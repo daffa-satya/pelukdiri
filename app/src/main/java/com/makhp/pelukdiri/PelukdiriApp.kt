@@ -5,6 +5,8 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.makhp.pelukdiri.worker.UsageSyncWorker
@@ -26,10 +28,11 @@ class PelukdiriApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         setupBackgroundSync()
+        triggerImmediateSync()
     }
 
     private fun setupBackgroundSync() {
-        val syncRequest = PeriodicWorkRequestBuilder<UsageSyncWorker>(15, TimeUnit.MINUTES)
+        val syncRequest = PeriodicWorkRequestBuilder<UsageSyncWorker>(30, TimeUnit.MINUTES)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiresBatteryNotLow(true)
@@ -41,6 +44,17 @@ class PelukdiriApp : Application(), Configuration.Provider {
             "UsageSyncWorker",
             ExistingPeriodicWorkPolicy.KEEP,
             syncRequest
+        )
+    }
+
+    private fun triggerImmediateSync() {
+        val immediateSyncRequest = OneTimeWorkRequestBuilder<UsageSyncWorker>()
+            .build()
+        
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            "UsageSyncImmediate",
+            ExistingWorkPolicy.REPLACE,
+            immediateSyncRequest
         )
     }
 }

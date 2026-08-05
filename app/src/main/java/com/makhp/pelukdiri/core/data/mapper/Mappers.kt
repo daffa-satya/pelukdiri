@@ -1,12 +1,18 @@
 package com.makhp.pelukdiri.core.data.mapper
 
-import com.makhp.pelukdiri.core.data.database.AppUsageEntity
-import com.makhp.pelukdiri.core.data.database.DailySummaryEntity
-import com.makhp.pelukdiri.core.data.database.InterventionEntity
+import com.makhp.pelukdiri.core.database.entity.AppUsageEntity
+import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
+import com.makhp.pelukdiri.core.database.entity.InterventionNotificationEntity
+import com.makhp.pelukdiri.core.database.entity.DailyAdaptiveLimitEntity
+import com.makhp.pelukdiri.core.database.entity.InterventionLogEntity
+import com.makhp.pelukdiri.core.database.entity.UsageSensorLogEntity
 import com.makhp.pelukdiri.core.domain.model.AppUsage
+import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.core.domain.model.Intervention
+import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.model.InterventionType
+import com.makhp.pelukdiri.core.domain.model.UsageSensorLog
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -40,7 +46,7 @@ fun DailySummaryEntity.toDomainModel(): DailySummary {
     )
 }
 
-fun InterventionEntity.toDomainModel(): Intervention {
+fun InterventionNotificationEntity.toDomainModel(): Intervention {
     return Intervention(
         id = id,
         title = title,
@@ -51,13 +57,79 @@ fun InterventionEntity.toDomainModel(): Intervention {
     )
 }
 
-fun Intervention.toEntity(): InterventionEntity {
-    return InterventionEntity(
+fun Intervention.toEntity(): InterventionNotificationEntity {
+    return InterventionNotificationEntity(
         id = id,
         title = title,
         message = message,
         type = type.name,
         timestamp = timestamp.toEpochSecond(ZoneOffset.UTC),
         isAcknowledged = isAcknowledged
+    )
+}
+
+fun DailyAdaptiveLimitEntity.toDomainModel(): DailyAdaptiveLimit {
+    return DailyAdaptiveLimit(
+        dateString = dateString,
+        calculatedLimitMinutes = calculatedLimitMinutes,
+        actualScreenTimeMinutes = actualScreenTimeMinutes,
+        reclaimedTimeMinutes = reclaimedTimeMinutes
+    )
+}
+
+fun DailyAdaptiveLimit.toEntity(): DailyAdaptiveLimitEntity {
+    return DailyAdaptiveLimitEntity(
+        dateString = dateString,
+        calculatedLimitMinutes = calculatedLimitMinutes,
+        actualScreenTimeMinutes = actualScreenTimeMinutes,
+        reclaimedTimeMinutes = reclaimedTimeMinutes
+    )
+}
+
+fun InterventionLogEntity.toDomainModel(): InterventionLog {
+    return InterventionLog(
+        id = id,
+        timestamp = timestamp,
+        targetPackageName = targetPackageName,
+        questionType = questionType,
+        difficultyLevel = difficultyLevel,
+        responseTimeMs = responseTimeMs,
+        isCorrect = isCorrect,
+        isBypassed = isBypassed
+    )
+}
+
+fun InterventionLog.toEntity(): InterventionLogEntity {
+    return InterventionLogEntity(
+        id = id,
+        timestamp = timestamp,
+        targetPackageName = targetPackageName,
+        questionType = questionType,
+        difficultyLevel = difficultyLevel,
+        responseTimeMs = responseTimeMs,
+        isCorrect = isCorrect,
+        isBypassed = isBypassed
+    )
+}
+
+fun UsageSensorLogEntity.toDomainModel(): UsageSensorLog {
+    return UsageSensorLog(
+        id = id,
+        timestamp = timestamp,
+        packageName = packageName,
+        rawScreenTimeMs = rawScreenTimeMs,
+        appOpeningFrequency = appOpeningFrequency,
+        ambientLightLux = ambientLightLux
+    )
+}
+
+fun UsageSensorLog.toEntity(): UsageSensorLogEntity {
+    return UsageSensorLogEntity(
+        id = id,
+        timestamp = timestamp,
+        packageName = packageName,
+        rawScreenTimeMs = rawScreenTimeMs,
+        appOpeningFrequency = appOpeningFrequency,
+        ambientLightLux = ambientLightLux
     )
 }

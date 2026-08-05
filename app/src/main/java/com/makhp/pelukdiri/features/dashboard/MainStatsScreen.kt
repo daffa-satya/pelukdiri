@@ -1,80 +1,238 @@
 package com.makhp.pelukdiri.features.dashboard
 
-import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.makhp.pelukdiri.collector.AppUsageCollector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainStatsScreen(activityContext: Context, collector: AppUsageCollector) {
-    var isPermissionGranted by remember { mutableStateOf(collector.isPermissionGranted()) }
-    var statsText by remember { mutableStateOf("Loading statistics...") }
-
-    // 1. Get access to the current Android lifecycle owner
+fun MainStatsScreen(
+    viewModel: DashboardViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // 2. This hook watches when the user leaves or comes BACK to the app
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            // ON_RESUME fires every single time the app screen becomes visible again
-            if (event == Lifecycle.Event.ON_RESUME) {
-                // Re-check the actual system setting status right now
-                isPermissionGranted = collector.isPermissionGranted()
+    LaunchedEffect(uiState) {
+        val state = uiState
+        if (state is DashboardUiState.Success) {
+            if (state.exportedFile != null) {
+                val fileUri = FileProvider.getUriForFile(
+                    context,
+                    "com.makhp.pelukdiri.fileprovider",
+                    state.exportedFile
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/zip"
+                    putExtra(Intent.EXTRA_STREAM, fileUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Share Export ZIP"))
+                viewModel.clearExportResult()
+            }
+            state.exportError?.let {
+                snackbarHostState.showSnackbar(it)
+                viewModel.clearExportResult()
             }
         }
+    }
 
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.updatePermissionStatus()
+            }
+        }
         lifecycleOwner.lifecycle.addObserver(observer)
-
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
-    // 3. This updates the text as soon as the check in step 2 switches to true
-    LaunchedEffect(isPermissionGranted) {
-        statsText = if (isPermissionGranted) {
-            collector.fetchRecentEventsPlainText(6)
-        } else {
-            "Permission is required to view usage statistics."
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("App Usage Statistics") }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            if (uiState is DashboardUiState.Success) {
+                val state = uiState as DashboardUiState.Success
+                ExtendedFloatingActionButton(
+                    onClick = { viewModel.exportDatabase() },
+                    icon = { 
+                        if (state.isExporting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        } else {
+                            // Using a simple text for icon if icons are not available, 
+                            // but usually icons are part of material3
+                            Text("📦") 
+                        }
+                    },
+                    text = { Text("Export DB") },
+                    expanded = !state.isExporting
+                )
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (val state = uiState) {
+                is DashboardUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is DashboardUiState.Success -> {
+                    SuccessContent(
+                        state = state,
+                        onGrantPermission = {
+                            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(intent)
+                        },
+                        onRefresh = { viewModel.forceRefresh() }
+                    )
+                }
+                is DashboardUiState.Error -> {
+                    ErrorContent(
+                        message = state.message,
+                        onRetry = { viewModel.loadData() }
+                    )
+                }
+            }
         }
     }
+}
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(text = "App Usage Statistics Log", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (!isPermissionGranted) {
-            Button(onClick = {
-                // Fix: Use ONLY Settings.ACTION_USAGE_ACCESS_SETTINGS
-                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                activityContext.startActivity(intent)
-            }) {
-                Text("Grant Usage Permission")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        } else {
-            Button(onClick = { statsText = collector.fetchRecentEventsPlainText(6) }) {
-                Text("Refresh Data")
-            }
+@Composable
+private fun SuccessContent(
+    state: DashboardUiState.Success,
+    onGrantPermission: () -> Unit,
+    onRefresh: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        if (!state.isPermissionGranted) {
+            AlertCard(
+                message = "Permission is required to view usage statistics.",
+                actionLabel = "Grant Permission",
+                onAction = onGrantPermission
+            )
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            Text(text = statsText, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Recent Events (Last 6h)",
+                style = MaterialTheme.typography.titleMedium
+            )
+            
+            Button(
+                onClick = onRefresh,
+                enabled = !state.isRefreshing
+            ) {
+                if (state.isRefreshing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Force Sync")
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = state.statsText,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlertCard(
+    message: String,
+    actionLabel: String,
+    onAction: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onAction,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text(actionLabel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorContent(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = message, style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Retry")
         }
     }
 }

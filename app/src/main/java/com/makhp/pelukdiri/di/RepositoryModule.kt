@@ -2,8 +2,10 @@ package com.makhp.pelukdiri.di
 
 import com.makhp.pelukdiri.core.data.repository.InterventionRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.UsageRepositoryImpl
+import com.makhp.pelukdiri.core.data.repository.UsageSensorRepositoryImpl
 import com.makhp.pelukdiri.core.domain.repository.InterventionRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
+import com.makhp.pelukdiri.core.domain.repository.UsageSensorRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -25,4 +27,10 @@ abstract class RepositoryModule {
     abstract fun bindInterventionRepository(
         interventionRepositoryImpl: InterventionRepositoryImpl
     ): InterventionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUsageSensorRepository(
+        usageSensorRepositoryImpl: UsageSensorRepositoryImpl
+    ): UsageSensorRepository
 }

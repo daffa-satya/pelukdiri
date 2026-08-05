@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
-import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.database.dao.UsageSensorDao
 import com.makhp.pelukdiri.core.database.entity.UsageSensorLogEntity
 import com.makhp.pelukdiri.features.dashboard.MainStatsScreen
@@ -21,10 +20,6 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    // Hilt delivers your collector directly into your activity window!
-    @Inject
-    lateinit var appUsageCollector: AppUsageCollector
 
     @Inject
     lateinit var usageSensorDao: UsageSensorDao
@@ -51,10 +46,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainStatsScreen(
-                        activityContext = this,
-                        collector = appUsageCollector
-                    )
+                    MainStatsScreen()
                 }
             }
         }

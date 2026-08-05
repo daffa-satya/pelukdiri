@@ -5,8 +5,9 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.makhp.pelukdiri.collector.AppUsageCollector
-import com.makhp.pelukdiri.core.database.dao.UsageSensorDao
-import com.makhp.pelukdiri.core.database.entity.UsageSensorLogEntity
+import com.makhp.pelukdiri.core.domain.model.UsageSensorLog
+import com.makhp.pelukdiri.core.domain.repository.UsageRepository
+import com.makhp.pelukdiri.core.domain.repository.UsageSensorRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
@@ -17,16 +18,19 @@ import java.util.Calendar
 class UsageSyncWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val usageSensorDao: UsageSensorDao,
+    private val usageRepository: UsageRepository,
+    private val usageSensorRepository: UsageSensorRepository,
     private val appUsageCollector: AppUsageCollector
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            // 1. Ambil data dari UsageStats & Sensor
+            // 1. Refresh general usage data (AppUsage & DailySummary)
+            usageRepository.refreshUsageData()
+
+            // 2. Ambil data dari UsageStats & Sensor untuk logs (Variabel H, F, L)
             val currentTimestamp = System.currentTimeMillis()
             
-            // Query apps used today (since 00:00)
             val calendar = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, 0)
                 set(Calendar.MINUTE, 0)
@@ -38,13 +42,13 @@ class UsageSyncWorker @AssistedInject constructor(
             val activeApps = appUsageCollector.fetchRecentEvents(startTime, currentTimestamp)
             val ambientLux = appUsageCollector.getCurrentAmbientLightLux()
 
-            // 2. Loop setiap package yang terdeteksi aktif hari ini dan simpan log-nya
+            // 3. Loop setiap package yang terdeteksi aktif hari ini dan simpan log-nya
             for (app in activeApps) {
                 val pkg = app.packageName
                 val screenTimeMs = app.usageDurationMillis
                 val openFreq = appUsageCollector.getLaunchCountForPackage(pkg)
 
-                val sensorLog = UsageSensorLogEntity(
+                val sensorLog = UsageSensorLog(
                     timestamp = currentTimestamp,
                     packageName = pkg,
                     rawScreenTimeMs = screenTimeMs,
@@ -52,7 +56,7 @@ class UsageSyncWorker @AssistedInject constructor(
                     ambientLightLux = ambientLux
                 )
 
-                usageSensorDao.insertLog(sensorLog)
+                usageSensorRepository.insertLog(sensorLog)
             }
 
             Result.success()

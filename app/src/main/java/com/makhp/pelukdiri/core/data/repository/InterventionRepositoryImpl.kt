@@ -1,6 +1,6 @@
 package com.makhp.pelukdiri.core.data.repository
 
-import com.makhp.pelukdiri.core.data.database.InterventionDao
+import com.makhp.pelukdiri.core.database.dao.InterventionNotificationDao
 import com.makhp.pelukdiri.core.data.mapper.toDomainModel
 import com.makhp.pelukdiri.core.data.mapper.toEntity
 import com.makhp.pelukdiri.core.domain.model.Intervention
@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class InterventionRepositoryImpl @Inject constructor(
-    private val dao: InterventionDao
+    private val dao: InterventionNotificationDao
 ) : InterventionRepository {
     override fun getInterventions(): Flow<List<Intervention>> {
         return dao.getAllInterventions().map { entities ->
