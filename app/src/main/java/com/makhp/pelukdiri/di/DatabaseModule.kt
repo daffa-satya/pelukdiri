@@ -2,9 +2,10 @@ package com.makhp.pelukdiri.di
 
 import android.content.Context
 import androidx.room.Room
-import com.makhp.pelukdiri.core.data.database.AppDatabase
-import com.makhp.pelukdiri.core.data.database.InterventionDao
-import com.makhp.pelukdiri.core.data.database.UsageDao
+import com.makhp.pelukdiri.core.database.PelukDiriDatabase
+import com.makhp.pelukdiri.core.database.dao.AdaptiveLimitDao
+import com.makhp.pelukdiri.core.database.dao.InterventionDao
+import com.makhp.pelukdiri.core.database.dao.UsageSensorDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,21 +19,23 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+    fun provideDatabase(@ApplicationContext context: Context): PelukDiriDatabase {
         return Room.databaseBuilder(
             context,
-            AppDatabase::class.java,
-            AppDatabase.DATABASE_NAME
-        ).fallbackToDestructiveMigration().build()
+            PelukDiriDatabase::class.java,
+            "pelukdiri_db"
+        ).build()
     }
 
     @Provides
-    fun provideUsageDao(db: AppDatabase): UsageDao {
-        return db.usageDao()
-    }
+    @Singleton
+    fun provideUsageSensorDao(db: PelukDiriDatabase): UsageSensorDao = db.usageSensorDao()
 
     @Provides
-    fun provideInterventionDao(db: AppDatabase): InterventionDao {
-        return db.interventionDao()
-    }
+    @Singleton
+    fun provideInterventionDao(db: PelukDiriDatabase): InterventionDao = db.interventionDao()
+
+    @Provides
+    @Singleton
+    fun provideAdaptiveLimitDao(db: PelukDiriDatabase): AdaptiveLimitDao = db.adaptiveLimitDao()
 }
