@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PELUKDIRI</string>
+    <string name="accessibility_service_description">Monitors app usage to provide mindful interventions and prevent excessive screen time.</string>
 </resources>

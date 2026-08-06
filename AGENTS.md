@@ -24,7 +24,7 @@ This document outlines the architectural standards, code style, and technical co
    - Contains shared infrastructure such as Database, central Repositories, and global Domain Models.
    - **Data (`core/data/`):** Repository implementations and Data Sources.
    - **Domain (`core/domain/`):** Pure Kotlin models, UseCases, and Repository Interfaces.
-   - **Database (`core/database/`):** Room Entities and DAOs.
+   - **Database (`core/database/`):** Unified Room Database (`PelukDiriDatabase`), Entities, DAOs, and Export engines.
 
 2. **Feature Layer (`features/`)**
    - Contains feature-specific UI (Dashboard, Intervention, Settings).
@@ -86,11 +86,14 @@ app/src/main/java/com/makhp/pelukdiri/
 ├── core/                # Shared logic & infrastructure
 │   ├── data/            # Repository Impls, Mappers
 │   ├── domain/          # Models, Repository Interfaces, UseCases
-│   └── database/        # Room Entities, DAOs
+│   └── database/        # Room Database
+│       ├── dao/         # Data Access Objects
+│       ├── entity/      # Room Entities
+│       └── export/      # CSV/ZIP Export Engines
 ├── features/            # Feature Screens (MVVM)
 │   └── dashboard/       # DashboardScreen.kt, DashboardViewModel.kt
 ├── collector/           # Sensor & System data collectors
-├── worker/              # Background Work (WorkManager)
+├── worker/              # Background Work (WorkManager + Foreground Services)
 ├── di/                  # Hilt Modules
 └── ui/                  # Global Theme & Components
 ```
@@ -111,8 +114,8 @@ app/src/main/java/com/makhp/pelukdiri/
 
 #### Workflow A: Adding New Data / Entity Pipeline
 1. **Entity Definition:** Define the Room `@Entity` in `core/database/entity/`.
-2. **DAO Contract:** Create or update the `@Dao` interface in `core/database/dao/`.
-3. **Database Registration:** Register the new entity in `PelukDiriDatabase` and handle Room migrations if required.
+2. **DAO Contract:** Create or update the `@Dao` interface in `core/database/dao/`. Ensure "read-all" methods are available for the export engine.
+3. **Database Registration:** Register the new entity in `PelukDiriDatabase` (unified source). Current tables: `app_usage`, `daily_summary`, `usage_sensor_logs`, `interventions`, `intervention_logs`, `daily_adaptive_limits`.
 4. **Domain Model & Mapper:** Create pure Kotlin models in `core/domain/model/` and extension mappers in `core/data/mapper/`.
 5. **Repository Layer:** Declare contract in `core/domain/repository/` and implement in `core/data/repository/`.
 
@@ -126,9 +129,19 @@ app/src/main/java/com/makhp/pelukdiri/
 #### Workflow C: Data Collection & Background Workers
 1. **Sensor Collectors:** Ensure sensor listeners (`Light`, `UsageStats`) in `collector/` properly register and unregister to prevent memory leaks.
 2. **WorkManager Setup:** Implement background synchronization using `@HiltWorker` and `@AssistedInject` inside `worker/`.
-3. **Execution Constraints:** Schedule routine tasks exclusively via `PeriodicWorkRequest` with explicit constraints (e.g., Battery Not Low, Idle).
+3. **Reliability:** Critical workers (like `UsageSyncWorker`) must use **Foreground Service** (`setForeground`) with a dedicated notification channel to prevent system termination.
+4. **Execution Constraints:** Schedule routine tasks via `PeriodicWorkRequest` with explicit constraints (e.g., Battery Not Low, Storage Not Low).
 
 #### Workflow D: Research & CSV Export Pipeline
-1. **Data Retrieval:** Aggregate database records via `core/domain/usecase/`.
-2. **Asynchronous Processing:** Execute CSV formatting strictly on `Dispatchers.IO`.
-3. **File Handling:** Safely write export files to app-specific storage without blocking the UI thread.
+1. **Data Retrieval:** Aggregate database records via `core/domain/usecase/` or DAOs directly for full exports.
+2. **Asynchronous Processing:** Execute CSV formatting and ZIP compression strictly on `Dispatchers.IO`.
+3. **Escape Strings:** All String fields in CSV must be escaped with double quotes (`"..."`) for compatibility with R/Python.
+4. **Secure Sharing:** Use `androidx.core.content.FileProvider` to share export ZIP files from the app's internal `exports` directory.
+
+---
+
+## 7. System & Power Management Rules
+
+1. **Battery Optimization:** For longitudinal data collection, the app must check and request "Battery Optimization Exemption" (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) from the user.
+2. **Permissions:** Always check for `PACKAGE_USAGE_STATS` and `POST_NOTIFICATIONS` (for Android 13+) before initiating sync tasks.
+3. **Foreground Services:** Use the `dataSync` foreground service type for background synchronization to ensure compliance with Android 14+ requirements.

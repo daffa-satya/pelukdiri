@@ -27,6 +27,7 @@ class PelukdiriApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        android.util.Log.d("PelukdiriApp", "Application Created")
         setupBackgroundSync()
         triggerImmediateSync()
     }

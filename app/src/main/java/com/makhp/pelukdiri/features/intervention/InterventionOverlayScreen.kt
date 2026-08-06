@@ -30,7 +30,8 @@ import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
 
 @Composable
 fun InterventionOverlayScreen(
-    viewModel: InterventionViewModel = hiltViewModel()
+    viewModel: InterventionViewModel = hiltViewModel(),
+    onDismiss: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val hapticFeedback = LocalHapticFeedback.current
@@ -52,7 +53,10 @@ fun InterventionOverlayScreen(
                 ambientLightLux = 12.5f
             )
         },
-        onReset = viewModel::resetToIdle
+        onReset = {
+            viewModel.resetToIdle()
+            onDismiss()
+        }
     )
 }
 

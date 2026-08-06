@@ -126,6 +126,32 @@ class AppUsageCollector @Inject constructor(
     }
 
     /**
+     * Menghitung total screen time hari ini dalam menit.
+     * Langsung dari UsageStatsManager (Real-time).
+     */
+    fun getTodayScreenTimeMinutes(): Double {
+        if (!isPermissionGranted()) return 0.0
+
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+
+        val stats = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_DAILY,
+            startTime,
+            endTime
+        )
+
+        val totalMs = stats?.sumOf { it.totalTimeInForeground } ?: 0L
+        return totalMs / 1000.0 / 60.0
+    }
+
+    /**
      * Menghitung frekuensi buka aplikasi (F) berdasarkan event ACTIVITY_RESUMED sejak awal hari ini.
      */
     fun getLaunchCountForPackage(packageName: String): Int {
