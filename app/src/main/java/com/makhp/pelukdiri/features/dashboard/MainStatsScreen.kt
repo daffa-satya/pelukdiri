@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri.features.dashboard
 
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.makhp.pelukdiri.core.domain.engine.CognitiveQuestionGenerator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,7 +114,8 @@ fun MainStatsScreen(
                             }
                             context.startActivity(intent)
                         },
-                        onRefresh = { viewModel.forceRefresh() }
+                        onRefresh = { viewModel.forceRefresh() },
+                        onBackfill = { viewModel.backfillHistory() }
                     )
                 }
                 is DashboardUiState.Error -> {
@@ -130,8 +133,10 @@ fun MainStatsScreen(
 private fun SuccessContent(
     state: DashboardUiState.Success,
     onGrantPermission: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onBackfill: () -> Unit
 ) {
+    val context = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -143,7 +148,22 @@ private fun SuccessContent(
                 actionLabel = "Grant Permission",
                 onAction = onGrantPermission
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        if (!state.isBatteryOptimizationIgnored) {
+            AlertCard(
+                message = "Battery optimization is active and may kill background sync. Please whitelist the app for reliable data collection.",
+                actionLabel = "Whitelist App",
+                onAction = {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
+                }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
         Row(
@@ -152,26 +172,47 @@ private fun SuccessContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Recent Events (Last 6h)",
+                text = "Recent Events (All Available)",
                 style = MaterialTheme.typography.titleMedium
             )
             
-            Button(
-                onClick = onRefresh,
-                enabled = !state.isRefreshing
-            ) {
-                if (state.isRefreshing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Force Sync")
+            Row {
+                OutlinedButton(
+                    onClick = onBackfill,
+                    enabled = !state.isBackfilling && !state.isRefreshing,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    if (state.isBackfilling) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Backfill")
+                    }
+                }
+
+                Button(
+                    onClick = onRefresh,
+                    enabled = !state.isRefreshing && !state.isBackfilling
+                ) {
+                    if (state.isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Force Sync")
+                    }
                 }
             }
         }
         
+        Spacer(modifier = Modifier.height(8.dp))
+
+        QuestionTesterCard()
+
         Spacer(modifier = Modifier.height(8.dp))
 
         Box(
@@ -184,6 +225,101 @@ private fun SuccessContent(
                 text = state.statsText,
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+    }
+}
+
+@Composable
+fun QuestionTesterCard(
+    modifier: Modifier = Modifier,
+    generator: CognitiveQuestionGenerator = remember { CognitiveQuestionGenerator() }
+) {
+    var selectedLevel by remember { mutableIntStateOf(1) }
+    var currentQuestion by remember { mutableStateOf(generator.generateQuestion(1)) }
+    var userAnswer by remember { mutableStateOf("") }
+    var feedbackMessage by remember { mutableStateOf("") }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "🧪 Cognitive Engine Playground",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                (1..5).forEach { lvl ->
+                    FilterChip(
+                        selected = selectedLevel == lvl,
+                        onClick = {
+                            selectedLevel = lvl
+                            currentQuestion = generator.generateQuestion(lvl)
+                            userAnswer = ""
+                            feedbackMessage = ""
+                        },
+                        label = { Text("Lvl $lvl") }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = currentQuestion.expression,
+                style = MaterialTheme.typography.headlineLarge
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = userAnswer,
+                onValueChange = { userAnswer = it },
+                label = { Text("Ketik Jawaban") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(0.6f)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        feedbackMessage = if (userAnswer.trim() == currentQuestion.correctAnswer.toString()) {
+                            "✅ BENAR! Great job."
+                        } else {
+                            "❌ SALAH! Kunci: ${currentQuestion.correctAnswer}"
+                        }
+                    }
+                ) {
+                    Text("Cek Jawaban")
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        currentQuestion = generator.generateQuestion(selectedLevel)
+                        userAnswer = ""
+                        feedbackMessage = ""
+                    }
+                ) {
+                    Text("Acak Soal Baru")
+                }
+            }
+
+            if (feedbackMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = feedbackMessage, style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
 }

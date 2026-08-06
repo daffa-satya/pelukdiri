@@ -182,11 +182,25 @@ class AppUsageCollector @Inject constructor(
         }
     }
 
+    /**
+     * Mengambil log event aplikasi dalam bentuk teks.
+     * Jika hoursAgo <= 0, maka mengambil data sejak awal hari ini (00:00).
+     */
     fun fetchRecentEventsPlainText(hoursAgo: Int): String {
         if (!isPermissionGranted()) return "Permission is required to view usage statistics."
 
         val endTime = System.currentTimeMillis()
-        val startTime = endTime - (1000L * 60 * 60 * hoursAgo)
+        val startTime = if (hoursAgo > 0) {
+            endTime - (1000L * 60 * 60 * hoursAgo)
+        } else {
+            val calendar = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            calendar.timeInMillis
+        }
 
         val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
         val event = UsageEvents.Event()

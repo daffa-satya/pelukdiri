@@ -19,5 +19,5 @@ interface InterventionDao {
     suspend fun getAllLogsList(): List<InterventionLogEntity>
 
     @Query("SELECT AVG(responseTimeMs) FROM intervention_logs WHERE difficultyLevel = :difficulty")
-    suspend fun getAverageResponseTime(difficulty: String): Long?
+    suspend fun getAverageResponseTime(difficulty: Int): Double?
 }

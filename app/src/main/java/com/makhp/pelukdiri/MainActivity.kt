@@ -28,17 +28,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Temp Trigger di MainActivity.kt untuk verifikasi data terisi
-        lifecycleScope.launch(Dispatchers.IO) {
-            usageSensorDao.insertLog(
-                UsageSensorLogEntity(
-                    timestamp = System.currentTimeMillis(),
-                    packageName = "com.ss.android.ugc.trill",
-                    rawScreenTimeMs = 3600000L, // 60 mins
-                    appOpeningFrequency = 12,
-                    ambientLightLux = 240.5f
-                )
-            )
-        }
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            usageSensorDao.insertLog(
+//                UsageSensorLogEntity(
+//                    timestamp = System.currentTimeMillis(),
+//                    packageName = "com.ss.android.ugc.trill",
+//                    rawScreenTimeMs = 3600000L, // 60 mins
+//                    appOpeningFrequency = 12,
+//                    ambientLightLux = 240.5f
+//                )
+//            )
+//        }
 
         setContent {
             MaterialTheme {

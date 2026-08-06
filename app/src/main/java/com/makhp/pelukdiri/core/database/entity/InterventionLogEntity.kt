@@ -7,10 +7,9 @@ import androidx.room.PrimaryKey
 data class InterventionLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val timestamp: Long,
-    val targetPackageName: String,
-    val questionType: String,         // ARITHMETIC, LOGIC, PATTERN, REFLECTION
-    val difficultyLevel: String,      // EASY, MEDIUM, HARD (Variabel D)
-    val responseTimeMs: Long,         // Waktu tempuh jawab (Variabel T)
-    val isCorrect: Boolean,
-    val isBypassed: Boolean           // Apakah user menyerah/membatalkan
+    val riskScore: Double,
+    val difficultyLevel: Int,
+    val responseTimeMs: Long,
+    val isSuccess: Boolean,
+    val penaltyAppliedMinutes: Int
 )

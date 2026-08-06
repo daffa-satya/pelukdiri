@@ -7,5 +7,5 @@ interface InterventionLogRepository {
     suspend fun insertLog(log: InterventionLog)
     fun getAllLogs(): Flow<List<InterventionLog>>
     suspend fun getAllLogsList(): List<InterventionLog>
-    suspend fun getAverageResponseTime(difficulty: String): Long?
+    suspend fun getAverageResponseTime(difficulty: Int): Double?
 }

@@ -27,7 +27,7 @@ class InterventionLogRepositoryImpl @Inject constructor(
         return dao.getAllLogsList().map { it.toDomainModel() }
     }
 
-    override suspend fun getAverageResponseTime(difficulty: String): Long? {
+    override suspend fun getAverageResponseTime(difficulty: Int): Double? {
         return dao.getAverageResponseTime(difficulty)
     }
 }

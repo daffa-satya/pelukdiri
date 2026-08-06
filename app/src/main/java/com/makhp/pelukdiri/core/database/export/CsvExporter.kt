@@ -130,9 +130,9 @@ class CsvExporter @Inject constructor(
         if (data.isEmpty()) return null
         val file = createTempFile("intervention_logs.csv")
         FileWriter(file).use { writer ->
-            writer.append("ID,Timestamp,Date,TargetPackageName,QuestionType,DifficultyLevel,ResponseTimeMs,IsCorrect,IsBypassed\n")
+            writer.append("ID,Timestamp,Date,RiskScore,DifficultyLevel,ResponseTimeMs,IsSuccess,PenaltyAppliedMinutes\n")
             data.forEach {
-                writer.append("${it.id},${it.timestamp},\"${dateFormatter.format(Date(it.timestamp))}\",\"${it.targetPackageName}\",\"${it.questionType}\",\"${it.difficultyLevel}\",${it.responseTimeMs},${it.isCorrect},${it.isBypassed}\n")
+                writer.append("${it.id},${it.timestamp},\"${dateFormatter.format(Date(it.timestamp))}\",${it.riskScore},${it.difficultyLevel},${it.responseTimeMs},${it.isSuccess},${it.penaltyAppliedMinutes}\n")
             }
         }
         return file

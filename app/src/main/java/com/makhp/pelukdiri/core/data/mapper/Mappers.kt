@@ -90,12 +90,11 @@ fun InterventionLogEntity.toDomainModel(): InterventionLog {
     return InterventionLog(
         id = id,
         timestamp = timestamp,
-        targetPackageName = targetPackageName,
-        questionType = questionType,
+        riskScore = riskScore,
         difficultyLevel = difficultyLevel,
         responseTimeMs = responseTimeMs,
-        isCorrect = isCorrect,
-        isBypassed = isBypassed
+        isSuccess = isSuccess,
+        penaltyAppliedMinutes = penaltyAppliedMinutes
     )
 }
 
@@ -103,12 +102,11 @@ fun InterventionLog.toEntity(): InterventionLogEntity {
     return InterventionLogEntity(
         id = id,
         timestamp = timestamp,
-        targetPackageName = targetPackageName,
-        questionType = questionType,
+        riskScore = riskScore,
         difficultyLevel = difficultyLevel,
         responseTimeMs = responseTimeMs,
-        isCorrect = isCorrect,
-        isBypassed = isBypassed
+        isSuccess = isSuccess,
+        penaltyAppliedMinutes = penaltyAppliedMinutes
     )
 }
 

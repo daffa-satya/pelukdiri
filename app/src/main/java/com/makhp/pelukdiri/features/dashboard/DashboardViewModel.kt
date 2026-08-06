@@ -1,11 +1,14 @@
 package com.makhp.pelukdiri.features.dashboard
 
+import android.content.Context
+import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.database.export.CsvExporter
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +22,8 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val appUsageCollector: AppUsageCollector,
-    private val csvExporter: CsvExporter
+    private val csvExporter: CsvExporter,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
@@ -32,13 +36,23 @@ class DashboardViewModel @Inject constructor(
     fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
             val isGranted = appUsageCollector.isPermissionGranted()
+            val isOptimized = isBatteryOptimizationIgnored()
             val statsText = if (isGranted) {
-                appUsageCollector.fetchRecentEventsPlainText(6)
+                appUsageCollector.fetchRecentEventsPlainText(168) // 168 hours = 7 days
             } else {
                 "Permission is required to view usage statistics."
             }
-            _uiState.value = DashboardUiState.Success(statsText, isGranted)
+            _uiState.value = DashboardUiState.Success(
+                statsText = statsText, 
+                isPermissionGranted = isGranted,
+                isBatteryOptimizationIgnored = isOptimized
+            )
         }
+    }
+
+    private fun isBatteryOptimizationIgnored(): Boolean {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     fun forceRefresh() {
@@ -51,12 +65,18 @@ class DashboardViewModel @Inject constructor(
             try {
                 usageRepository.refreshUsageData()
                 val isGranted = appUsageCollector.isPermissionGranted()
+                val isOptimized = isBatteryOptimizationIgnored()
                 val statsText = if (isGranted) {
-                    appUsageCollector.fetchRecentEventsPlainText(6)
+                    appUsageCollector.fetchRecentEventsPlainText(168)
                 } else {
                     "Permission is required to view usage statistics."
                 }
-                _uiState.value = DashboardUiState.Success(statsText, isGranted, isRefreshing = false)
+                _uiState.value = DashboardUiState.Success(
+                    statsText = statsText, 
+                    isPermissionGranted = isGranted,
+                    isBatteryOptimizationIgnored = isOptimized,
+                    isRefreshing = false
+                )
             } catch (e: Exception) {
                 _uiState.value = DashboardUiState.Error(e.message ?: "Failed to refresh data")
             }
@@ -66,17 +86,44 @@ class DashboardViewModel @Inject constructor(
     fun updatePermissionStatus() {
         viewModelScope.launch(Dispatchers.IO) {
             val isGranted = appUsageCollector.isPermissionGranted()
+            val isOptimized = isBatteryOptimizationIgnored()
             _uiState.update { state ->
                 if (state is DashboardUiState.Success) {
                     val statsText = if (isGranted) {
-                        appUsageCollector.fetchRecentEventsPlainText(6)
+                        appUsageCollector.fetchRecentEventsPlainText(168)
                     } else {
                         "Permission is required to view usage statistics."
                     }
-                    state.copy(statsText = statsText, isPermissionGranted = isGranted)
+                    state.copy(
+                        statsText = statsText, 
+                        isPermissionGranted = isGranted,
+                        isBatteryOptimizationIgnored = isOptimized
+                    )
                 } else {
                     state
                 }
+            }
+        }
+    }
+
+    fun backfillHistory() {
+        val currentState = _uiState.value
+        if (currentState is DashboardUiState.Success) {
+            _uiState.update { currentState.copy(isBackfilling = true) }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                usageRepository.backfillUsageData(7)
+                _uiState.update { state ->
+                    if (state is DashboardUiState.Success) {
+                        state.copy(isBackfilling = false)
+                    } else {
+                        state
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.value = DashboardUiState.Error(e.message ?: "Failed to backfill history")
             }
         }
     }

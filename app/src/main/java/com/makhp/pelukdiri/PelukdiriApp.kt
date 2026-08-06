@@ -32,12 +32,13 @@ class PelukdiriApp : Application(), Configuration.Provider {
     }
 
     private fun setupBackgroundSync() {
-        val syncRequest = PeriodicWorkRequestBuilder<UsageSyncWorker>(30, TimeUnit.MINUTES)
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiresBatteryNotLow(true)
-                    .build()
-            )
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .setRequiresStorageNotLow(true)
+            .build()
+
+        val syncRequest = PeriodicWorkRequestBuilder<UsageSyncWorker>(15, TimeUnit.MINUTES)
+            .setConstraints(constraints)
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
