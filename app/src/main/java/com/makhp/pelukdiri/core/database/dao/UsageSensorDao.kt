@@ -12,6 +12,9 @@ interface UsageSensorDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLog(log: UsageSensorLogEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllLogs(logs: List<UsageSensorLogEntity>)
+
     @Query("SELECT * FROM usage_sensor_logs ORDER BY timestamp DESC")
     fun getAllLogs(): Flow<List<UsageSensorLogEntity>>
 

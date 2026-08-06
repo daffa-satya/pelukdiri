@@ -14,6 +14,7 @@ sealed interface DashboardUiState {
         val isBatteryOptimizationIgnored: Boolean = true,
         val isRefreshing: Boolean = false,
         val isBackfilling: Boolean = false,
+        val isHistoryBackfilled: Boolean = false,
         val isExporting: Boolean = false,
         val exportedFile: File? = null,
         val exportError: String? = null

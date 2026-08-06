@@ -179,7 +179,7 @@ private fun SuccessContent(
             Row {
                 OutlinedButton(
                     onClick = onBackfill,
-                    enabled = !state.isBackfilling && !state.isRefreshing,
+                    enabled = !state.isBackfilling && !state.isRefreshing && !state.isHistoryBackfilled,
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
                     if (state.isBackfilling) {
@@ -188,7 +188,7 @@ private fun SuccessContent(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text("Backfill")
+                        Text(if (state.isHistoryBackfilled) "Backfilled" else "Backfill")
                     }
                 }
 

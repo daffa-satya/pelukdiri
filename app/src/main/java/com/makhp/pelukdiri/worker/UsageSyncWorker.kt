@@ -52,21 +52,23 @@ class UsageSyncWorker @AssistedInject constructor(
             val activeApps = appUsageCollector.fetchRecentEvents(startTime, currentTimestamp)
             val ambientLux = appUsageCollector.getCurrentAmbientLightLux()
 
-            // 3. Loop setiap package yang terdeteksi aktif hari ini dan simpan log-nya
-            for (app in activeApps) {
+            // 3. Batch save logs
+            val sensorLogs = activeApps.map { app ->
                 val pkg = app.packageName
                 val screenTimeMs = app.usageDurationMillis
                 val openFreq = appUsageCollector.getLaunchCountForPackage(pkg)
 
-                val sensorLog = UsageSensorLog(
+                UsageSensorLog(
                     timestamp = currentTimestamp,
                     packageName = pkg,
                     rawScreenTimeMs = screenTimeMs,
                     appOpeningFrequency = openFreq,
                     ambientLightLux = ambientLux
                 )
+            }
 
-                usageSensorRepository.insertLog(sensorLog)
+            if (sensorLogs.isNotEmpty()) {
+                usageSensorRepository.insertAllLogs(sensorLogs)
             }
 
             Result.success()

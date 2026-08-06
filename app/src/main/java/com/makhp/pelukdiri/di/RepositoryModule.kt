@@ -5,11 +5,13 @@ import com.makhp.pelukdiri.core.data.repository.InterventionLogRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.InterventionRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.UsageRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.UsageSensorRepositoryImpl
+import com.makhp.pelukdiri.core.data.repository.UserPreferencesRepositoryImpl
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageSensorRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -49,4 +51,10 @@ abstract class RepositoryModule {
     abstract fun bindInterventionLogRepository(
         interventionLogRepositoryImpl: InterventionLogRepositoryImpl
     ): InterventionLogRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUserPreferencesRepository(
+        userPreferencesRepositoryImpl: UserPreferencesRepositoryImpl
+    ): UserPreferencesRepository
 }

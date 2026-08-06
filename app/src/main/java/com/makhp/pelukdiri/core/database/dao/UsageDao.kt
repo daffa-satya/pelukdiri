@@ -22,6 +22,12 @@ interface UsageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDailySummary(summary: DailySummaryEntity)
 
+    @Transaction
+    suspend fun saveUsageDataWithSummary(usage: List<AppUsageEntity>, summary: DailySummaryEntity) {
+        insertAppUsage(usage)
+        insertDailySummary(summary)
+    }
+
     @Query("SELECT * FROM app_usage ORDER BY date DESC")
     suspend fun getAllAppUsageList(): List<AppUsageEntity>
 

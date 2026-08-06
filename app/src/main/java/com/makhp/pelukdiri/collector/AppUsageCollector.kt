@@ -12,6 +12,7 @@ import android.os.Process
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.model.DailyUsageSummary
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.LocalDate
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -47,6 +48,56 @@ class AppUsageCollector @Inject constructor(
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     fun getCurrentAmbientLightLux(): Float = currentAmbientLux
+
+    /**
+     * Lightweight sync fetching events only from lastSyncedTimestamp to now.
+     */
+    fun syncRecentEventsOnly(lastSyncedTimestamp: Long): List<AppUsage> {
+        val now = System.currentTimeMillis()
+        val startTime = if (lastSyncedTimestamp > 0) lastSyncedTimestamp else {
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+        }
+        return fetchRecentEvents(startTime, now)
+    }
+
+    /**
+     * Heavy I/O function that queries UsageStatsManager for past usage events.
+     */
+    fun executeFullBackfill(daysHistory: Int = 7): Map<String, List<AppUsage>> {
+        val backfillData = mutableMapOf<String, List<AppUsage>>()
+        val today = LocalDate.now()
+
+        for (i in 1..daysHistory) {
+            val targetDate = today.minusDays(i.toLong())
+            val dateStr = targetDate.toString()
+
+            val calendar = Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, -i)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val startTime = calendar.timeInMillis
+
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            val endTime = calendar.timeInMillis
+
+            val events = fetchRecentEvents(startTime, endTime)
+            if (events.isNotEmpty()) {
+                backfillData[dateStr] = events
+            }
+        }
+        return backfillData
+    }
 
     // --- PER-PACKAGE QUERY UNTUK USAGESYNCWORKER ---
 

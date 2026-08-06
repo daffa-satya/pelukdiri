@@ -17,6 +17,10 @@ class UsageSensorRepositoryImpl @Inject constructor(
         dao.insertLog(log.toEntity())
     }
 
+    override suspend fun insertAllLogs(logs: List<UsageSensorLog>) {
+        dao.insertAllLogs(logs.map { it.toEntity() })
+    }
+
     override fun getAllLogs(): Flow<List<UsageSensorLog>> {
         return dao.getAllLogs().map { entities ->
             entities.map { it.toDomainModel() }

@@ -7,12 +7,14 @@ import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.database.export.CsvExporter
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -23,6 +25,7 @@ class DashboardViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val appUsageCollector: AppUsageCollector,
     private val csvExporter: CsvExporter,
+    private val userPreferencesRepository: UserPreferencesRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -35,8 +38,13 @@ class DashboardViewModel @Inject constructor(
 
     fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {
+            // Lightweight sync on startup instead of backfill
+            usageRepository.syncRecentEventsOnly()
+
             val isGranted = appUsageCollector.isPermissionGranted()
             val isOptimized = isBatteryOptimizationIgnored()
+            val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
+            
             val statsText = if (isGranted) {
                 appUsageCollector.fetchRecentEventsPlainText(168) // 168 hours = 7 days
             } else {
@@ -45,7 +53,8 @@ class DashboardViewModel @Inject constructor(
             _uiState.value = DashboardUiState.Success(
                 statsText = statsText, 
                 isPermissionGranted = isGranted,
-                isBatteryOptimizationIgnored = isOptimized
+                isBatteryOptimizationIgnored = isOptimized,
+                isHistoryBackfilled = isBackfilled
             )
         }
     }
@@ -66,6 +75,8 @@ class DashboardViewModel @Inject constructor(
                 usageRepository.refreshUsageData()
                 val isGranted = appUsageCollector.isPermissionGranted()
                 val isOptimized = isBatteryOptimizationIgnored()
+                val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
+
                 val statsText = if (isGranted) {
                     appUsageCollector.fetchRecentEventsPlainText(168)
                 } else {
@@ -75,6 +86,7 @@ class DashboardViewModel @Inject constructor(
                     statsText = statsText, 
                     isPermissionGranted = isGranted,
                     isBatteryOptimizationIgnored = isOptimized,
+                    isHistoryBackfilled = isBackfilled,
                     isRefreshing = false
                 )
             } catch (e: Exception) {
@@ -87,6 +99,8 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val isGranted = appUsageCollector.isPermissionGranted()
             val isOptimized = isBatteryOptimizationIgnored()
+            val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
+
             _uiState.update { state ->
                 if (state is DashboardUiState.Success) {
                     val statsText = if (isGranted) {
@@ -97,7 +111,8 @@ class DashboardViewModel @Inject constructor(
                     state.copy(
                         statsText = statsText, 
                         isPermissionGranted = isGranted,
-                        isBatteryOptimizationIgnored = isOptimized
+                        isBatteryOptimizationIgnored = isOptimized,
+                        isHistoryBackfilled = isBackfilled
                     )
                 } else {
                     state
@@ -114,10 +129,13 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                usageRepository.backfillUsageData(7)
+                // strictly manual, on-demand operation
+                usageRepository.executeFullBackfill(daysHistory = 7, force = false)
+                val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
+
                 _uiState.update { state ->
                     if (state is DashboardUiState.Success) {
-                        state.copy(isBackfilling = false)
+                        state.copy(isBackfilling = false, isHistoryBackfilled = isBackfilled)
                     } else {
                         state
                     }
