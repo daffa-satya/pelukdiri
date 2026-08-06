@@ -26,14 +26,17 @@ PELUKDIRI is an Android application designed for research and intervention regar
 
 ### Intervention System
 - **Accessibility Service**: Implemented `AppBlockerAccessibilityService` for real-time app launch detection (`TYPE_WINDOW_STATE_CHANGED`).
+- **Accessibility Status Banner**: Added a dynamic warning card on `MainStatsScreen` that detects if the service is disabled and provides a direct shortcut to system settings.
 - **Defensive Error Handling & Fallbacks**:
   - Wrapped event processing in defensive `try-catch` blocks to resolve OS "malfunctioning" status caused by uncaught DI/Initialization exceptions.
   - Added real-time usage fallback mechanism when Room historical database is empty (fresh installs).
-  - Implemented 10-second debouncing/cooldown guard to prevent rapid activity launch loops.
+  - Implemented 3-second debouncing/cooldown guard to prevent rapid activity launch loops.
+- **Emergency Bypass Feature**: Implemented a 3-minute emergency bypass option on the intervention overlay. Confirmed bypasses are logged with `isBypassed = true` for research analytics.
 - **Risk Engine**: Integrated `CalculateRiskScoreUseCase` evaluating Daily Screen Time ($H$), Launch Frequency ($F$), and Ambient Light ($L$).
 - **Transparent Overlay**: Developed `InterventionActivity` as a `singleInstance` task with `taskAffinity=""` and transparent theme (`Theme.PELUKDIRI.Transparent`), allowing it to float seamlessly over target apps (Instagram, TikTok, YouTube).
 
 ### Research Tooling
+- **Database Migration**: Successfully migrated `intervention_logs` to include `isBypassed` flag (Version 3).
 - **CSV Export Engine**: `CsvExporter` generates a secure, timestamped ZIP package of the entire database.
 - **File Sharing**: Integrated `FileProvider` to allow the research ZIP to be exported via the system share sheet.
 
@@ -46,8 +49,6 @@ PELUKDIRI is an Android application designed for research and intervention regar
 
 ## 4. Pending / TODO
 - [ ] **Cognitive Engine Calibration**: Adjust Level 4 math generator boundaries (currently too simple due to double-digit mental math tricks) and extend engine up to Level 7 (algebraic linear equations / modulo friction).
-- [ ] **Emergency Bypass Option**: Add a 5-minute emergency bypass button with quota penalties to record user "Bypass Rate" for research analytics.
-- [ ] **Accessibility Service Prompt**: Add a dynamic status banner/card on `MainStatsScreen` detecting if Accessibility Service is disabled, providing a direct shortcut to system settings.
 - [ ] **Dynamic Target List**: Move target monitored packages from a hardcoded set to a user-configurable checklist in DataStore/Settings UI.
 - [ ] **Time-Based Active Monitoring**: Transition from `TYPE_WINDOW_STATE_CHANGED` only to periodic active foreground app duration tracking inside `AccessibilityService`.
 - [ ] **Data Retention Worker**: Implement an automated cleanup worker to purge raw sensor logs older than 30 days.

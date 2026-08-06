@@ -64,6 +64,12 @@ object DatabaseModule {
         }
     }
 
+    private val migration2To3 = object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE intervention_logs ADD COLUMN isBypassed INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PelukDiriDatabase {
@@ -71,7 +77,7 @@ object DatabaseModule {
             context,
             PelukDiriDatabase::class.java,
             "pelukdiri_db"
-        ).addMigrations(migration1To2).build()
+        ).addMigrations(migration1To2, migration2To3).build()
     }
 
     @Provides

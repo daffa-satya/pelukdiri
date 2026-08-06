@@ -11,5 +11,6 @@ data class InterventionLogEntity(
     val difficultyLevel: Int,
     val responseTimeMs: Long,
     val isSuccess: Boolean,
+    val isBypassed: Boolean = false,
     val penaltyAppliedMinutes: Int
 )

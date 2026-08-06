@@ -5,12 +5,14 @@ import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.usecase.CalculateRiskScoreUseCase
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -26,6 +28,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     @Inject
     lateinit var adaptiveLimitRepository: AdaptiveLimitRepository
+
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var lastInterventionTimestamp: Long = 0L
@@ -93,10 +98,17 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             return
         }
         
-        // Update timestamp immediately before async launch to prevent race conditions
-        lastInterventionTimestamp = currentTime
-
         serviceScope.launch {
+            // Check for emergency bypass
+            val bypassUntil = userPreferencesRepository.emergencyBypassUntil.first()
+            if (currentTime < bypassUntil) {
+                Log.d("AppBlockerService", "Emergency bypass active until $bypassUntil")
+                return@launch
+            }
+
+            // Update timestamp immediately before async launch to prevent race conditions
+            lastInterventionTimestamp = currentTime
+
             val todayStr = LocalDate.now().toString()
             val adaptiveLimit = adaptiveLimitRepository.getLimitForDate(todayStr)
             

@@ -9,8 +9,8 @@ sealed interface DashboardUiState {
     data object Loading : DashboardUiState
     
     data class Success(
-        val statsText: String,
         val isPermissionGranted: Boolean,
+        val isAccessibilityEnabled: Boolean = true,
         val isBatteryOptimizationIgnored: Boolean = true,
         val isRefreshing: Boolean = false,
         val isBackfilling: Boolean = false,

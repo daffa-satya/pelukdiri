@@ -23,7 +23,7 @@ import com.makhp.pelukdiri.core.database.entity.UsageSensorLogEntity
         DailySummaryEntity::class,
         InterventionNotificationEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class PelukDiriDatabase : RoomDatabase() {

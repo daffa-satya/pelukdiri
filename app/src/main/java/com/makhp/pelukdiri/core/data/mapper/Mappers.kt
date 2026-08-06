@@ -94,6 +94,7 @@ fun InterventionLogEntity.toDomainModel(): InterventionLog {
         difficultyLevel = difficultyLevel,
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,
+        isBypassed = isBypassed,
         penaltyAppliedMinutes = penaltyAppliedMinutes
     )
 }
@@ -106,6 +107,7 @@ fun InterventionLog.toEntity(): InterventionLogEntity {
         difficultyLevel = difficultyLevel,
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,
+        isBypassed = isBypassed,
         penaltyAppliedMinutes = penaltyAppliedMinutes
     )
 }

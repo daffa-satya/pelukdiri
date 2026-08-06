@@ -6,6 +6,7 @@ import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.usecase.GenerateInterventionQuestionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +24,8 @@ import javax.inject.Inject
 class InterventionViewModel @Inject constructor(
     private val generateInterventionQuestionUseCase: GenerateInterventionQuestionUseCase,
     private val interventionLogRepository: InterventionLogRepository,
-    private val adaptiveLimitRepository: AdaptiveLimitRepository
+    private val adaptiveLimitRepository: AdaptiveLimitRepository,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<InterventionUiState>(InterventionUiState.Idle)
@@ -136,6 +138,60 @@ class InterventionViewModel @Inject constructor(
                     responseTimeMs = responseTime
                 )
             }
+        }
+    }
+
+    fun emergencyBypass() {
+        val currentState = _uiState.value
+        val assessment = when (currentState) {
+            is InterventionUiState.QuestionActive -> currentState.assessment
+            is InterventionUiState.MaxPenalized -> currentState.assessment
+            is InterventionUiState.IncorrectAnswer -> currentState.assessment
+            else -> return
+        }
+
+        val responseTime = System.currentTimeMillis() - questionStartTimeMs
+
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    // 1. Log as bypassed
+                    interventionLogRepository.insertLog(
+                        InterventionLog(
+                            timestamp = System.currentTimeMillis(),
+                            riskScore = assessment.riskScore,
+                            difficultyLevel = assessment.level,
+                            responseTimeMs = responseTime,
+                            isSuccess = false,
+                            isBypassed = true,
+                            penaltyAppliedMinutes = assessment.penaltyMinutes
+                        )
+                    )
+
+                    // 2. Apply penalty to limit
+                    val dateString = LocalDate.now().toString()
+                    val existingLimit = adaptiveLimitRepository.getLimitForDate(dateString)
+                    val updatedActualScreenTime = max(
+                        existingLimit?.actualScreenTimeMinutes ?: 0,
+                        currentScreenTimeMinutes.roundToInt()
+                    )
+                    adaptiveLimitRepository.insertOrUpdateLimit(
+                        DailyAdaptiveLimit(
+                            dateString = dateString,
+                            calculatedLimitMinutes = assessment.calculatedLimitMinutes,
+                            actualScreenTimeMinutes = updatedActualScreenTime,
+                            reclaimedTimeMinutes = assessment.penaltyMinutes
+                        )
+                    )
+
+                    // 3. Set bypass guard for 3 minutes
+                    userPreferencesRepository.setEmergencyBypassUntil(
+                        System.currentTimeMillis() + 180_000L
+                    )
+                }
+            }.getOrThrow()
+            
+            _uiState.value = InterventionUiState.Idle // This will trigger onDismiss in Activity
         }
     }
 

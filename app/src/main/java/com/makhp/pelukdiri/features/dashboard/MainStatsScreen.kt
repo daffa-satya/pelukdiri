@@ -5,8 +5,6 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -151,6 +149,18 @@ private fun SuccessContent(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
+        if (!state.isAccessibilityEnabled) {
+            AlertCard(
+                message = "Layanan Aksesibilitas PELUKDIRI belum aktif. Aktifkan agar intervensi dapat berjalan.",
+                actionLabel = "Aktifkan",
+                onAction = {
+                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    context.startActivity(intent)
+                }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         if (!state.isBatteryOptimizationIgnored) {
             AlertCard(
                 message = "Battery optimization is active and may kill background sync. Please whitelist the app for reliable data collection.",
@@ -168,14 +178,9 @@ private fun SuccessContent(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Recent Events (All Available)",
-                style = MaterialTheme.typography.titleMedium
-            )
-            
             Row {
                 OutlinedButton(
                     onClick = onBackfill,
@@ -212,20 +217,6 @@ private fun SuccessContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         QuestionTesterCard()
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-        ) {
-            Text(
-                text = state.statsText,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
     }
 }
 

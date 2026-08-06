@@ -27,6 +27,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     private object PreferencesKeys {
         val IS_HISTORY_BACKFILLED = booleanPreferencesKey("is_history_backfilled")
         val LAST_SYNCED_TIMESTAMP = longPreferencesKey("last_synced_timestamp")
+        val EMERGENCY_BYPASS_UNTIL = longPreferencesKey("emergency_bypass_until")
     }
 
     override val isHistoryBackfilled: Flow<Boolean> = context.dataStore.data
@@ -53,6 +54,18 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.LAST_SYNCED_TIMESTAMP] ?: 0L
         }
 
+    override val emergencyBypassUntil: Flow<Long> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.EMERGENCY_BYPASS_UNTIL] ?: 0L
+        }
+
     override suspend fun setHistoryBackfilled(isBackfilled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_HISTORY_BACKFILLED] = isBackfilled
@@ -62,6 +75,12 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override suspend fun setLastSyncedTimestamp(timestamp: Long) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.LAST_SYNCED_TIMESTAMP] = timestamp
+        }
+    }
+
+    override suspend fun setEmergencyBypassUntil(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EMERGENCY_BYPASS_UNTIL] = timestamp
         }
     }
 }

@@ -4,10 +4,12 @@ import android.content.Context
 import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.makhp.pelukdiri.collector.AppBlockerAccessibilityService
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.database.export.CsvExporter
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.util.AccessibilityUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -42,17 +44,13 @@ class DashboardViewModel @Inject constructor(
             usageRepository.syncRecentEventsOnly()
 
             val isGranted = appUsageCollector.isPermissionGranted()
+            val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
             val isOptimized = isBatteryOptimizationIgnored()
             val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
             
-            val statsText = if (isGranted) {
-                appUsageCollector.fetchRecentEventsPlainText(168) // 168 hours = 7 days
-            } else {
-                "Permission is required to view usage statistics."
-            }
             _uiState.value = DashboardUiState.Success(
-                statsText = statsText, 
                 isPermissionGranted = isGranted,
+                isAccessibilityEnabled = isAccessibilityEnabled,
                 isBatteryOptimizationIgnored = isOptimized,
                 isHistoryBackfilled = isBackfilled
             )
@@ -74,17 +72,13 @@ class DashboardViewModel @Inject constructor(
             try {
                 usageRepository.refreshUsageData()
                 val isGranted = appUsageCollector.isPermissionGranted()
+                val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
                 val isOptimized = isBatteryOptimizationIgnored()
                 val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
 
-                val statsText = if (isGranted) {
-                    appUsageCollector.fetchRecentEventsPlainText(168)
-                } else {
-                    "Permission is required to view usage statistics."
-                }
                 _uiState.value = DashboardUiState.Success(
-                    statsText = statsText, 
                     isPermissionGranted = isGranted,
+                    isAccessibilityEnabled = isAccessibilityEnabled,
                     isBatteryOptimizationIgnored = isOptimized,
                     isHistoryBackfilled = isBackfilled,
                     isRefreshing = false
@@ -98,19 +92,15 @@ class DashboardViewModel @Inject constructor(
     fun updatePermissionStatus() {
         viewModelScope.launch(Dispatchers.IO) {
             val isGranted = appUsageCollector.isPermissionGranted()
+            val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
             val isOptimized = isBatteryOptimizationIgnored()
             val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
 
             _uiState.update { state ->
                 if (state is DashboardUiState.Success) {
-                    val statsText = if (isGranted) {
-                        appUsageCollector.fetchRecentEventsPlainText(168)
-                    } else {
-                        "Permission is required to view usage statistics."
-                    }
                     state.copy(
-                        statsText = statsText, 
                         isPermissionGranted = isGranted,
+                        isAccessibilityEnabled = isAccessibilityEnabled,
                         isBatteryOptimizationIgnored = isOptimized,
                         isHistoryBackfilled = isBackfilled
                     )

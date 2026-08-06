@@ -3,20 +3,27 @@ package com.makhp.pelukdiri.features.intervention
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -35,17 +42,43 @@ fun InterventionOverlayScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val hapticFeedback = LocalHapticFeedback.current
+    var showBypassDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
         if (uiState is InterventionUiState.IncorrectAnswer) {
             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
         }
+        if (uiState is InterventionUiState.Idle && !showBypassDialog) {
+            onDismiss()
+        }
+    }
+
+    if (showBypassDialog) {
+        AlertDialog(
+            onDismissRequest = { showBypassDialog = false },
+            title = { Text("Konfirmasi Darurat") },
+            text = { Text("Bypass akan memberikan akses selama 3 menit, namun tindakan ini akan mencatat penalti pada limit harian Anda. Lanjutkan?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBypassDialog = false
+                    viewModel.emergencyBypass()
+                }) {
+                    Text("Lanjutkan")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBypassDialog = false }) {
+                    Text("Batal")
+                }
+            }
+        )
     }
 
     InterventionOverlayContent(
         state = uiState,
         onAnswerChanged = viewModel::onAnswerChanged,
         onSubmitAnswer = viewModel::submitAnswer,
+        onBypass = { showBypassDialog = true },
         onStartSample = {
             viewModel.startIntervention(
                 screenTimeMinutes = 95.0,
@@ -65,6 +98,7 @@ fun InterventionOverlayContent(
     state: InterventionUiState,
     onAnswerChanged: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
+    onBypass: () -> Unit,
     onStartSample: () -> Unit,
     onReset: () -> Unit
 ) {
@@ -108,7 +142,8 @@ fun InterventionOverlayContent(
                         ActiveQuestionContent(
                             state = state,
                             onAnswerChanged = onAnswerChanged,
-                            onSubmitAnswer = onSubmitAnswer
+                            onSubmitAnswer = onSubmitAnswer,
+                            onBypass = onBypass
                         )
                     }
 
@@ -126,7 +161,8 @@ fun InterventionOverlayContent(
                                 answerInput = state.answerInput
                             ),
                             onAnswerChanged = onAnswerChanged,
-                            onSubmitAnswer = onSubmitAnswer
+                            onSubmitAnswer = onSubmitAnswer,
+                            onBypass = onBypass
                         )
                     }
 
@@ -170,7 +206,8 @@ fun InterventionOverlayContent(
 private fun ActiveQuestionContent(
     state: InterventionUiState.QuestionActive,
     onAnswerChanged: (String) -> Unit,
-    onSubmitAnswer: () -> Unit
+    onSubmitAnswer: () -> Unit,
+    onBypass: () -> Unit
 ) {
     Text(
         text = "Solve this challenge",
@@ -195,11 +232,21 @@ private fun ActiveQuestionContent(
         label = { Text("Your answer") }
     )
     Spacer(modifier = Modifier.height(12.dp))
-    Button(
-        onClick = onSubmitAnswer,
-        enabled = state.answerInput.isNotBlank()
-    ) {
-        Text("Submit")
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            onClick = onSubmitAnswer,
+            enabled = state.answerInput.isNotBlank(),
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("Submit")
+        }
+        
+        OutlinedButton(
+            onClick = onBypass,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text("Darurat (3m)")
+        }
     }
 }
 
@@ -229,6 +276,7 @@ private fun InterventionOverlayContentPreview() {
             ),
             onAnswerChanged = {},
             onSubmitAnswer = {},
+            onBypass = {},
             onStartSample = {},
             onReset = {}
         )
