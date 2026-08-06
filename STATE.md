@@ -33,7 +33,9 @@ PELUKDIRI is an Android application designed for research and intervention regar
   - Implemented 3-second debouncing/cooldown guard to prevent rapid activity launch loops.
 - **Emergency Bypass Feature**: Implemented a 3-minute emergency bypass option on the intervention overlay. Confirmed bypasses are logged with `isBypassed = true` for research analytics.
 - **Risk Engine**: Integrated `CalculateRiskScoreUseCase` evaluating Daily Screen Time ($H$), Launch Frequency ($F$), and Ambient Light ($L$).
+- **Cognitive Engine Calibration**: Calibrated Level 4 math generator boundaries ($A \in [14, 35], B \in [13, 28]$) and added asymmetric mixed operations to ensure proper cognitive friction.
 - **Transparent Overlay**: Developed `InterventionActivity` as a `singleInstance` task with `taskAffinity=""` and transparent theme (`Theme.PELUKDIRI.Transparent`), allowing it to float seamlessly over target apps (Instagram, TikTok, YouTube).
+- **Dynamic Target Apps**: Implemented a user-configurable target app selector in the Dashboard UI, persisting choices via DataStore.
 
 ### Research Tooling
 - **Database Migration**: Successfully migrated `intervention_logs` to include `isBypassed` flag (Version 3).
@@ -48,8 +50,7 @@ PELUKDIRI is an Android application designed for research and intervention regar
   - Intervention: Cognitive challenge overlay hosting adaptive math tasks.
 
 ## 4. Pending / TODO
-- [ ] **Cognitive Engine Calibration**: Adjust Level 4 math generator boundaries (currently too simple due to double-digit mental math tricks) and extend engine up to Level 7 (algebraic linear equations / modulo friction).
-- [ ] **Dynamic Target List**: Move target monitored packages from a hardcoded set to a user-configurable checklist in DataStore/Settings UI.
+- [ ] **Extended Cognitive Friction**: Extend the cognitive engine up to Level 7 (algebraic linear equations / modulo friction).
 - [ ] **Time-Based Active Monitoring**: Transition from `TYPE_WINDOW_STATE_CHANGED` only to periodic active foreground app duration tracking inside `AccessibilityService`.
 - [ ] **Data Retention Worker**: Implement an automated cleanup worker to purge raw sensor logs older than 30 days.
 - [ ] **Enhanced Analytics**: Add visual longitudinal graphs (Compose Charts) for daily risk score trends and usage habits.

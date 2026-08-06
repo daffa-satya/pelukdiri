@@ -12,6 +12,7 @@ sealed interface DashboardUiState {
         val isPermissionGranted: Boolean,
         val isAccessibilityEnabled: Boolean = true,
         val isBatteryOptimizationIgnored: Boolean = true,
+        val monitoredPackages: Set<String> = emptySet(),
         val isRefreshing: Boolean = false,
         val isBackfilling: Boolean = false,
         val isHistoryBackfilled: Boolean = false,

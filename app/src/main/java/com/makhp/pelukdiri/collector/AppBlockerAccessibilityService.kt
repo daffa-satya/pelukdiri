@@ -36,14 +36,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private var lastInterventionTimestamp: Long = 0L
     private val COOLDOWN_MS = 3_000L // Reduced to 3 seconds for testing
 
-    private val targetApps = setOf(
-        "com.instagram.android",
-        "com.zhiliaoapp.musically",
-        "com.ss.android.ugc.trill",
-        "com.google.android.youtube",
-        "com.twitter.android",
-        "com.facebook.katana"
-    )
+    private var currentMonitoredPackages = emptySet<String>()
 
     private val systemApps = setOf(
         "com.makhp.pelukdiri",
@@ -59,6 +52,13 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         Log.d("AppBlockerService", "Service Created - Hilt Injection Success")
+        
+        serviceScope.launch {
+            userPreferencesRepository.monitoredPackages.collect {
+                currentMonitoredPackages = it
+                Log.d("AppBlockerService", "Updated Monitored Packages: $it")
+            }
+        }
     }
 
     override fun onServiceConnected() {
@@ -82,7 +82,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                 if (systemApps.contains(packageName)) return
                 
                 // 2. ONLY evaluate target apps (Instagram/YouTube/etc)
-                if (targetApps.contains(packageName)) {
+                if (currentMonitoredPackages.contains(packageName)) {
                     evaluateIntervention(packageName)
                 }
             }

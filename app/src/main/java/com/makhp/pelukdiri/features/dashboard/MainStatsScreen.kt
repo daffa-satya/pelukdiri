@@ -113,7 +113,8 @@ fun MainStatsScreen(
                             context.startActivity(intent)
                         },
                         onRefresh = { viewModel.forceRefresh() },
-                        onBackfill = { viewModel.backfillHistory() }
+                        onBackfill = { viewModel.backfillHistory() },
+                        onToggleApp = viewModel::toggleTargetApp
                     )
                 }
                 is DashboardUiState.Error -> {
@@ -132,7 +133,8 @@ private fun SuccessContent(
     state: DashboardUiState.Success,
     onGrantPermission: () -> Unit,
     onRefresh: () -> Unit,
-    onBackfill: () -> Unit
+    onBackfill: () -> Unit,
+    onToggleApp: (String) -> Unit
 ) {
     val context = LocalContext.current
     Column(
@@ -216,7 +218,57 @@ private fun SuccessContent(
         
         Spacer(modifier = Modifier.height(8.dp))
 
+        TargetAppsCard(
+            monitoredPackages = state.monitoredPackages,
+            onToggleApp = onToggleApp
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         QuestionTesterCard()
+    }
+}
+
+@Composable
+fun TargetAppsCard(
+    monitoredPackages: Set<String>,
+    onToggleApp: (String) -> Unit
+) {
+    val apps = listOf(
+        "com.instagram.android" to "Instagram",
+        "com.zhiliaoapp.musically" to "TikTok",
+        "com.google.android.youtube" to "YouTube",
+        "com.twitter.android" to "Twitter / X",
+        "com.facebook.katana" to "Facebook"
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "🎯 Monitored Target Apps",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            apps.forEach { (pkg, name) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = name, style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = monitoredPackages.contains(pkg),
+                        onCheckedChange = { onToggleApp(pkg) }
+                    )
+                }
+            }
+        }
     }
 }
 

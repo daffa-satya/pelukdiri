@@ -71,23 +71,36 @@ class CognitiveQuestionGenerator @Inject constructor() {
     }
 
     private fun generateLevelFour(): MathQuestion {
-        return if (random.nextBoolean()) {
-            val first = randomInRange(11, 25)
-            val second = randomInRange(11, 20)
-            MathQuestion(
-                expression = "$first * $second",
-                correctAnswer = first * second,
-                level = 4
-            )
-        } else {
-            val divisor = randomInRange(6, 12)
-            val quotient = randomInRange(12, 30)
-            val dividend = divisor * quotient
-            MathQuestion(
-                expression = "$dividend / $divisor",
-                correctAnswer = quotient,
-                level = 4
-            )
+        return when (random.nextInt(3)) {
+            0 -> { // multiplication
+                val first = randomInRange(14, 35)
+                val second = randomInRange(13, 28)
+                MathQuestion(
+                    expression = "$first * $second",
+                    correctAnswer = first * second,
+                    level = 4
+                )
+            }
+            1 -> { // division
+                val divisor = randomInRange(8, 18)
+                val quotient = randomInRange(16, 38)
+                val dividend = divisor * quotient
+                MathQuestion(
+                    expression = "$dividend / $divisor",
+                    correctAnswer = quotient,
+                    level = 4
+                )
+            }
+            else -> { // mixed
+                val a = randomInRange(150, 450)
+                val b = randomInRange(150, 450)
+                val c = randomInRange(50, 150)
+                MathQuestion(
+                    expression = "$a + $b - $c",
+                    correctAnswer = a + b - c,
+                    level = 4
+                )
+            }
         }
     }
 

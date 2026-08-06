@@ -47,12 +47,14 @@ class DashboardViewModel @Inject constructor(
             val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
             val isOptimized = isBatteryOptimizationIgnored()
             val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
+            val monitored = userPreferencesRepository.monitoredPackages.first()
             
             _uiState.value = DashboardUiState.Success(
                 isPermissionGranted = isGranted,
                 isAccessibilityEnabled = isAccessibilityEnabled,
                 isBatteryOptimizationIgnored = isOptimized,
-                isHistoryBackfilled = isBackfilled
+                isHistoryBackfilled = isBackfilled,
+                monitoredPackages = monitored
             )
         }
     }
@@ -95,6 +97,7 @@ class DashboardViewModel @Inject constructor(
             val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
             val isOptimized = isBatteryOptimizationIgnored()
             val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
+            val monitored = userPreferencesRepository.monitoredPackages.first()
 
             _uiState.update { state ->
                 if (state is DashboardUiState.Success) {
@@ -102,12 +105,20 @@ class DashboardViewModel @Inject constructor(
                         isPermissionGranted = isGranted,
                         isAccessibilityEnabled = isAccessibilityEnabled,
                         isBatteryOptimizationIgnored = isOptimized,
-                        isHistoryBackfilled = isBackfilled
+                        isHistoryBackfilled = isBackfilled,
+                        monitoredPackages = monitored
                     )
                 } else {
                     state
                 }
             }
+        }
+    }
+
+    fun toggleTargetApp(packageName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            userPreferencesRepository.toggleMonitoredPackage(packageName)
+            updatePermissionStatus()
         }
     }
 
