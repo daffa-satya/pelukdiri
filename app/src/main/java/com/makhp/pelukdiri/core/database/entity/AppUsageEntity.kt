@@ -1,9 +1,13 @@
-package com.makhp.pelukdiri.core.data.database
+package com.makhp.pelukdiri.core.database.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "app_usage")
+@Entity(
+    tableName = "app_usage",
+    indices = [Index(value = ["packageName", "date"], unique = true)]
+)
 data class AppUsageEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val packageName: String,

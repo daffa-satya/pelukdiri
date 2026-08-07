@@ -1,6 +1,8 @@
-package com.makhp.pelukdiri.core.data.database
+package com.makhp.pelukdiri.core.database.dao
 
 import androidx.room.*
+import com.makhp.pelukdiri.core.database.entity.AppUsageEntity
+import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -19,4 +21,16 @@ interface UsageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDailySummary(summary: DailySummaryEntity)
+
+    @Transaction
+    suspend fun saveUsageDataWithSummary(usage: List<AppUsageEntity>, summary: DailySummaryEntity) {
+        insertAppUsage(usage)
+        insertDailySummary(summary)
+    }
+
+    @Query("SELECT * FROM app_usage ORDER BY date DESC")
+    suspend fun getAllAppUsageList(): List<AppUsageEntity>
+
+    @Query("SELECT * FROM daily_summary ORDER BY date DESC")
+    suspend fun getAllDailySummariesList(): List<DailySummaryEntity>
 }
