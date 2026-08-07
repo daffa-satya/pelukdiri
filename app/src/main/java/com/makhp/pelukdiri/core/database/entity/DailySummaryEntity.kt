@@ -1,4 +1,4 @@
-package com.makhp.pelukdiri.core.data.database
+package com.makhp.pelukdiri.core.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

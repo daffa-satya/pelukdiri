@@ -10,4 +10,6 @@ interface UsageRepository {
     fun getDailySummary(date: LocalDate): Flow<DailySummary?>
     fun getUsageHistory(startDate: LocalDate, endDate: LocalDate): Flow<List<DailySummary>>
     suspend fun refreshUsageData()
+    suspend fun syncRecentEventsOnly()
+    suspend fun executeFullBackfill(daysHistory: Int = 7, force: Boolean = false)
 }
