@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlin.math.max
 import kotlin.math.roundToInt
 import javax.inject.Inject
@@ -43,20 +45,16 @@ class InterventionViewModel @Inject constructor(
     ) {
         _uiState.value = InterventionUiState.Loading
         currentScreenTimeMinutes = screenTimeMinutes
-
-        val (assessment, question) = generateInterventionQuestionUseCase(
-            screenTimeMinutes = screenTimeMinutes,
-            launchFrequency = launchFrequency.toDouble(),
-            ambientLightLux = ambientLightLux,
-            baselineLimitMinutes = baselineLimitMinutes,
-            frequencyBaseline = frequencyBaseline
-        )
-
-        questionStartTimeMs = System.currentTimeMillis()
-        _uiState.value = if (assessment.calculatedLimitMinutes <= 15) {
-            InterventionUiState.MaxPenalized(question = question, assessment = assessment)
-        } else {
-            InterventionUiState.QuestionActive(question = question, assessment = assessment)
+        
+        viewModelScope.launch {
+            val (assessment, question) = generateInterventionQuestionUseCase()
+            val remaining = getRemainingBypasses()
+            questionStartTimeMs = System.currentTimeMillis()
+            _uiState.value = InterventionUiState.QuestionActive(
+                question = question,
+                assessment = assessment,
+                remainingBypasses = remaining
+            )
         }
     }
 
@@ -135,7 +133,8 @@ class InterventionViewModel @Inject constructor(
                     question = question,
                     assessment = assessment,
                     enteredAnswer = enteredAnswer.toString(),
-                    responseTimeMs = responseTime
+                    responseTimeMs = responseTime,
+                    remainingBypasses = getRemainingBypasses()
                 )
             }
         }
@@ -153,6 +152,17 @@ class InterventionViewModel @Inject constructor(
         val responseTime = System.currentTimeMillis() - questionStartTimeMs
 
         viewModelScope.launch {
+            val remaining = getRemainingBypasses()
+            if (remaining <= 0) {
+                _uiState.value = when (val state = _uiState.value) {
+                    is InterventionUiState.QuestionActive -> state.copy(bypassDenied = true, remainingBypasses = 0)
+                    is InterventionUiState.MaxPenalized -> state.copy(bypassDenied = true, remainingBypasses = 0)
+                    is InterventionUiState.IncorrectAnswer -> state.copy(remainingBypasses = 0)
+                    else -> state
+                }
+                return@launch
+            }
+
             runCatching {
                 withContext(Dispatchers.IO) {
                     // 1. Log as bypassed
@@ -168,23 +178,7 @@ class InterventionViewModel @Inject constructor(
                         )
                     )
 
-                    // 2. Apply penalty to limit
-                    val dateString = LocalDate.now().toString()
-                    val existingLimit = adaptiveLimitRepository.getLimitForDate(dateString)
-                    val updatedActualScreenTime = max(
-                        existingLimit?.actualScreenTimeMinutes ?: 0,
-                        currentScreenTimeMinutes.roundToInt()
-                    )
-                    adaptiveLimitRepository.insertOrUpdateLimit(
-                        DailyAdaptiveLimit(
-                            dateString = dateString,
-                            calculatedLimitMinutes = assessment.calculatedLimitMinutes,
-                            actualScreenTimeMinutes = updatedActualScreenTime,
-                            reclaimedTimeMinutes = assessment.penaltyMinutes
-                        )
-                    )
-
-                    // 3. Set bypass guard for 3 minutes
+                    // 2. Set bypass guard for 3 minutes
                     userPreferencesRepository.setEmergencyBypassUntil(
                         System.currentTimeMillis() + 180_000L
                     )
@@ -193,6 +187,14 @@ class InterventionViewModel @Inject constructor(
             
             _uiState.value = InterventionUiState.Idle // This will trigger onDismiss in Activity
         }
+    }
+
+    private suspend fun getRemainingBypasses(): Int {
+        val now = ZonedDateTime.now(ZoneId.systemDefault())
+        val startOfDay = now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endOfDay = now.toLocalDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val count = interventionLogRepository.getBypassCountForDay(startOfDay, endOfDay)
+        return maxOf(0, 5 - count)
     }
 
     fun resetToIdle() {

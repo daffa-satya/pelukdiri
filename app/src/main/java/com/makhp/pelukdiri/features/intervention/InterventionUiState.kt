@@ -12,7 +12,9 @@ sealed interface InterventionUiState {
     data class QuestionActive(
         val question: MathQuestion,
         val assessment: RiskAssessmentResult,
-        val answerInput: String = ""
+        val answerInput: String = "",
+        val remainingBypasses: Int = 5,
+        val bypassDenied: Boolean = false
     ) : InterventionUiState
 
     data class CorrectAnswer(
@@ -25,12 +27,15 @@ sealed interface InterventionUiState {
         val question: MathQuestion,
         val assessment: RiskAssessmentResult,
         val enteredAnswer: String,
-        val responseTimeMs: Long
+        val responseTimeMs: Long,
+        val remainingBypasses: Int = 5
     ) : InterventionUiState
 
     data class MaxPenalized(
         val question: MathQuestion,
         val assessment: RiskAssessmentResult,
-        val answerInput: String = ""
+        val answerInput: String = "",
+        val remainingBypasses: Int = 5,
+        val bypassDenied: Boolean = false
     ) : InterventionUiState
 }

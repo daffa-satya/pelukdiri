@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
@@ -13,12 +14,17 @@ import androidx.work.WorkerParameters
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.domain.model.UsageSensorLog
+import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageSensorRepository
+import com.makhp.pelukdiri.core.domain.usecase.InitializeDailyAdaptiveLimitUseCase
+import com.makhp.pelukdiri.core.util.NotificationHelper
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import java.util.Calendar
 
 @HiltWorker
@@ -27,7 +33,10 @@ class UsageSyncWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val usageRepository: UsageRepository,
     private val usageSensorRepository: UsageSensorRepository,
-    private val appUsageCollector: AppUsageCollector
+    private val appUsageCollector: AppUsageCollector,
+    private val adaptiveLimitRepository: AdaptiveLimitRepository,
+    private val initializeDailyAdaptiveLimitUseCase: InitializeDailyAdaptiveLimitUseCase,
+    private val notificationHelper: NotificationHelper
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -71,6 +80,19 @@ class UsageSyncWorker @AssistedInject constructor(
                 usageSensorRepository.insertAllLogs(sensorLogs)
             }
 
+            // 4. Initialize today's adaptive limit if missing (Idempotent)
+            initializeDailyAdaptiveLimitUseCase()
+
+            // 5. Update Daily Usage Notification
+            val today = LocalDate.now()
+            val summary = usageRepository.getDailySummary(today).firstOrNull()
+            val limit = adaptiveLimitRepository.getLimitForDate(today.toString())
+
+            notificationHelper.updateDailyUsageNotification(
+                totalUsageMillis = summary?.totalScreenTimeMillis ?: 0L,
+                adaptiveLimitMinutes = limit?.calculatedLimitMinutes
+            )
+
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -101,6 +123,10 @@ class UsageSyncWorker @AssistedInject constructor(
             .setOngoing(true)
             .build()
 
-        return ForegroundInfo(notificationId, notification)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(notificationId, notification)
+        }
     }
 }

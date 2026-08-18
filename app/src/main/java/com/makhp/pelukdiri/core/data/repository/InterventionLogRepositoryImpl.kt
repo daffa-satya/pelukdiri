@@ -30,4 +30,16 @@ class InterventionLogRepositoryImpl @Inject constructor(
     override suspend fun getAverageResponseTime(difficulty: Int): Double? {
         return dao.getAverageResponseTime(difficulty)
     }
+
+    override suspend fun getRecentValidSuccessfulLogsByDifficulty(difficulty: Int, limit: Int): List<InterventionLog> {
+        return dao.getRecentValidSuccessfulLogsByDifficulty(difficulty, limit).map { it.toDomainModel() }
+    }
+
+    override suspend fun getLatestLog(): InterventionLog? {
+        return dao.getLatestLog()?.toDomainModel()
+    }
+
+    override suspend fun getBypassCountForDay(startOfDay: Long, endOfDay: Long): Int {
+        return dao.getBypassCountInInterval(startOfDay, endOfDay)
+    }
 }

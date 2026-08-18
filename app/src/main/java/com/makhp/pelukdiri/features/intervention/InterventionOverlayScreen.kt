@@ -28,11 +28,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
+import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
 
 @Composable
@@ -74,22 +74,32 @@ fun InterventionOverlayScreen(
         )
     }
 
-    InterventionOverlayContent(
-        state = uiState,
-        onAnswerChanged = viewModel::onAnswerChanged,
-        onSubmitAnswer = viewModel::submitAnswer,
-        onBypass = { showBypassDialog = true },
-        onStartSample = {
+    val onAnswerChanged = remember(viewModel) { { input: String -> viewModel.onAnswerChanged(input) } }
+    val onSubmitAnswer = remember(viewModel) { { viewModel.submitAnswer() } }
+    val onBypassClick = remember { { showBypassDialog = true } }
+    val onStartSample = remember(viewModel) {
+        {
             viewModel.startIntervention(
                 screenTimeMinutes = 95.0,
                 launchFrequency = 14,
                 ambientLightLux = 12.5f
             )
-        },
-        onReset = {
+        }
+    }
+    val onReset = remember(viewModel, onDismiss) {
+        {
             viewModel.resetToIdle()
             onDismiss()
         }
+    }
+
+    InterventionOverlayContent(
+        state = uiState,
+        onAnswerChanged = onAnswerChanged,
+        onSubmitAnswer = onSubmitAnswer,
+        onBypass = onBypassClick,
+        onStartSample = onStartSample,
+        onReset = onReset
     )
 }
 
@@ -111,21 +121,21 @@ fun InterventionOverlayContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(Dimens.spaceMedium),
         verticalArrangement = Arrangement.Center
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = cardColor)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(Dimens.spaceMedium)) {
                 when (state) {
                     InterventionUiState.Idle -> {
                         Text(
                             text = "Ready for adaptive intervention.",
                             style = MaterialTheme.typography.titleMedium
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Dimens.spaceMedium))
                         Button(onClick = onStartSample) {
                             Text("Start Challenge")
                         }
@@ -153,12 +163,14 @@ fun InterventionOverlayContent(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.error
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.spaceSmall))
                         ActiveQuestionContent(
                             state = InterventionUiState.QuestionActive(
                                 question = state.question,
                                 assessment = state.assessment,
-                                answerInput = state.answerInput
+                                answerInput = state.answerInput,
+                                remainingBypasses = state.remainingBypasses,
+                                bypassDenied = state.bypassDenied
                             ),
                             onAnswerChanged = onAnswerChanged,
                             onSubmitAnswer = onSubmitAnswer,
@@ -171,11 +183,11 @@ fun InterventionOverlayContent(
                             text = "Correct answer.",
                             style = MaterialTheme.typography.titleMedium
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.spaceSmall))
                         Text("Question: ${state.question.expression.toDisplayExpression()}")
                         Text("Time: ${state.responseTimeMs} ms")
                         Text("Level: ${state.assessment.level}")
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Dimens.spaceMedium))
                         Button(onClick = onReset) {
                             Text("Done")
                         }
@@ -187,11 +199,11 @@ fun InterventionOverlayContent(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.spaceSmall))
                         Text("Question: ${state.question.expression.toDisplayExpression()}")
                         Text("Your answer: ${state.enteredAnswer}")
                         Text("Correct answer: ${state.question.correctAnswer}")
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Dimens.spaceMedium))
                         Button(onClick = onReset) {
                             Text("Dismiss")
                         }
@@ -209,21 +221,44 @@ private fun ActiveQuestionContent(
     onSubmitAnswer: () -> Unit,
     onBypass: () -> Unit
 ) {
+    val displayExpr = remember(state.question.expression) {
+        state.question.expression.toDisplayExpression()
+    }
+    val riskScoreTxt = remember(state.assessment.riskScore) {
+        "Risk score: ${"%.2f".format(state.assessment.riskScore)}"
+    }
+
     Text(
         text = "Solve this challenge",
         style = MaterialTheme.typography.titleMedium
     )
-    Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(Dimens.spaceSmall))
     Text(
-        text = "${state.question.expression.toDisplayExpression()} = ?",
+        text = "$displayExpr = ?",
         style = MaterialTheme.typography.headlineSmall
     )
-    Spacer(modifier = Modifier.height(12.dp))
-    Text("Risk score: ${"%.2f".format(state.assessment.riskScore)}")
+    Spacer(modifier = Modifier.height(Dimens.spaceSmall + Dimens.spaceExtraSmall))
+    Text(riskScoreTxt)
     Text("Difficulty: Level ${state.assessment.level}")
     Text("Penalty: ${state.assessment.penaltyMinutes} minutes")
     Text("Calculated limit: ${state.assessment.calculatedLimitMinutes} minutes")
-    Spacer(modifier = Modifier.height(12.dp))
+    
+    val bypassColor = if (state.remainingBypasses == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    Text(
+        text = "Sisa Darurat Hari Ini: ${state.remainingBypasses}",
+        style = MaterialTheme.typography.bodySmall,
+        color = bypassColor
+    )
+    
+    if (state.bypassDenied) {
+        Text(
+            text = "Kuota darurat hari ini telah habis (Maks 5).",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+
+    Spacer(modifier = Modifier.height(Dimens.spaceSmall + Dimens.spaceExtraSmall))
     OutlinedTextField(
         value = state.answerInput,
         onValueChange = onAnswerChanged,
@@ -231,8 +266,8 @@ private fun ActiveQuestionContent(
         modifier = Modifier.fillMaxWidth(),
         label = { Text("Your answer") }
     )
-    Spacer(modifier = Modifier.height(12.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Spacer(modifier = Modifier.height(Dimens.spaceSmall + Dimens.spaceExtraSmall))
+    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.spaceSmall)) {
         Button(
             onClick = onSubmitAnswer,
             enabled = state.answerInput.isNotBlank(),
@@ -243,7 +278,8 @@ private fun ActiveQuestionContent(
         
         OutlinedButton(
             onClick = onBypass,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            enabled = state.remainingBypasses > 0
         ) {
             Text("Darurat (3m)")
         }
