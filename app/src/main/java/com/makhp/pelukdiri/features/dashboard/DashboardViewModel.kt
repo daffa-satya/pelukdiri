@@ -7,11 +7,14 @@ import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.collector.AppBlockerAccessibilityService
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.database.export.CsvExporter
+import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.util.AccessibilityUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,11 +23,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
+    private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val appUsageCollector: AppUsageCollector,
     private val csvExporter: CsvExporter,
     private val userPreferencesRepository: UserPreferencesRepository,
@@ -49,7 +54,7 @@ class DashboardViewModel @Inject constructor(
             val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
             val monitored = userPreferencesRepository.monitoredPackages.first()
             
-            _uiState.value = DashboardUiState.Success(
+            _uiState.value = dashboardState(
                 isPermissionGranted = isGranted,
                 isAccessibilityEnabled = isAccessibilityEnabled,
                 isBatteryOptimizationIgnored = isOptimized,
@@ -78,17 +83,67 @@ class DashboardViewModel @Inject constructor(
                 val isOptimized = isBatteryOptimizationIgnored()
                 val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
 
-                _uiState.value = DashboardUiState.Success(
+                val monitored = userPreferencesRepository.monitoredPackages.first()
+                _uiState.value = dashboardState(
                     isPermissionGranted = isGranted,
                     isAccessibilityEnabled = isAccessibilityEnabled,
                     isBatteryOptimizationIgnored = isOptimized,
                     isHistoryBackfilled = isBackfilled,
+                    monitoredPackages = monitored,
                     isRefreshing = false
                 )
             } catch (e: Exception) {
                 _uiState.value = DashboardUiState.Error(e.message ?: "Failed to refresh data")
             }
         }
+    }
+
+    private suspend fun dashboardState(
+        isPermissionGranted: Boolean,
+        isAccessibilityEnabled: Boolean,
+        isBatteryOptimizationIgnored: Boolean,
+        isHistoryBackfilled: Boolean,
+        monitoredPackages: Set<String>,
+        isRefreshing: Boolean = false
+    ): DashboardUiState.Success {
+        val today = LocalDate.now()
+        val yesterday = today.minusDays(1)
+
+        val todayApps = usageRepository.getDailyUsage(today).first()
+            .sortedByDescending { it.usageDurationMillis }
+        val yesterdayApps = usageRepository.getDailyUsage(yesterday).first()
+            .associateBy { it.packageName }
+
+        // Enrich today's apps with yesterday's comparison data for the UI
+        val enrichedTodayApps = todayApps.map { app ->
+            val yesterdayApp = yesterdayApps[app.packageName]
+            UiAppUsage(
+                domain = app,
+                usageDurationYesterdayMillis = yesterdayApp?.usageDurationMillis,
+                // Removed mock openings and peak time. 
+                // These should come from the repository when implemented.
+                openingsToday = null,
+                openingsYesterday = null,
+                peakTimeToday = null,
+                peakTimeYesterday = null,
+                interventionsToday = null,
+                interventionsLimit = 10
+            )
+        }
+
+        return DashboardUiState.Success(
+            isPermissionGranted = isPermissionGranted,
+            isAccessibilityEnabled = isAccessibilityEnabled,
+            isBatteryOptimizationIgnored = isBatteryOptimizationIgnored,
+            isHistoryBackfilled = isHistoryBackfilled,
+            monitoredPackages = monitoredPackages.toImmutableSet(),
+            todaySummary = usageRepository.getDailySummary(today).first(),
+            todayAdaptiveLimit = adaptiveLimitRepository.getLimitForDate(today.toString())?.calculatedLimitMinutes,
+            weeklySummaries = usageRepository.getUsageHistory(today.minusDays(6), today).first().toImmutableList(),
+            topApps = enrichedTodayApps.toImmutableList(),
+            yesterdayTopApps = yesterdayApps.values.map { UiAppUsage(it) }.toImmutableList(),
+            isRefreshing = isRefreshing
+        )
     }
 
     fun updatePermissionStatus() {
@@ -106,7 +161,7 @@ class DashboardViewModel @Inject constructor(
                         isAccessibilityEnabled = isAccessibilityEnabled,
                         isBatteryOptimizationIgnored = isOptimized,
                         isHistoryBackfilled = isBackfilled,
-                        monitoredPackages = monitored
+                        monitoredPackages = monitored.toImmutableSet()
                     )
                 } else {
                     state

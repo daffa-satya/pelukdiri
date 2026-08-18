@@ -19,7 +19,7 @@ class InterventionActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        android.util.Log.d("InterventionActivity", ">>> onCreate reached")
+        android.util.Log.d("InterventionActivity", ">>> onCreate reached in InterventionActivity")
 
         // Use standard background transparency
         window.setBackgroundDrawableResource(android.R.color.transparent)
@@ -30,18 +30,20 @@ class InterventionActivity : ComponentActivity() {
             setTurnScreenOn(true)
         }
 
-        val screenTime = intent.getDoubleExtra("EXTRA_SCREEN_TIME", 0.0)
+        val screenTime = intent.getDoubleExtra("EXTRA_SCREEN_TIME", -1.0)
         val launchFreq = intent.getDoubleExtra("EXTRA_LAUNCH_FREQ", 0.0)
         val ambientLux = intent.getFloatExtra("EXTRA_AMBIENT_LUX", 0f)
         val baselineLimit = intent.getDoubleExtra("EXTRA_BASELINE_LIMIT", 60.0)
 
-        if (screenTime > 0.0) {
+        if (screenTime >= 0.0) {
             viewModel.startIntervention(
                 screenTimeMinutes = screenTime,
                 launchFrequency = launchFreq.toInt(),
                 ambientLightLux = ambientLux,
                 baselineLimitMinutes = baselineLimit
             )
+        } else {
+            android.util.Log.w("InterventionActivity", ">>> No valid screen time data in intent")
         }
 
         setContent {

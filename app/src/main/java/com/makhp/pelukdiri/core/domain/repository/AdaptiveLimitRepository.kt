@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface AdaptiveLimitRepository {
     suspend fun insertOrUpdateLimit(limit: DailyAdaptiveLimit)
+    suspend fun insertInitialLimit(limit: DailyAdaptiveLimit)
     suspend fun getLimitForDate(date: String): DailyAdaptiveLimit?
     fun getAllLimits(): Flow<List<DailyAdaptiveLimit>>
     suspend fun getAllLimitsList(): List<DailyAdaptiveLimit>

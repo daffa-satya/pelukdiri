@@ -17,6 +17,10 @@ class AdaptiveLimitRepositoryImpl @Inject constructor(
         dao.insertOrUpdateLimit(limit.toEntity())
     }
 
+    override suspend fun insertInitialLimit(limit: DailyAdaptiveLimit) {
+        dao.insertInitialLimit(limit.toEntity())
+    }
+
     override suspend fun getLimitForDate(date: String): DailyAdaptiveLimit? {
         return dao.getLimitForDate(date)?.toDomainModel()
     }

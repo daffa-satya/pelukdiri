@@ -22,8 +22,12 @@ interface UsageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDailySummary(summary: DailySummaryEntity)
 
+    @Query("DELETE FROM app_usage WHERE date = :date")
+    suspend fun deleteAppUsageByDate(date: String)
+
     @Transaction
     suspend fun saveUsageDataWithSummary(usage: List<AppUsageEntity>, summary: DailySummaryEntity) {
+        deleteAppUsageByDate(summary.date)
         insertAppUsage(usage)
         insertDailySummary(summary)
     }

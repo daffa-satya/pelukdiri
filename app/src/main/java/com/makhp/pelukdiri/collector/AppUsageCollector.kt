@@ -29,13 +29,21 @@ class AppUsageCollector @Inject constructor(
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     private var currentAmbientLux: Float = 0f
+    private var isSensorRegistered = false
 
-    init {
-        // Inisialisasi Sensor Light (L)
+    fun startLightSensor() {
+        if (isSensorRegistered) return
         val lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         lightSensor?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            isSensorRegistered = true
         }
+    }
+
+    fun stopLightSensor() {
+        if (!isSensorRegistered) return
+        sensorManager.unregisterListener(this)
+        isSensorRegistered = false
     }
 
     // --- SENSOR LIGHT LISTENER ---
@@ -249,7 +257,7 @@ class AppUsageCollector @Inject constructor(
             }
     }
 
-    private fun getAppName(packageName: String): String {
+    fun getAppName(packageName: String): String {
         return try {
             val pm = context.packageManager
             val info = pm.getApplicationInfo(packageName, 0)

@@ -40,6 +40,7 @@ fun DailySummaryEntity.toDomainModel(): DailySummary {
     return DailySummary(
         date = LocalDate.parse(date),
         totalScreenTimeMillis = totalScreenTimeMillis,
+        totalScreenOnMillis = totalScreenOnMillis,
         unlockCount = unlockCount,
         mostUsedApp = mostUsedApp,
         wellbeingScore = wellbeingScore

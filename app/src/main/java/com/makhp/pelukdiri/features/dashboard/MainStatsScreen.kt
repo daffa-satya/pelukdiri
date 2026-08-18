@@ -2,416 +2,398 @@ package com.makhp.pelukdiri.features.dashboard
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
-import androidx.core.content.FileProvider
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.makhp.pelukdiri.core.domain.engine.CognitiveQuestionGenerator
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.makhp.pelukdiri.R
+import com.makhp.pelukdiri.core.domain.model.DailySummary
+import com.makhp.pelukdiri.features.dashboard.UiAppUsage
+import com.makhp.pelukdiri.features.intervention.InterventionActivity
+import com.makhp.pelukdiri.ui.components.*
+import com.makhp.pelukdiri.ui.theme.Dimens
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
+import java.time.LocalDate
+import kotlin.math.max
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainStatsScreen(
-    viewModel: DashboardViewModel = hiltViewModel()
+    onProgressClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onViewAllClick: () -> Unit,
+    onOnboardingClick: () -> Unit,
+    viewModel: DashboardViewModel = hiltViewModel(),
+    profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val profileState by profileViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(uiState) {
-        val state = uiState
-        if (state is DashboardUiState.Success) {
-            if (state.exportedFile != null) {
-                val fileUri = FileProvider.getUriForFile(
-                    context,
-                    "com.makhp.pelukdiri.fileprovider",
-                    state.exportedFile
-                )
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/zip"
-                    putExtra(Intent.EXTRA_STREAM, fileUri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ProfileSidebar(
+                viewModel = profileViewModel,
+                onClose = { scope.launch { drawerState.close() } },
+                onOnboardingClick = {
+                    scope.launch { drawerState.close() }
+                    onOnboardingClick()
+                },
+                onInterventionClick = {
+                    scope.launch { drawerState.close() }
+                    val intent = Intent(context, InterventionActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP or 
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                        putExtra("EXTRA_PACKAGE_NAME", context.packageName)
+                        putExtra("EXTRA_SCREEN_TIME", 120.0)
+                        putExtra("EXTRA_LAUNCH_FREQ", 20.0)
+                        putExtra("EXTRA_AMBIENT_LUX", 100f)
+                        putExtra("EXTRA_BASELINE_LIMIT", 60.0)
+                    }
+                    context.startActivity(intent)
                 }
-                context.startActivity(Intent.createChooser(shareIntent, "Share Export ZIP"))
-                viewModel.clearExportResult()
-            }
-            state.exportError?.let {
-                snackbarHostState.showSnackbar(it)
-                viewModel.clearExportResult()
-            }
-        }
-    }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.updatePermissionStatus()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("App Usage Statistics") }
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            if (uiState is DashboardUiState.Success) {
-                val state = uiState as DashboardUiState.Success
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.exportDatabase() },
-                    icon = { 
-                        if (state.isExporting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        } else {
-                            // Using a simple text for icon if icons are not available, 
-                            // but usually icons are part of material3
-                            Text("📦") 
-                        }
-                    },
-                    text = { Text("Export DB") },
-                    expanded = !state.isExporting
-                )
-            }
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (val state = uiState) {
-                is DashboardUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+    ) {
+        DashboardScaffold(
+            uiState = uiState,
+            profileState = profileState,
+            snackbarHostState = snackbarHostState,
+            onRefresh = viewModel::forceRefresh,
+            onBackfill = viewModel::backfillHistory,
+            onGrantUsageAccess = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
+            onGrantAccessibility = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+            onGrantBatteryExemption = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    })
                 }
-                is DashboardUiState.Success -> {
-                    SuccessContent(
-                        state = state,
-                        onGrantPermission = {
-                            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                            context.startActivity(intent)
-                        },
-                        onRefresh = { viewModel.forceRefresh() },
-                        onBackfill = { viewModel.backfillHistory() },
-                        onToggleApp = viewModel::toggleTargetApp
-                    )
-                }
-                is DashboardUiState.Error -> {
-                    ErrorContent(
-                        message = state.message,
-                        onRetry = { viewModel.loadData() }
-                    )
-                }
-            }
-        }
+            },
+            onRetry = viewModel::loadData,
+            onProgressClick = onProgressClick,
+            onSettingsClick = onSettingsClick,
+            onViewAllClick = onViewAllClick,
+            onMenuClick = { scope.launch { drawerState.open() } }
+        )
     }
 }
 
 @Composable
-private fun SuccessContent(
-    state: DashboardUiState.Success,
-    onGrantPermission: () -> Unit,
+private fun DashboardScaffold(
+    uiState: DashboardUiState,
+    profileState: ProfileUiState,
+    snackbarHostState: SnackbarHostState,
     onRefresh: () -> Unit,
     onBackfill: () -> Unit,
-    onToggleApp: (String) -> Unit
+    onGrantUsageAccess: () -> Unit,
+    onGrantAccessibility: () -> Unit,
+    onGrantBatteryExemption: () -> Unit,
+    onRetry: () -> Unit,
+    onProgressClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onViewAllClick: () -> Unit,
+    onMenuClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = { DashboardNavigation(onProgressClick, onSettingsClick) }
+    ) { paddingValues ->
+        when (uiState) {
+            DashboardUiState.Loading -> Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            is DashboardUiState.Error -> DashboardError(Modifier.padding(paddingValues), uiState.message, onRetry)
+            is DashboardUiState.Success -> DashboardContent(
+                state = uiState,
+                profileState = profileState,
+                modifier = Modifier.padding(paddingValues),
+                onRefresh = onRefresh,
+                onBackfill = onBackfill,
+                onGrantUsageAccess = onGrantUsageAccess,
+                onGrantAccessibility = onGrantAccessibility,
+                onGrantBatteryExemption = onGrantBatteryExemption,
+                onViewAllClick = onViewAllClick,
+                onNavigateToAnalytics = onProgressClick,
+                onMenuClick = onMenuClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardContent(
+    state: DashboardUiState.Success,
+    profileState: ProfileUiState,
+    modifier: Modifier,
+    onRefresh: () -> Unit,
+    onBackfill: () -> Unit,
+    onGrantUsageAccess: () -> Unit,
+    onGrantAccessibility: () -> Unit,
+    onGrantBatteryExemption: () -> Unit,
+    onViewAllClick: () -> Unit,
+    onNavigateToAnalytics: () -> Unit,
+    onMenuClick: () -> Unit
+) {
+    var selectedApp by remember { mutableStateOf<UiAppUsage?>(null) }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(DashboardTokens.ScreenPadding),
+        verticalArrangement = Arrangement.spacedBy(DashboardTokens.LargeGap)
     ) {
-        if (!state.isPermissionGranted) {
-            AlertCard(
-                message = "Permission is required to view usage statistics.",
-                actionLabel = "Grant Permission",
-                onAction = onGrantPermission
+        item(key = "header") { DashboardHeader(profileState, onRefresh, onBackfill, onMenuClick) }
+        if (!state.isPermissionGranted) item(key = "perm_usage") { PermissionNotice(stringResource(R.string.dashboard_usage_access_needed), stringResource(R.string.dashboard_open_permission), onGrantUsageAccess) }
+        if (!state.isAccessibilityEnabled) item(key = "perm_acc") { PermissionNotice(stringResource(R.string.dashboard_accessibility_needed), stringResource(R.string.dashboard_enable), onGrantAccessibility) }
+        if (!state.isBatteryOptimizationIgnored) item(key = "perm_batt") { PermissionNotice(stringResource(R.string.dashboard_battery_optimization_needed), stringResource(R.string.dashboard_allow), onGrantBatteryExemption) }
+        item(key = "screentime") { ScreenTimeCard(state.todaySummary, state.todayAdaptiveLimit, state.weeklySummaries) }
+        item(key = "weekly_chart") { WeeklyChart(state.weeklySummaries) }
+        item(key = "insight") {
+            val appName = remember(state.topApps, state.todaySummary) {
+                state.topApps.firstOrNull()?.appName ?: state.todaySummary?.mostUsedApp ?: "your phone"
+            }
+            InsightCard(
+                emoji = "🌿",
+                title = stringResource(R.string.dashboard_insight_title),
+                message = stringResource(R.string.dashboard_insight_message, appName)
             )
-            Spacer(modifier = Modifier.height(8.dp))
         }
-
-        if (!state.isAccessibilityEnabled) {
-            AlertCard(
-                message = "Layanan Aksesibilitas PELUKDIRI belum aktif. Aktifkan agar intervensi dapat berjalan.",
-                actionLabel = "Aktifkan",
-                onAction = {
-                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                    context.startActivity(intent)
-                }
+        item(key = "top_apps") {
+            TopAppsCard(
+                apps = state.topApps,
+                onViewAllClick = onViewAllClick,
+                onAppClick = { selectedApp = it }
             )
-            Spacer(modifier = Modifier.height(8.dp))
         }
+        item(key = "encouragement") { EncouragementCard() }
+    }
 
-        if (!state.isBatteryOptimizationIgnored) {
-            AlertCard(
-                message = "Battery optimization is active and may kill background sync. Please whitelist the app for reliable data collection.",
-                actionLabel = "Whitelist App",
-                onAction = {
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(intent)
-                }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+    selectedApp?.let { app ->
+        AppDetailBottomSheet(
+            app = app,
+            onDismiss = { selectedApp = null },
+            onViewFullAnalytics = {
+                selectedApp = null
+                onNavigateToAnalytics()
+            }
+        )
+    }
+}
+
+@Composable
+private fun DashboardHeader(
+    profileState: ProfileUiState,
+    onRefresh: () -> Unit,
+    onBackfill: () -> Unit,
+    onMenuClick: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            modifier = Modifier.size(DashboardTokens.AppIconSize).clickable(onClick = onMenuClick),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            if (profileState.profileImagePath != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(profileState.profileImagePath)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = stringResource(R.string.profile_image_description),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(Icons.Default.Person, null, modifier = Modifier.padding(8.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
         }
+        Spacer(Modifier.width(DashboardTokens.MediumGap))
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(stringResource(R.string.dashboard_header_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
+        IconButton(onClick = {}) { Icon(Icons.Default.NotificationsNone, contentDescription = stringResource(R.string.notification_settings_title)) }
+        Box {
+            IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = null) }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                DropdownMenuItem(text = { Text(stringResource(R.string.dashboard_sync_now)) }, onClick = { menuExpanded = false; onRefresh() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.dashboard_backfill_7_days)) }, onClick = { menuExpanded = false; onBackfill() })
+            }
+        }
+    }
+}
 
+@Composable
+private fun ScreenTimeCard(today: DailySummary?, adaptiveLimitMinutes: Int?, history: List<DailySummary>) {
+    val total = today?.totalScreenTimeMillis ?: 0L
+    val adaptiveLimitMillis = adaptiveLimitMinutes?.let { it * 60_000L } ?: 0L
+    val progress = remember(total, adaptiveLimitMillis) {
+        if (adaptiveLimitMillis == 0L) 0f else (total.toFloat() / adaptiveLimitMillis).coerceIn(0f, 1f)
+    }
+    val previous = remember(history) {
+        history.firstOrNull { it.date == LocalDate.now().minusDays(1) }?.totalScreenTimeMillis ?: total
+    }
+    val change = remember(total, previous) {
+        if (previous == 0L) 0 else (((total - previous) * 100) / previous).toInt()
+    }
+    val totalFormatted = remember(total) { formatDuration(total) }
+    val limitFormatted = if (adaptiveLimitMinutes != null) {
+        formatDuration(adaptiveLimitMillis)
+    } else {
+        stringResource(R.string.dashboard_insufficient_data)
+    }
+    val changeTxt = remember(change) { 
+        if (change <= 0) -change else change
+    }
+    val changeLabel = if (change <= 0) stringResource(R.string.dashboard_from_yesterday, changeTxt) else stringResource(R.string.dashboard_more_than_yesterday, changeTxt)
+
+    PelukCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(Modifier.weight(1.2f)) {
+                Text(stringResource(R.string.dashboard_screen_time_today), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                Text(totalFormatted, style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (change <= 0) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward, 
+                        null, 
+                        tint = if (change <= 0) Color(0xFF4CAF50) else Color(0xFFE53935), 
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(changeLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider(modifier = Modifier.width(60.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(16.dp))
+                Text(stringResource(R.string.dashboard_adaptive_limit), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(limitFormatted, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
+            
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                FreedomRing(progress, Modifier.size(DashboardTokens.RingSize))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TopAppsCard(
+    apps: List<UiAppUsage>,
+    onViewAllClick: () -> Unit,
+    onAppClick: (UiAppUsage) -> Unit
+) {
+    PelukCard {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onViewAllClick),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row {
-                OutlinedButton(
-                    onClick = onBackfill,
-                    enabled = !state.isBackfilling && !state.isRefreshing && !state.isHistoryBackfilled,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    if (state.isBackfilling) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text(if (state.isHistoryBackfilled) "Backfilled" else "Backfill")
-                    }
-                }
-
-                Button(
-                    onClick = onRefresh,
-                    enabled = !state.isRefreshing && !state.isBackfilling
-                ) {
-                    if (state.isRefreshing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text("Force Sync")
-                    }
-                }
-            }
+            Text(stringResource(R.string.dashboard_top_apps_today), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.dashboard_view_all), style = MaterialTheme.typography.labelLarge)
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(DashboardTokens.MediumGap), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TargetAppsCard(
-            monitoredPackages = state.monitoredPackages,
-            onToggleApp = onToggleApp
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        QuestionTesterCard()
-    }
-}
-
-@Composable
-fun TargetAppsCard(
-    monitoredPackages: Set<String>,
-    onToggleApp: (String) -> Unit
-) {
-    val apps = listOf(
-        "com.instagram.android" to "Instagram",
-        "com.zhiliaoapp.musically" to "TikTok",
-        "com.google.android.youtube" to "YouTube",
-        "com.twitter.android" to "Twitter / X",
-        "com.facebook.katana" to "Facebook"
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "🎯 Monitored Target Apps",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            apps.forEach { (pkg, name) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = name, style = MaterialTheme.typography.bodyMedium)
-                    Switch(
-                        checked = monitoredPackages.contains(pkg),
-                        onCheckedChange = { onToggleApp(pkg) }
-                    )
-                }
-            }
+        Spacer(Modifier.height(DashboardTokens.MediumGap))
+        if (apps.isEmpty()) {
+            Text(stringResource(R.string.dashboard_no_usage_data), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else apps.take(3).forEach { app -> 
+            AppUsageRow(
+                app = app, 
+                onClick = { onAppClick(app) }
+            ) 
         }
     }
 }
 
 @Composable
-fun QuestionTesterCard(
-    modifier: Modifier = Modifier,
-    generator: CognitiveQuestionGenerator = remember { CognitiveQuestionGenerator() }
+private fun AppUsageRow(
+    app: UiAppUsage, 
+    onClick: () -> Unit
 ) {
-    var selectedLevel by remember { mutableIntStateOf(1) }
-    var currentQuestion by remember { mutableStateOf(generator.generateQuestion(1)) }
-    var userAnswer by remember { mutableStateOf("") }
-    var feedbackMessage by remember { mutableStateOf("") }
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = DashboardTokens.SmallGap).clickable(onClick = onClick), 
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "🧪 Cognitive Engine Playground",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+        AppIcon(app.packageName, app.appName, size = DashboardTokens.AppIconSize)
+        Spacer(Modifier.width(DashboardTokens.MediumGap))
+        Text(app.appName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Spacer(Modifier.width(DashboardTokens.MediumGap))
+        Text(formatDuration(app.usageDurationMillis), style = MaterialTheme.typography.labelLarge)
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.padding(start = DashboardTokens.SmallGap).size(DashboardTokens.MediumGap), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
 
-            Row(
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                (1..5).forEach { lvl ->
-                    FilterChip(
-                        selected = selectedLevel == lvl,
-                        onClick = {
-                            selectedLevel = lvl
-                            currentQuestion = generator.generateQuestion(lvl)
-                            userAnswer = ""
-                            feedbackMessage = ""
-                        },
-                        label = { Text("Lvl $lvl") }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = currentQuestion.expression,
-                style = MaterialTheme.typography.headlineLarge
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = userAnswer,
-                onValueChange = { userAnswer = it },
-                label = { Text("Ketik Jawaban") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(0.6f)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = {
-                        feedbackMessage = if (userAnswer.trim() == currentQuestion.correctAnswer.toString()) {
-                            "✅ BENAR! Great job."
-                        } else {
-                            "❌ SALAH! Kunci: ${currentQuestion.correctAnswer}"
-                        }
-                    }
-                ) {
-                    Text("Cek Jawaban")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        currentQuestion = generator.generateQuestion(selectedLevel)
-                        userAnswer = ""
-                        feedbackMessage = ""
-                    }
-                ) {
-                    Text("Acak Soal Baru")
-                }
-            }
-
-            if (feedbackMessage.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = feedbackMessage, style = MaterialTheme.typography.bodyMedium)
-            }
+@Composable
+private fun EncouragementCard() {
+    PelukCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(Dimens.buttonHeight).clip(RoundedCornerShape(DashboardTokens.LargeRadius)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) { Text("🌱", style = MaterialTheme.typography.headlineMedium) }
+            Spacer(Modifier.width(DashboardTokens.CardPadding))
+            Text(stringResource(R.string.dashboard_encouragement), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun AlertCard(
-    message: String,
-    actionLabel: String,
-    onAction: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        ),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = onAction,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Text(actionLabel)
-            }
+private fun PermissionNotice(message: String, action: String, onAction: () -> Unit) {
+    Surface(shape = RoundedCornerShape(DashboardTokens.MediumRadius), color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth().clickable(onClick = onAction)) {
+        Row(Modifier.padding(DashboardTokens.CardPadding), verticalAlignment = Alignment.CenterVertically) {
+            Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+            Text(action, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
         }
     }
 }
 
 @Composable
-private fun ErrorContent(
-    message: String,
-    onRetry: () -> Unit
+private fun DashboardNavigation(
+    onProgressClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = message, style = MaterialTheme.typography.bodyLarge)
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("Retry")
-        }
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+        NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Home, null) }, label = { Text(stringResource(R.string.dashboard_home)) })
+        NavigationBarItem(selected = false, onClick = onProgressClick, icon = { Icon(Icons.Default.PieChartOutline, null) }, label = { Text(stringResource(R.string.dashboard_progress)) })
+        NavigationBarItem(selected = false, onClick = onSettingsClick, icon = { Icon(Icons.Default.Settings, null) }, label = { Text(stringResource(R.string.dashboard_settings)) })
+    }
+}
+
+@Composable
+private fun DashboardError(modifier: Modifier, message: String, onRetry: () -> Unit) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(stringResource(R.string.dashboard_tap_to_retry, message), textAlign = TextAlign.Center, modifier = Modifier.clickable(onClick = onRetry))
     }
 }

@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri.core.data.repository
 
 import com.makhp.pelukdiri.collector.AppUsageCollector
+import com.makhp.pelukdiri.collector.UsageEventCollector
 import com.makhp.pelukdiri.core.database.dao.UsageDao
 import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import com.makhp.pelukdiri.core.data.mapper.toDomainModel
@@ -22,6 +23,7 @@ import javax.inject.Inject
 class UsageRepositoryImpl @Inject constructor(
     private val dao: UsageDao,
     private val appUsageCollector: AppUsageCollector,
+    private val usageEventCollector: UsageEventCollector,
     private val userPreferencesRepository: UserPreferencesRepository
 ) : UsageRepository {
     override fun getDailyUsage(date: LocalDate): Flow<List<AppUsage>> {
@@ -47,28 +49,34 @@ class UsageRepositoryImpl @Inject constructor(
     override suspend fun syncRecentEventsOnly() = withContext(Dispatchers.IO) {
         if (!appUsageCollector.isPermissionGranted()) return@withContext
 
-        val lastSynced = userPreferencesRepository.lastSyncedTimestamp.first()
-        val recentUsage = appUsageCollector.syncRecentEventsOnly(lastSynced)
-
-        if (recentUsage.isNotEmpty()) {
-            val todayStr = LocalDate.now().toString()
-            saveUsageData(recentUsage, todayStr)
-            userPreferencesRepository.setLastSyncedTimestamp(System.currentTimeMillis())
-        }
+        val today = LocalDate.now()
+        reconstructAndSave(today)
+        
+        userPreferencesRepository.setLastSyncedTimestamp(System.currentTimeMillis())
     }
 
     override suspend fun executeFullBackfill(daysHistory: Int, force: Boolean) = withContext(Dispatchers.IO) {
         if (!appUsageCollector.isPermissionGranted()) return@withContext
 
-        val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
-        if (isBackfilled && !force) return@withContext
-
-        val backfillData = appUsageCollector.executeFullBackfill(daysHistory)
-        backfillData.forEach { (dateStr, usageList) ->
-            saveUsageData(usageList, dateStr)
+        // For validation phase, we force backfill
+        val today = LocalDate.now()
+        for (i in 1..daysHistory) {
+            val targetDate = today.minusDays(i.toLong())
+            reconstructAndSave(targetDate)
         }
 
         userPreferencesRepository.setHistoryBackfilled(true)
+    }
+
+    private suspend fun reconstructAndSave(date: LocalDate) {
+        android.util.Log.d("UsageRepository", "Starting reconstruction for $date")
+        val usageList = usageEventCollector.getUsageForDay(date)
+        android.util.Log.d("UsageRepository", "Reconstructed ${usageList.size} apps for $date")
+        
+        val totalMs = usageList.sumOf { it.usageDurationMillis }
+        android.util.Log.d("UsageRepository", "Total Screen Time for $date: ${totalMs / 1000.0 / 60.0} minutes")
+        
+        saveUsageData(usageList, date.toString())
     }
 
     private suspend fun saveUsageData(usageList: List<AppUsage>, dateStr: String) {
@@ -79,9 +87,11 @@ class UsageRepositoryImpl @Inject constructor(
         val mostUsedApp = usageList.maxByOrNull { it.usageDurationMillis }?.appName
 
         val existingSummary = dao.getDailySummary(dateStr).firstOrNull()
+        val totalScreenOnMillis = usageEventCollector.getScreenOnMillisForDay(LocalDate.parse(dateStr))
         val newSummary = DailySummaryEntity(
             date = dateStr,
             totalScreenTimeMillis = totalScreenTime,
+            totalScreenOnMillis = totalScreenOnMillis,
             unlockCount = existingSummary?.unlockCount ?: 0,
             mostUsedApp = mostUsedApp,
             wellbeingScore = existingSummary?.wellbeingScore

@@ -75,19 +75,20 @@ class CognitiveQuestionGeneratorTest {
     }
 
     @Test
-    fun `level 4 follows multiplication or reverse division constraints`() {
+    fun `level 4 follows multiplication, division, or mixed constraints`() {
         repeat(300) {
             val question = generator.generateQuestion(level = 4)
             val multiplyMatch = Regex("""(\d+) \* (\d+)""").matchEntire(question.expression)
             val divideMatch = Regex("""(\d+) / (\d+)""").matchEntire(question.expression)
-            assertTrue(multiplyMatch != null || divideMatch != null)
+            val mixedMatch = Regex("""(\d+) \+ (\d+) - (\d+)""").matchEntire(question.expression)
+            assertTrue(multiplyMatch != null || divideMatch != null || mixedMatch != null)
 
             if (multiplyMatch != null) {
                 val (firstRaw, secondRaw) = multiplyMatch.destructured
                 val first = firstRaw.toInt()
                 val second = secondRaw.toInt()
-                assertTrue(first in 11..25)
-                assertTrue(second in 11..20)
+                assertTrue(first in 14..35)
+                assertTrue(second in 13..28)
                 assertEquals(first * second, question.correctAnswer)
             }
 
@@ -95,11 +96,22 @@ class CognitiveQuestionGeneratorTest {
                 val (dividendRaw, divisorRaw) = divideMatch.destructured
                 val dividend = dividendRaw.toInt()
                 val divisor = divisorRaw.toInt()
-                assertTrue(divisor in 6..12)
+                assertTrue(divisor in 8..18)
                 assertEquals(0, dividend % divisor)
                 val quotient = dividend / divisor
-                assertTrue(quotient in 12..30)
+                assertTrue(quotient in 16..38)
                 assertEquals(quotient, question.correctAnswer)
+            }
+
+            if (mixedMatch != null) {
+                val (aRaw, bRaw, cRaw) = mixedMatch.destructured
+                val a = aRaw.toInt()
+                val b = bRaw.toInt()
+                val c = cRaw.toInt()
+                assertTrue(a in 150..450)
+                assertTrue(b in 150..450)
+                assertTrue(c in 50..150)
+                assertEquals(a + b - c, question.correctAnswer)
             }
         }
     }
