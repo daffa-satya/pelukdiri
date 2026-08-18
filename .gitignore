@@ -9,3 +9,6 @@ captures/
 .cxx/
 .DS_Store
 tmp/
+usagestats_*.txt
+AGENTS.md
+STATE.md
