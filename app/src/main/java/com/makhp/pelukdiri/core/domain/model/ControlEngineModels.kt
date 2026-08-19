@@ -24,6 +24,14 @@ data class ControlResult(
     val mode: ControlMode
 )
 
+data class InterventionDecision(
+    val shouldTrigger: Boolean,
+    val controlResult: ControlResult?,
+    val monitoredUsageMinutes: Double,
+    val totalUsageMinutes: Double,
+    val ambientLux: Float
+)
+
 enum class ControlMode {
     PERSONALIZED,
     SAFE_DEFAULT,

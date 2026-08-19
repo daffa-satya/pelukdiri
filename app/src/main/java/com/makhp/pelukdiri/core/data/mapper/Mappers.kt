@@ -41,6 +41,7 @@ fun DailySummaryEntity.toDomainModel(): DailySummary {
         date = LocalDate.parse(date),
         totalScreenTimeMillis = totalScreenTimeMillis,
         totalScreenOnMillis = totalScreenOnMillis,
+        monitoredUsageMillis = monitoredUsageMillis,
         unlockCount = unlockCount,
         mostUsedApp = mostUsedApp,
         wellbeingScore = wellbeingScore
@@ -91,7 +92,8 @@ fun InterventionLogEntity.toDomainModel(): InterventionLog {
     return InterventionLog(
         id = id,
         timestamp = timestamp,
-        riskScore = riskScore,
+        deviation = deviation,
+        difficultyControlSignal = difficultyControlSignal,
         difficultyLevel = difficultyLevel,
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,
@@ -104,7 +106,8 @@ fun InterventionLog.toEntity(): InterventionLogEntity {
     return InterventionLogEntity(
         id = id,
         timestamp = timestamp,
-        riskScore = riskScore,
+        deviation = deviation,
+        difficultyControlSignal = difficultyControlSignal,
         difficultyLevel = difficultyLevel,
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,

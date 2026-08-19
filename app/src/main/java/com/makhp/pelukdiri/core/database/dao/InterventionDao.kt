@@ -21,8 +21,11 @@ interface InterventionDao {
     @Query("SELECT AVG(responseTimeMs) FROM intervention_logs WHERE difficultyLevel = :difficulty")
     suspend fun getAverageResponseTime(difficulty: Int): Double?
 
-    @Query("SELECT * FROM intervention_logs WHERE difficultyLevel = :difficulty AND isSuccess = 1 AND responseTimeMs > 0 ORDER BY timestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM intervention_logs WHERE difficultyLevel = :difficulty AND isSuccess = 1 AND isBypassed = 0 AND responseTimeMs > 0 ORDER BY timestamp DESC, id DESC LIMIT :limit")
     suspend fun getRecentValidSuccessfulLogsByDifficulty(difficulty: Int, limit: Int): List<InterventionLogEntity>
+
+    @Query("SELECT * FROM intervention_logs WHERE difficultyLevel = :difficulty AND isBypassed = 0 AND responseTimeMs > 0 ORDER BY timestamp DESC, id DESC LIMIT 1")
+    suspend fun getLatestValidPerformanceLogByDifficulty(difficulty: Int): InterventionLogEntity?
 
     @Query("SELECT * FROM intervention_logs ORDER BY timestamp DESC LIMIT 1")
     suspend fun getLatestLog(): InterventionLogEntity?

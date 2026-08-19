@@ -1,5 +1,6 @@
 package com.makhp.pelukdiri.di
 
+import com.makhp.pelukdiri.core.domain.model.AdaptiveLimitConfig
 import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import com.makhp.pelukdiri.core.domain.model.DeviationConfig
 import dagger.Module
@@ -19,4 +20,8 @@ object EngineModule {
     @Provides
     @Singleton
     fun provideDeviationConfig(): DeviationConfig = DeviationConfig()
+
+    @Provides
+    @Singleton
+    fun provideAdaptiveLimitConfig(): AdaptiveLimitConfig = AdaptiveLimitConfig()
 }

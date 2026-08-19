@@ -8,6 +8,7 @@ data class DailySummaryEntity(
     @PrimaryKey val date: String, // YYYY-MM-DD
     val totalScreenTimeMillis: Long,
     val totalScreenOnMillis: Long,
+    val monitoredUsageMillis: Long,
     val unlockCount: Int,
     val mostUsedApp: String?,
     val wellbeingScore: Int?

@@ -25,9 +25,9 @@ class FrequencyController @Inject constructor(
         // Normalize
         val normalizedSignal = controlSignal.coerceIn(0.0, 1.0)
         
-        // intervalMinutes = 30 - 27 * C_F_norm
-        // Range: 3 to 30
-        val interval = 30.0 - 27.0 * normalizedSignal
+        // Map C_F_norm from the configured maximum interval down to the minimum.
+        val intervalRange = config.maxFrequencyMinutes - config.minFrequencyMinutes
+        val interval = config.maxFrequencyMinutes - intervalRange * normalizedSignal
         
         val finalInterval = interval.coerceIn(config.minFrequencyMinutes, config.maxFrequencyMinutes)
         

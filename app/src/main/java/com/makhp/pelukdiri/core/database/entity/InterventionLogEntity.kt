@@ -1,13 +1,15 @@
 package com.makhp.pelukdiri.core.database.entity
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "intervention_logs")
 data class InterventionLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val timestamp: Long,
-    val riskScore: Double,
+    val deviation: Double,
+    @ColumnInfo(name = "riskScore") val difficultyControlSignal: Double,
     val difficultyLevel: Int,
     val responseTimeMs: Long,
     val isSuccess: Boolean,

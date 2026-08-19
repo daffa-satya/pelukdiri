@@ -77,7 +77,10 @@ object DatabaseModule {
             context,
             PelukDiriDatabase::class.java,
             "pelukdiri_db"
-        ).addMigrations(migration1To2, migration2To3).build()
+        )
+            .addMigrations(migration1To2, migration2To3)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

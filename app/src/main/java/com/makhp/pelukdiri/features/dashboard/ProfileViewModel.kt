@@ -16,8 +16,13 @@ data class ProfileUiState(
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager
 ) : ViewModel() {
+
+    fun tryAcquireInterventionLock(): Boolean {
+        return lockManager.acquireLock()
+    }
 
     val uiState: StateFlow<ProfileUiState> = combine(
         userPreferencesRepository.userNickname,

@@ -115,6 +115,7 @@ class AnalyticsViewModel @Inject constructor(
                     date = date,
                     totalScreenTimeMillis = history.sumOf { it.totalScreenTimeMillis } / totalDaysInRange,
                     totalScreenOnMillis = history.sumOf { it.totalScreenOnMillis } / totalDaysInRange,
+                    monitoredUsageMillis = history.sumOf { it.monitoredUsageMillis } / totalDaysInRange,
                     unlockCount = (history.sumOf { it.unlockCount } / totalDaysInRange).toInt(),
                     mostUsedApp = history.groupBy { it.mostUsedApp }.filter { it.key != null }.maxByOrNull { it.value.size }?.key,
                     wellbeingScore = history.mapNotNull { it.wellbeingScore?.toDouble() }.let { if (it.isEmpty()) 0 else it.average().toInt() }

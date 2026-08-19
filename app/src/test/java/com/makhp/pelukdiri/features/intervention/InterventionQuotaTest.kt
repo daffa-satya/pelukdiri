@@ -21,6 +21,7 @@ class FakeInterventionLogRepository : InterventionLogRepository {
     override suspend fun getAllLogsList(): List<InterventionLog> = logs
     override suspend fun getAverageResponseTime(difficulty: Int): Double? = null
     override suspend fun getRecentValidSuccessfulLogsByDifficulty(difficulty: Int, limit: Int): List<InterventionLog> = emptyList()
+    override suspend fun getLatestValidPerformanceLogByDifficulty(difficulty: Int): InterventionLog? = null
     override suspend fun getLatestLog(): InterventionLog? = logs.lastOrNull()
     
     override suspend fun getBypassCountForDay(startOfDay: Long, endOfDay: Long): Int {
@@ -42,28 +43,29 @@ class InterventionQuotaTest {
         val tomorrow = endOfDay + 1000
         
         // Logs from yesterday (should not count)
-        repo.insertLog(InterventionLog(timestamp = yesterday, riskScore = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
+        repo.insertLog(InterventionLog(timestamp = yesterday, deviation = 0.0, difficultyControlSignal = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
         
         // Logs from tomorrow (should not count)
-        repo.insertLog(InterventionLog(timestamp = tomorrow, riskScore = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
+        repo.insertLog(InterventionLog(timestamp = tomorrow, deviation = 0.0, difficultyControlSignal = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
         
         // Today non-bypass log (should not count)
-        repo.insertLog(InterventionLog(timestamp = startOfDay + 1000, riskScore = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = true, isBypassed = false, penaltyAppliedMinutes = 0))
+        repo.insertLog(InterventionLog(timestamp = startOfDay + 1000, deviation = 0.0, difficultyControlSignal = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = true, isBypassed = false, penaltyAppliedMinutes = 0))
         
         assertEquals("Should have 0 bypasses for today initially", 0, repo.getBypassCountForDay(startOfDay, endOfDay))
         
         // 1st bypass today
-        repo.insertLog(InterventionLog(timestamp = startOfDay + 2000, riskScore = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
+        repo.insertLog(InterventionLog(timestamp = startOfDay + 2000, deviation = 0.0, difficultyControlSignal = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
         assertEquals("Should have 1 bypass for today", 1, repo.getBypassCountForDay(startOfDay, endOfDay))
         
         // Up to 5 bypasses today
         repeat(4) {
-             repo.insertLog(InterventionLog(timestamp = startOfDay + 3000, riskScore = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
+             repo.insertLog(InterventionLog(timestamp = startOfDay + 3000, deviation = 0.0, difficultyControlSignal = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
         }
         assertEquals("Should have 5 bypasses for today", 5, repo.getBypassCountForDay(startOfDay, endOfDay))
         
         // 6th bypass today
-        repo.insertLog(InterventionLog(timestamp = startOfDay + 4000, riskScore = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
+        repo.insertLog(InterventionLog(timestamp = startOfDay + 4000, deviation = 0.0, difficultyControlSignal = 0.0, difficultyLevel = 1, responseTimeMs = 0, isSuccess = false, isBypassed = true, penaltyAppliedMinutes = 0))
+
         assertEquals("Should have 6 bypasses for today in the log", 6, repo.getBypassCountForDay(startOfDay, endOfDay))
     }
 
