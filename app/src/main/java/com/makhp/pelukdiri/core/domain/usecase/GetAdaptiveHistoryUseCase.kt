@@ -20,9 +20,9 @@ class GetAdaptiveHistoryUseCase @Inject constructor(
         val history = usageRepository.getUsageHistory(startDate, endDate).first()
         
         return history
-            .filter { it.totalScreenTimeMillis > 0 }
+            .filter { it.monitoredUsageMillis > 0 }
             .sortedByDescending { it.date }
             .take(7)
-            .map { it.totalScreenTimeMillis / 1000.0 / 60.0 }
+            .map { it.monitoredUsageMillis / 1000.0 / 60.0 }
     }
 }

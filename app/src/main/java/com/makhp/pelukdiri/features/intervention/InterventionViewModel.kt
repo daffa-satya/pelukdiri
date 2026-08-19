@@ -2,12 +2,15 @@ package com.makhp.pelukdiri.features.intervention
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.makhp.pelukdiri.core.domain.engine.CognitiveQuestionGenerator
 import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
+import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
-import com.makhp.pelukdiri.core.domain.usecase.GenerateInterventionQuestionUseCase
+import com.makhp.pelukdiri.core.domain.usecase.BypassResult
+import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,48 +27,117 @@ import javax.inject.Inject
 
 @HiltViewModel
 class InterventionViewModel @Inject constructor(
-    private val generateInterventionQuestionUseCase: GenerateInterventionQuestionUseCase,
+    private val cognitiveQuestionGenerator: CognitiveQuestionGenerator,
     private val interventionLogRepository: InterventionLogRepository,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val performEmergencyBypassUseCase: PerformEmergencyBypassUseCase,
+    private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
+    private val activeInterventionSession: ActiveInterventionSession
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<InterventionUiState>(InterventionUiState.Idle)
     val uiState: StateFlow<InterventionUiState> = _uiState.asStateFlow()
 
+    private var questionJob: kotlinx.coroutines.Job? = null
     private var questionStartTimeMs: Long = 0L
-    private var currentScreenTimeMinutes: Double = 0.0
+    private var currentMonitoredUsageMinutes: Double = 0.0
+    private var currentDeviation: Double = 0.0
+    private var currentDifficultyControlSignal: Double = 0.0
+    private var currentDifficulty: Int = 2
+    private var currentLaunchFrequency: Int = 0
+    private var currentAmbientLightLux: Float = 0f
+    private var isBypassProcessing: Boolean = false
 
     fun startIntervention(
-        screenTimeMinutes: Double,
+        monitoredUsageMinutes: Double,
         launchFrequency: Int,
         ambientLightLux: Float,
-        baselineLimitMinutes: Double = 60.0,
-        frequencyBaseline: Double = 10.0
+        deviation: Double,
+        difficultyControlSignal: Double,
+        difficulty: Int
     ) {
-        _uiState.value = InterventionUiState.Loading
-        currentScreenTimeMinutes = screenTimeMinutes
-        
-        viewModelScope.launch {
-            val (assessment, question) = generateInterventionQuestionUseCase()
+        // Cancel any pending generation to ensure state integrity
+        questionJob?.cancel()
+
+        currentMonitoredUsageMinutes = monitoredUsageMinutes
+        currentDeviation = deviation
+        currentDifficultyControlSignal = difficultyControlSignal
+        currentDifficulty = difficulty
+        currentLaunchFrequency = launchFrequency
+        currentAmbientLightLux = ambientLightLux
+        publishState(InterventionUiState.Loading)
+
+        questionJob = viewModelScope.launch {
+            val question = cognitiveQuestionGenerator.generateQuestion(difficulty)
+            val dateString = LocalDate.now().toString()
+            val adaptiveLimit = adaptiveLimitRepository.getLimitForDate(dateString)
+
+            val assessment = RiskAssessmentResult(
+                // RiskAssessmentResult is a legacy UI contract; this value is the
+                // normalized difficulty-control signal in the v0.1 control flow.
+                riskScore = difficultyControlSignal,
+                level = difficulty,
+                penaltyMinutes = 0, // Penalty is not explicitly defined in v0.1 trig logic
+                calculatedLimitMinutes = adaptiveLimit?.calculatedLimitMinutes ?: 0
+            )
+
             val remaining = getRemainingBypasses()
             questionStartTimeMs = System.currentTimeMillis()
-            _uiState.value = InterventionUiState.QuestionActive(
+            publishState(InterventionUiState.QuestionActive(
                 question = question,
                 assessment = assessment,
                 remainingBypasses = remaining
-            )
+            ))
         }
     }
 
+    fun restoreActiveIntervention(): Boolean {
+        val snapshot = activeInterventionSession.get() ?: return false
+
+        currentMonitoredUsageMinutes = snapshot.monitoredUsageMinutes
+        currentLaunchFrequency = snapshot.launchFrequency
+        currentAmbientLightLux = snapshot.ambientLightLux
+        currentDeviation = snapshot.deviation
+        currentDifficultyControlSignal = snapshot.difficultyControlSignal
+        currentDifficulty = snapshot.difficulty
+        questionStartTimeMs = snapshot.questionStartTimeMs
+
+        if (snapshot.uiState is InterventionUiState.Loading) {
+            startIntervention(
+                monitoredUsageMinutes = snapshot.monitoredUsageMinutes,
+                launchFrequency = snapshot.launchFrequency,
+                ambientLightLux = snapshot.ambientLightLux,
+                deviation = snapshot.deviation,
+                difficultyControlSignal = snapshot.difficultyControlSignal,
+                difficulty = snapshot.difficulty
+            )
+        } else {
+            _uiState.value = snapshot.uiState
+        }
+        return true
+    }
+
     fun onAnswerChanged(rawInput: String) {
-        val sanitizedInput = rawInput.filter { it.isDigit() }
         val state = _uiState.value
-        _uiState.value = when (state) {
+        val question = when (state) {
+            is InterventionUiState.QuestionActive -> state.question
+            is InterventionUiState.MaxPenalized -> state.question
+            else -> return
+        }
+        val maxDigits = question.correctAnswer
+            .toString()
+            .count { it.isDigit() }
+            .coerceAtLeast(1)
+        val sanitizedInput = rawInput
+            .filter { it.isDigit() }
+            .take(maxDigits)
+
+        publishState(when (state) {
             is InterventionUiState.QuestionActive -> state.copy(answerInput = sanitizedInput)
             is InterventionUiState.MaxPenalized -> state.copy(answerInput = sanitizedInput)
             else -> state
-        }
+        })
     }
 
     fun submitAnswer() {
@@ -97,8 +169,9 @@ class InterventionViewModel @Inject constructor(
                     interventionLogRepository.insertLog(
                         InterventionLog(
                             timestamp = System.currentTimeMillis(),
-                            riskScore = assessment.riskScore,
-                            difficultyLevel = assessment.level,
+                            deviation = currentDeviation,
+                            difficultyControlSignal = currentDifficultyControlSignal,
+                            difficultyLevel = currentDifficulty,
                             responseTimeMs = responseTime,
                             isSuccess = isSuccess,
                             penaltyAppliedMinutes = assessment.penaltyMinutes
@@ -109,7 +182,7 @@ class InterventionViewModel @Inject constructor(
                     val existingLimit = adaptiveLimitRepository.getLimitForDate(dateString)
                     val updatedActualScreenTime = max(
                         existingLimit?.actualScreenTimeMinutes ?: 0,
-                        currentScreenTimeMinutes.roundToInt()
+                        currentMonitoredUsageMinutes.roundToInt()
                     )
                     adaptiveLimitRepository.insertOrUpdateLimit(
                         DailyAdaptiveLimit(
@@ -122,7 +195,7 @@ class InterventionViewModel @Inject constructor(
                 }
             }.getOrThrow()
 
-            _uiState.value = if (isSuccess) {
+            publishState(if (isSuccess) {
                 InterventionUiState.CorrectAnswer(
                     question = question,
                     assessment = assessment,
@@ -136,11 +209,13 @@ class InterventionViewModel @Inject constructor(
                     responseTimeMs = responseTime,
                     remainingBypasses = getRemainingBypasses()
                 )
-            }
+            })
         }
     }
 
     fun emergencyBypass() {
+        if (isBypassProcessing) return
+
         val currentState = _uiState.value
         val assessment = when (currentState) {
             is InterventionUiState.QuestionActive -> currentState.assessment
@@ -150,42 +225,35 @@ class InterventionViewModel @Inject constructor(
         }
 
         val responseTime = System.currentTimeMillis() - questionStartTimeMs
+        isBypassProcessing = true
 
         viewModelScope.launch {
-            val remaining = getRemainingBypasses()
-            if (remaining <= 0) {
-                _uiState.value = when (val state = _uiState.value) {
-                    is InterventionUiState.QuestionActive -> state.copy(bypassDenied = true, remainingBypasses = 0)
-                    is InterventionUiState.MaxPenalized -> state.copy(bypassDenied = true, remainingBypasses = 0)
-                    is InterventionUiState.IncorrectAnswer -> state.copy(remainingBypasses = 0)
-                    else -> state
+            try {
+                val result = performEmergencyBypassUseCase(
+                    deviation = currentDeviation,
+                    difficultyControlSignal = currentDifficultyControlSignal,
+                    difficulty = currentDifficulty,
+                    penaltyMinutes = assessment.penaltyMinutes,
+                    responseTimeMs = responseTime
+                )
+
+                when (result) {
+                    is BypassResult.Success -> {
+                        publishState(InterventionUiState.Idle) // Triggers onDismiss
+                        lockManager.releaseLock()
+                    }
+                    BypassResult.Exhausted -> {
+                        publishState(when (val state = _uiState.value) {
+                            is InterventionUiState.QuestionActive -> state.copy(bypassDenied = true, remainingBypasses = 0)
+                            is InterventionUiState.MaxPenalized -> state.copy(bypassDenied = true, remainingBypasses = 0)
+                            is InterventionUiState.IncorrectAnswer -> state.copy(remainingBypasses = 0)
+                            else -> state
+                        })
+                    }
                 }
-                return@launch
+            } finally {
+                isBypassProcessing = false
             }
-
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    // 1. Log as bypassed
-                    interventionLogRepository.insertLog(
-                        InterventionLog(
-                            timestamp = System.currentTimeMillis(),
-                            riskScore = assessment.riskScore,
-                            difficultyLevel = assessment.level,
-                            responseTimeMs = responseTime,
-                            isSuccess = false,
-                            isBypassed = true,
-                            penaltyAppliedMinutes = assessment.penaltyMinutes
-                        )
-                    )
-
-                    // 2. Set bypass guard for 3 minutes
-                    userPreferencesRepository.setEmergencyBypassUntil(
-                        System.currentTimeMillis() + 180_000L
-                    )
-                }
-            }.getOrThrow()
-            
-            _uiState.value = InterventionUiState.Idle // This will trigger onDismiss in Activity
         }
     }
 
@@ -198,6 +266,28 @@ class InterventionViewModel @Inject constructor(
     }
 
     fun resetToIdle() {
-        _uiState.value = InterventionUiState.Idle
+        publishState(InterventionUiState.Idle)
+        lockManager.releaseLock()
+    }
+
+    private fun publishState(state: InterventionUiState) {
+        _uiState.value = state
+        if (state is InterventionUiState.Idle) {
+            activeInterventionSession.clear()
+            return
+        }
+
+        activeInterventionSession.save(
+            ActiveInterventionSnapshot(
+                uiState = state,
+                monitoredUsageMinutes = currentMonitoredUsageMinutes,
+                launchFrequency = currentLaunchFrequency,
+                ambientLightLux = currentAmbientLightLux,
+                deviation = currentDeviation,
+                difficultyControlSignal = currentDifficultyControlSignal,
+                difficulty = currentDifficulty,
+                questionStartTimeMs = questionStartTimeMs
+            )
+        )
     }
 }

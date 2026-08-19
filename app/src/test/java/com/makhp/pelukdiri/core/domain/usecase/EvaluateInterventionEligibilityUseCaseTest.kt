@@ -1,0 +1,185 @@
+package com.makhp.pelukdiri.core.domain.usecase
+
+import com.makhp.pelukdiri.collector.AppUsageCollector
+import com.makhp.pelukdiri.collector.UsageEventCollector
+import com.makhp.pelukdiri.core.domain.InterventionLockManager
+import com.makhp.pelukdiri.core.domain.engine.ControlEngine
+import com.makhp.pelukdiri.core.domain.engine.DeviationEngine
+import com.makhp.pelukdiri.core.domain.model.AppUsage
+import com.makhp.pelukdiri.core.domain.model.ControlMode
+import com.makhp.pelukdiri.core.domain.model.ControlResult
+import com.makhp.pelukdiri.core.domain.model.DeviationResult
+import com.makhp.pelukdiri.core.domain.model.DeviationStatus
+import com.makhp.pelukdiri.core.domain.model.InterventionDecision
+import com.makhp.pelukdiri.core.domain.model.InterventionLog
+import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.verify
+import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class EvaluateInterventionEligibilityUseCaseTest {
+
+    private val targetPackage = "com.example.target"
+
+    private lateinit var useCase: EvaluateInterventionEligibilityUseCase
+    private val usageEventCollector: UsageEventCollector = mockk()
+    private val userPreferencesRepository: UserPreferencesRepository = mockk()
+    private val getAdaptiveHistoryUseCase: GetAdaptiveHistoryUseCase = mockk()
+    private val deviationEngine: DeviationEngine = mockk()
+    private val controlEngine: ControlEngine = mockk()
+    private val interventionLogRepository: InterventionLogRepository = mockk()
+    private val appUsageCollector: AppUsageCollector = mockk()
+    private val lockManager = InterventionLockManager()
+
+    @Before
+    fun setup() {
+        coEvery { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
+        useCase = EvaluateInterventionEligibilityUseCase(
+            usageEventCollector,
+            userPreferencesRepository,
+            getAdaptiveHistoryUseCase,
+            deviationEngine,
+            controlEngine,
+            interventionLogRepository,
+            appUsageCollector,
+            lockManager
+        )
+        every { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
+    }
+
+    @Test
+    fun `returns shouldTrigger false when lock is held`() = runBlocking {
+        // GIVEN: Lock is acquired
+        lockManager.acquireLock()
+
+        // WHEN: Invoke use case
+        val result: InterventionDecision = useCase("com.example.app")
+
+        // THEN: shouldTrigger is false
+        assertFalse(result.shouldTrigger)
+    }
+
+    @Test
+    fun `authoritative usage is not inflated by a second copy of the active session`() = runBlocking {
+        stubEligibleEvaluation(
+            usage = listOf(
+                AppUsage(targetPackage, "Target", 10 * 60_000L, 0L),
+                AppUsage("com.example.other", "Other", 5 * 60_000L, 0L)
+            )
+        )
+
+        val result = useCase(targetPackage)
+
+        assertEquals(10.0, result.monitoredUsageMinutes, 0.0001)
+        assertEquals(15.0, result.totalUsageMinutes, 0.0001)
+        assertTrue(result.shouldTrigger)
+        verify { deviationEngine.calculate(10.0, List(7) { 10.0 }) }
+    }
+
+    @Test
+    fun `performance uses same difficulty excludes bypasses and omits current response from baseline`() = runBlocking {
+        val latest = performanceLog(id = 10L, responseTimeMs = 500L)
+        val previous = (1L..5L).map { id -> performanceLog(id = id, responseTimeMs = 1_000L) }
+        stubEligibleEvaluation(latestPerformance = latest, successfulHistory = listOf(latest) + previous)
+
+        useCase(targetPackage)
+
+        coVerify { interventionLogRepository.getLatestValidPerformanceLogByDifficulty(2) }
+        coVerify { interventionLogRepository.getRecentValidSuccessfulLogsByDifficulty(2, 6) }
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(),
+                match { it.difficulty == 2 && it.responseTimeMs == 500L },
+                match { it == List(5) { 1_000L } },
+                any(),
+                any(),
+                any(),
+                2,
+                any(),
+                any()
+            )
+        }
+    }
+
+    @Test
+    fun `unmonitored package cannot trigger the engine`() = runBlocking {
+        every { usageEventCollector.getUsageForDay(any()) } returns emptyList()
+        every { userPreferencesRepository.monitoredPackages } returns flowOf(emptySet())
+
+        val result = useCase("com.example.unmonitored")
+
+        assertFalse(result.shouldTrigger)
+        verify(exactly = 0) { deviationEngine.calculate(any(), any()) }
+    }
+
+    private fun stubEligibleEvaluation(
+        usage: List<AppUsage> = listOf(AppUsage(targetPackage, "Target", 10 * 60_000L, 0L)),
+        latestPerformance: InterventionLog? = null,
+        successfulHistory: List<InterventionLog> = emptyList()
+    ) {
+        every { usageEventCollector.getUsageForDay(any()) } returns usage
+        every { userPreferencesRepository.monitoredPackages } returns flowOf(setOf(targetPackage))
+        every { userPreferencesRepository.nextEligibleInterventionAt } returns flowOf(0L)
+        every { userPreferencesRepository.emergencyBypassUntil } returns flowOf(0L)
+        every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
+        every { userPreferencesRepository.bedtime } returns flowOf(null)
+        every { userPreferencesRepository.wakeTime } returns flowOf(null)
+        coEvery { getAdaptiveHistoryUseCase() } returns List(7) { 10.0 }
+        every { deviationEngine.calculate(any(), any()) } returns DeviationResult(
+            deviation = 0.2,
+            baseline = 10.0,
+            mad = 1.0,
+            signal = 1.0,
+            relativeDeviation = 1.0,
+            relativeMagnitude = 0.1,
+            status = DeviationStatus.Success
+        )
+        coEvery { interventionLogRepository.getLatestValidPerformanceLogByDifficulty(2) } returns latestPerformance
+        coEvery { interventionLogRepository.getRecentValidSuccessfulLogsByDifficulty(2, 6) } returns successfulHistory
+        every {
+            controlEngine.calculateNextIntervention(
+                any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+        } returns controlResult()
+    }
+
+    private fun performanceLog(id: Long, responseTimeMs: Long) = InterventionLog(
+        id = id,
+        timestamp = id,
+        deviation = 0.2,
+        difficultyControlSignal = 0.5,
+        difficultyLevel = 2,
+        responseTimeMs = responseTimeMs,
+        isSuccess = true,
+        isBypassed = false,
+        penaltyAppliedMinutes = 0
+    )
+
+    private fun controlResult() = ControlResult(
+        deviation = 0.2,
+        performance = 0.5,
+        qLux = 0.0,
+        qTime = 0.0,
+        sensitivity = 0.0,
+        difficultyControl = 0.1,
+        normalizedDifficultyControl = 0.1,
+        difficultyTarget = 1.4,
+        currentDifficulty = 2,
+        nextDifficulty = 2,
+        frequencyControl = 0.2,
+        normalizedFrequencyControl = 0.2,
+        intervalMinutes = 24.6,
+        nextEligibleInterventionAt = 1_000L,
+        mode = ControlMode.PERSONALIZED
+    )
+}

@@ -193,7 +193,7 @@
     <string name="about_adaptation_metric_title">Metrik Adaptasi</string>
     <string name="about_adaptation_metric_desc">Bagaimana batas waktu layar kamu dihitung.</string>
     <string name="about_mechanism_detail_msg">Intervensi diberikan dalam bentuk tantangan kognitif (seperti matematika) saat kamu membuka aplikasi yang dibatasi. Intensitas disesuaikan secara otomatis.</string>
-    <string name="about_metric_detail_msg">Kami menggunakan Mean Absolute Deviation (MAD) untuk menghitung variasi penggunaanmu dan menentukan ambang batas intervensi yang personal.</string>
+    <string name="about_metric_detail_msg">Kami menggunakan Median Absolute Deviation (MAD) untuk menghitung variasi penggunaanmu dan menentukan ambang batas intervensi yang personal.</string>
     <string name="about_copyright">© 2026 MAKHP. All Rights Reserved.</string>
 
     <!-- Profile Sidebar -->

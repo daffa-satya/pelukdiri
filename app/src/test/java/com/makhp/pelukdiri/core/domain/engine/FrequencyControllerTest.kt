@@ -46,4 +46,19 @@ class FrequencyControllerTest {
         val res = controller.calculate(1.0, 1.0)
         assertEquals(3.0, res.intervalMinutes, 0.001)
     }
+
+    @Test
+    fun `calculate - configured interval bounds define the full mapping`() {
+        val configured = FrequencyController(
+            ControlConfig(
+                lambdaFrequency = 0.5,
+                minFrequencyMinutes = 5.0,
+                maxFrequencyMinutes = 45.0
+            )
+        )
+
+        assertEquals(45.0, configured.calculate(0.0, 0.0).intervalMinutes, 0.001)
+        assertEquals(25.0, configured.calculate(0.5, 0.0).intervalMinutes, 0.001)
+        assertEquals(5.0, configured.calculate(1.0, 0.0).intervalMinutes, 0.001)
+    }
 }

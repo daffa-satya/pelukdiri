@@ -68,19 +68,23 @@ fun MainStatsScreen(
                     onOnboardingClick()
                 },
                 onInterventionClick = {
-                    scope.launch { drawerState.close() }
-                    val intent = Intent(context, InterventionActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                Intent.FLAG_ACTIVITY_SINGLE_TOP or 
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-                        putExtra("EXTRA_PACKAGE_NAME", context.packageName)
-                        putExtra("EXTRA_SCREEN_TIME", 120.0)
-                        putExtra("EXTRA_LAUNCH_FREQ", 20.0)
-                        putExtra("EXTRA_AMBIENT_LUX", 100f)
-                        putExtra("EXTRA_BASELINE_LIMIT", 60.0)
+                    if (profileViewModel.tryAcquireInterventionLock()) {
+                        scope.launch { drawerState.close() }
+                        val intent = Intent(context, InterventionActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                    Intent.FLAG_ACTIVITY_SINGLE_TOP or 
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                            putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
+                            putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
+                            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, 20.0)
+                            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 100f)
+                            putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
+                            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
+                            putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
+                        }
+                        context.startActivity(intent)
                     }
-                    context.startActivity(intent)
                 }
             )
         }
@@ -256,18 +260,18 @@ private fun DashboardHeader(
 
 @Composable
 private fun ScreenTimeCard(today: DailySummary?, adaptiveLimitMinutes: Int?, history: List<DailySummary>) {
-    val total = today?.totalScreenTimeMillis ?: 0L
+    val usage = today?.monitoredUsageMillis ?: 0L
     val adaptiveLimitMillis = adaptiveLimitMinutes?.let { it * 60_000L } ?: 0L
-    val progress = remember(total, adaptiveLimitMillis) {
-        if (adaptiveLimitMillis == 0L) 0f else (total.toFloat() / adaptiveLimitMillis).coerceIn(0f, 1f)
+    val progress = remember(usage, adaptiveLimitMillis) {
+        if (adaptiveLimitMillis == 0L) 0f else (usage.toFloat() / adaptiveLimitMillis).coerceIn(0f, 1f)
     }
     val previous = remember(history) {
-        history.firstOrNull { it.date == LocalDate.now().minusDays(1) }?.totalScreenTimeMillis ?: total
+        history.firstOrNull { it.date == LocalDate.now().minusDays(1) }?.monitoredUsageMillis ?: usage
     }
-    val change = remember(total, previous) {
-        if (previous == 0L) 0 else (((total - previous) * 100) / previous).toInt()
+    val change = remember(usage, previous) {
+        if (previous == 0L) 0 else (((usage - previous) * 100) / previous).toInt()
     }
-    val totalFormatted = remember(total) { formatDuration(total) }
+    val usageFormatted = remember(usage) { formatDuration(usage) }
     val limitFormatted = if (adaptiveLimitMinutes != null) {
         formatDuration(adaptiveLimitMillis)
     } else {
@@ -287,7 +291,7 @@ private fun ScreenTimeCard(today: DailySummary?, adaptiveLimitMinutes: Int?, his
             Column(Modifier.weight(1.2f)) {
                 Text(stringResource(R.string.dashboard_screen_time_today), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
-                Text(totalFormatted, style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
+                Text(usageFormatted, style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(

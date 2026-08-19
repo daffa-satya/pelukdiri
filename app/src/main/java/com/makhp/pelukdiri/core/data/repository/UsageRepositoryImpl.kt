@@ -86,12 +86,18 @@ class UsageRepositoryImpl @Inject constructor(
         val totalScreenTime = usageList.sumOf { it.usageDurationMillis }
         val mostUsedApp = usageList.maxByOrNull { it.usageDurationMillis }?.appName
 
+        val monitoredPackages = userPreferencesRepository.monitoredPackages.first()
+        val monitoredUsage = usageList
+            .filter { it.packageName in monitoredPackages }
+            .sumOf { it.usageDurationMillis }
+
         val existingSummary = dao.getDailySummary(dateStr).firstOrNull()
         val totalScreenOnMillis = usageEventCollector.getScreenOnMillisForDay(LocalDate.parse(dateStr))
         val newSummary = DailySummaryEntity(
             date = dateStr,
             totalScreenTimeMillis = totalScreenTime,
             totalScreenOnMillis = totalScreenOnMillis,
+            monitoredUsageMillis = monitoredUsage,
             unlockCount = existingSummary?.unlockCount ?: 0,
             mostUsedApp = mostUsedApp,
             wellbeingScore = existingSummary?.wellbeingScore

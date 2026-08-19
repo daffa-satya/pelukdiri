@@ -1,7 +1,10 @@
 package com.makhp.pelukdiri.features.intervention
 
+import android.app.ActivityManager
 import android.os.Bundle
+import javax.inject.Inject
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,9 +20,17 @@ class InterventionActivity : ComponentActivity() {
     
     private val viewModel: InterventionViewModel by viewModels()
 
+    @Inject
+    lateinit var lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         android.util.Log.d("InterventionActivity", ">>> onCreate reached in InterventionActivity")
+
+        // The service normally acquires this before launch. Acquiring here as well makes the
+        // activity the authoritative owner when restored by Android or opened by a debug path.
+        lockManager.acquireLock()
+        excludeCurrentTaskFromRecents()
 
         // Use standard background transparency
         window.setBackgroundDrawableResource(android.R.color.transparent)
@@ -30,21 +41,13 @@ class InterventionActivity : ComponentActivity() {
             setTurnScreenOn(true)
         }
 
-        val screenTime = intent.getDoubleExtra("EXTRA_SCREEN_TIME", -1.0)
-        val launchFreq = intent.getDoubleExtra("EXTRA_LAUNCH_FREQ", 0.0)
-        val ambientLux = intent.getFloatExtra("EXTRA_AMBIENT_LUX", 0f)
-        val baselineLimit = intent.getDoubleExtra("EXTRA_BASELINE_LIMIT", 60.0)
+        // An intervention must be answered or explicitly bypassed. System Back must not
+        // silently dismiss it and leave the already-committed cooldown in place.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = Unit
+        })
 
-        if (screenTime >= 0.0) {
-            viewModel.startIntervention(
-                screenTimeMinutes = screenTime,
-                launchFrequency = launchFreq.toInt(),
-                ambientLightLux = ambientLux,
-                baselineLimitMinutes = baselineLimit
-            )
-        } else {
-            android.util.Log.w("InterventionActivity", ">>> No valid screen time data in intent")
-        }
+        processIntent(intent)
 
         setContent {
             PELUKDIRITheme {
@@ -62,5 +65,88 @@ class InterventionActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        android.util.Log.d("InterventionActivity", ">>> onNewIntent reached")
+        excludeCurrentTaskFromRecents()
+        processIntent(intent)
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        excludeCurrentTaskFromRecents()
+    }
+
+    private fun excludeCurrentTaskFromRecents() {
+        val activityManager = getSystemService(ActivityManager::class.java)
+        activityManager.appTasks
+            .firstOrNull { it.taskInfo?.taskId == taskId }
+            ?.setExcludeFromRecents(true)
+    }
+
+    private fun processIntent(intent: android.content.Intent?) {
+        if (intent == null) return
+
+        if (intent.getBooleanExtra(EXTRA_RESTORE_ACTIVE, false)) {
+            if (viewModel.restoreActiveIntervention()) {
+                android.util.Log.d("InterventionActivity", ">>> Restored active intervention")
+            } else {
+                android.util.Log.w("InterventionActivity", ">>> Active intervention snapshot unavailable")
+                lockManager.releaseLock()
+                finishAndRemoveTask()
+            }
+            return
+        }
+
+        val monitoredUsage = intent.getDoubleExtra(EXTRA_MONITORED_USAGE, -1.0)
+        val launchFreq = intent.getDoubleExtra(EXTRA_LAUNCH_FREQ, 0.0)
+        val ambientLux = intent.getFloatExtra(EXTRA_AMBIENT_LUX, 0f)
+        val deviation = intent.getDoubleExtra(EXTRA_DEVIATION, 0.0)
+        val difficultyControlSignal = intent.getDoubleExtra(EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.0)
+        val difficulty = intent.getIntExtra(EXTRA_DIFFICULTY, 2)
+
+        if (monitoredUsage >= 0.0) {
+            viewModel.startIntervention(
+                monitoredUsageMinutes = monitoredUsage,
+                launchFrequency = launchFreq.toInt(),
+                ambientLightLux = ambientLux,
+                deviation = deviation,
+                difficultyControlSignal = difficultyControlSignal,
+                difficulty = difficulty
+            )
+        } else {
+            android.util.Log.w("InterventionActivity", ">>> No valid monitored usage data in intent. MonitoredUsage: $monitoredUsage")
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        android.util.Log.d(
+            "InterventionActivity",
+            ">>> onStop; finishing=$isFinishing changingConfigurations=$isChangingConfigurations"
+        )
+        // The lock belongs to the unanswered intervention, not to the visible Activity
+        // lifecycle. It is released only by resetToIdle after an answer or bypass.
+    }
+
+    override fun onDestroy() {
+        android.util.Log.d(
+            "InterventionActivity",
+            ">>> onDestroy; finishing=$isFinishing changingConfigurations=$isChangingConfigurations"
+        )
+        super.onDestroy()
+    }
+
+    companion object {
+        const val EXTRA_PACKAGE_NAME = "EXTRA_PACKAGE_NAME"
+        const val EXTRA_MONITORED_USAGE = "EXTRA_MONITORED_USAGE"
+        const val EXTRA_LAUNCH_FREQ = "EXTRA_LAUNCH_FREQ"
+        const val EXTRA_AMBIENT_LUX = "EXTRA_AMBIENT_LUX"
+        const val EXTRA_DEVIATION = "EXTRA_DEVIATION"
+        const val EXTRA_DIFFICULTY_CONTROL_SIGNAL = "EXTRA_DIFFICULTY_CONTROL_SIGNAL"
+        const val EXTRA_DIFFICULTY = "EXTRA_DIFFICULTY"
+        const val EXTRA_RESTORE_ACTIVE = "EXTRA_RESTORE_ACTIVE"
     }
 }

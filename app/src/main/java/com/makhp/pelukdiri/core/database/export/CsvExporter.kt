@@ -91,9 +91,9 @@ class CsvExporter @Inject constructor(
         if (data.isEmpty()) return null
         val file = createTempFile("daily_summaries.csv")
         FileWriter(file).use { writer ->
-            writer.append("Date,TotalScreenTimeMillis,UnlockCount,MostUsedApp,WellbeingScore\n")
+            writer.append("Date,TotalScreenTimeMillis,TotalScreenOnMillis,MonitoredUsageMillis,UnlockCount,MostUsedApp,WellbeingScore\n")
             data.forEach {
-                writer.append("\"${it.date}\",${it.totalScreenTimeMillis},${it.unlockCount},\"${it.mostUsedApp ?: ""}\",${it.wellbeingScore ?: ""}\n")
+                writer.append("\"${it.date}\",${it.totalScreenTimeMillis},${it.totalScreenOnMillis},${it.monitoredUsageMillis},${it.unlockCount},\"${it.mostUsedApp ?: ""}\",${it.wellbeingScore ?: ""}\n")
             }
         }
         return file
@@ -130,9 +130,9 @@ class CsvExporter @Inject constructor(
         if (data.isEmpty()) return null
         val file = createTempFile("intervention_logs.csv")
         FileWriter(file).use { writer ->
-            writer.append("ID,Timestamp,Date,RiskScore,DifficultyLevel,ResponseTimeMs,IsSuccess,PenaltyAppliedMinutes\n")
+            writer.append("ID,Timestamp,Date,Deviation,DifficultyControlSignal,DifficultyLevel,ResponseTimeMs,IsSuccess,PenaltyAppliedMinutes\n")
             data.forEach {
-                writer.append("${it.id},${it.timestamp},\"${dateFormatter.format(Date(it.timestamp))}\",${it.riskScore},${it.difficultyLevel},${it.responseTimeMs},${it.isSuccess},${it.penaltyAppliedMinutes}\n")
+                writer.append("${it.id},${it.timestamp},\"${dateFormatter.format(Date(it.timestamp))}\",${it.deviation},${it.difficultyControlSignal},${it.difficultyLevel},${it.responseTimeMs},${it.isSuccess},${it.penaltyAppliedMinutes}\n")
             }
         }
         return file

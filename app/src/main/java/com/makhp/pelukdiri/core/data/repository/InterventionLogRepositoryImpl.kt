@@ -35,6 +35,10 @@ class InterventionLogRepositoryImpl @Inject constructor(
         return dao.getRecentValidSuccessfulLogsByDifficulty(difficulty, limit).map { it.toDomainModel() }
     }
 
+    override suspend fun getLatestValidPerformanceLogByDifficulty(difficulty: Int): InterventionLog? {
+        return dao.getLatestValidPerformanceLogByDifficulty(difficulty)?.toDomainModel()
+    }
+
     override suspend fun getLatestLog(): InterventionLog? {
         return dao.getLatestLog()?.toDomainModel()
     }

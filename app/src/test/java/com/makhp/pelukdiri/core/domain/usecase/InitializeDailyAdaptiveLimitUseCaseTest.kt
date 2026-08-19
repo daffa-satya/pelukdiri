@@ -18,7 +18,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
     private lateinit var usageRepository: FakeUsageRepository
     private lateinit var adaptiveLimitRepository: FakeAdaptiveLimitRepository
     private val deviationEngine = DeviationEngine(DeviationConfig())
-    private val adaptiveLimitGenerator = AdaptiveLimitGenerator()
+    private val adaptiveLimitGenerator = AdaptiveLimitGenerator(AdaptiveLimitConfig())
     private lateinit var getAdaptiveHistoryUseCase: GetAdaptiveHistoryUseCase
     private lateinit var useCase: InitializeDailyAdaptiveLimitUseCase
 
@@ -38,7 +38,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
     @Test
     fun `6 valid observations within 14 days - returns InsufficientHistory and no persistence`() = runBlocking {
         usageRepository.history = List(6) { i ->
-            DailySummary(LocalDate.now().minusDays(i + 1L), 60_000L * 60, 60_000L * 60, 10, null)
+            DailySummary(LocalDate.now().minusDays(i + 1L), 60_000L * 60, 60_000L * 60, 60_000L * 60, 10, null)
         }
 
         useCase.invoke()
@@ -47,31 +47,35 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
     }
 
     @Test
-    fun `7 valid observations within 14 days - persists personalized limit equal to baseline`() = runBlocking {
-        // Median of [10, 20, 30, 40, 50, 60, 70] is 40
+    fun `7 valid observations within 14 days - persists personalized limit equal to B plus MAD`() = runBlocking {
+        // History: [10, 20, 30, 40, 50, 60, 70]
+        // Median B = 40
+        // Deviations from 40: [30, 20, 10, 0, 10, 20, 30]
+        // Median Deviation MAD = 20
+        // Limit L = B + MAD = 40 + 20 = 60
         usageRepository.history = (1..7).map { i ->
-            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 0, null)
+            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
 
         useCase.invoke()
 
         val persisted = adaptiveLimitRepository.getLimitForDate(LocalDate.now().toString())
         assertNotNull(persisted)
-        assertEquals(40, persisted!!.calculatedLimitMinutes)
+        assertEquals(60, persisted!!.calculatedLimitMinutes)
     }
 
     @Test
-    fun `10 valid observations within 14 days - only 7 most recent used`() = runBlocking {
-        // Most recent 7: [10, 20, 30, 40, 50, 60, 70] -> Median 40
+    fun `10 valid observations within 14 days - only 7 most recent used for B plus MAD`() = runBlocking {
+        // Most recent 7: [10, 20, 30, 40, 50, 60, 70] -> B = 40, MAD = 20 -> L = 60
         // Older 3: [80, 90, 100] -> Should be ignored
         usageRepository.history = (1..10).map { i ->
-            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 0, null)
+            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
 
         useCase.invoke()
 
         val persisted = adaptiveLimitRepository.getLimitForDate(LocalDate.now().toString())
-        assertEquals(40, persisted!!.calculatedLimitMinutes)
+        assertEquals(60, persisted!!.calculatedLimitMinutes)
     }
 
     @Test
@@ -82,8 +86,8 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         val invalidDays = listOf(4, 7, 9)
         
         val history = mutableListOf<DailySummary>()
-        validDays.forEach { i -> history.add(DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * 100, 0, 0, null)) }
-        invalidDays.forEach { i -> history.add(DailySummary(LocalDate.now().minusDays(i.toLong()), 0, 0, 0, null)) }
+        validDays.forEach { i -> history.add(DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * 100, 0, 60_000L * 100, 0, null)) }
+        invalidDays.forEach { i -> history.add(DailySummary(LocalDate.now().minusDays(i.toLong()), 0, 0, 0, 0, null)) }
         
         usageRepository.history = history
 
@@ -101,7 +105,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         
         // Setup sufficient history that would generate a different limit (40)
         usageRepository.history = (1..7).map { i ->
-            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 0, null)
+            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
 
         useCase.invoke()
@@ -116,9 +120,9 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         // If today is NOT included, we need 7 PREVIOUS days.
         // Let's provide 6 previous days and today.
         val previousDays = (1..6).map { i ->
-            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 0, null)
+            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
-        val todayUsage = DailySummary(LocalDate.now(), 60_000L * 500, 0, 0, null)
+        val todayUsage = DailySummary(LocalDate.now(), 60_000L * 500, 0, 60_000L * 500, 0, null)
         
         usageRepository.history = previousDays + todayUsage
 
@@ -136,9 +140,9 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         // Yesterday's row exists
         adaptiveLimitRepository.limits[yesterday] = DailyAdaptiveLimit(yesterday, 120, 0, 0)
         
-        // Setup sufficient history for today (median 40)
+        // Setup sufficient history for today (B = 40, MAD = 20 -> L = 60)
         usageRepository.history = (1..7).map { i ->
-            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 0, null)
+            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
 
         useCase.invoke()
@@ -147,7 +151,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         val todayRow = adaptiveLimitRepository.getLimitForDate(today)
         
         assertEquals(120, yesterdayRow!!.calculatedLimitMinutes)
-        assertEquals(40, todayRow!!.calculatedLimitMinutes)
+        assertEquals(60, todayRow!!.calculatedLimitMinutes)
         assertNotEquals(yesterdayRow.dateString, todayRow.dateString)
     }
 

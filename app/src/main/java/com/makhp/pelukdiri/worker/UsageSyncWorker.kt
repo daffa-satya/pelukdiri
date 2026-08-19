@@ -89,7 +89,7 @@ class UsageSyncWorker @AssistedInject constructor(
             val limit = adaptiveLimitRepository.getLimitForDate(today.toString())
 
             notificationHelper.updateDailyUsageNotification(
-                totalUsageMillis = summary?.totalScreenTimeMillis ?: 0L,
+                totalUsageMillis = summary?.monitoredUsageMillis ?: 0L,
                 adaptiveLimitMinutes = limit?.calculatedLimitMinutes
             )
 
