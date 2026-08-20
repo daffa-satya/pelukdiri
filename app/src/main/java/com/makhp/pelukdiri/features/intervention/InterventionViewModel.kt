@@ -11,6 +11,7 @@ import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.usecase.BypassResult
 import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,9 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import kotlin.math.max
 import kotlin.math.roundToInt
 import javax.inject.Inject
@@ -33,7 +31,8 @@ class InterventionViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val performEmergencyBypassUseCase: PerformEmergencyBypassUseCase,
     private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
-    private val activeInterventionSession: ActiveInterventionSession
+    private val activeInterventionSession: ActiveInterventionSession,
+    private val timeProvider: TimeProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<InterventionUiState>(InterventionUiState.Idle)
@@ -48,6 +47,7 @@ class InterventionViewModel @Inject constructor(
     private var currentLaunchFrequency: Int = 0
     private var currentAmbientLightLux: Float = 0f
     private var isBypassProcessing: Boolean = false
+    private var sessionCreatedAtMs: Long = 0L
 
     fun startIntervention(
         monitoredUsageMinutes: Double,
@@ -66,11 +66,12 @@ class InterventionViewModel @Inject constructor(
         currentDifficulty = difficulty
         currentLaunchFrequency = launchFrequency
         currentAmbientLightLux = ambientLightLux
+        sessionCreatedAtMs = timeProvider.nowMillis()
         publishState(InterventionUiState.Loading)
 
         questionJob = viewModelScope.launch {
             val question = cognitiveQuestionGenerator.generateQuestion(difficulty)
-            val dateString = LocalDate.now().toString()
+            val dateString = timeProvider.today().toString()
             val adaptiveLimit = adaptiveLimitRepository.getLimitForDate(dateString)
 
             val assessment = RiskAssessmentResult(
@@ -83,7 +84,7 @@ class InterventionViewModel @Inject constructor(
             )
 
             val remaining = getRemainingBypasses()
-            questionStartTimeMs = System.currentTimeMillis()
+            questionStartTimeMs = timeProvider.nowMillis()
             publishState(InterventionUiState.QuestionActive(
                 question = question,
                 assessment = assessment,
@@ -92,8 +93,13 @@ class InterventionViewModel @Inject constructor(
         }
     }
 
-    fun restoreActiveIntervention(): Boolean {
-        val snapshot = activeInterventionSession.get() ?: return false
+    fun restoreActiveIntervention(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val snapshot = activeInterventionSession.restore()
+            if (snapshot == null) {
+                onResult(false)
+                return@launch
+            }
 
         currentMonitoredUsageMinutes = snapshot.monitoredUsageMinutes
         currentLaunchFrequency = snapshot.launchFrequency
@@ -102,6 +108,7 @@ class InterventionViewModel @Inject constructor(
         currentDifficultyControlSignal = snapshot.difficultyControlSignal
         currentDifficulty = snapshot.difficulty
         questionStartTimeMs = snapshot.questionStartTimeMs
+        sessionCreatedAtMs = snapshot.createdAtMs
 
         if (snapshot.uiState is InterventionUiState.Loading) {
             startIntervention(
@@ -115,7 +122,8 @@ class InterventionViewModel @Inject constructor(
         } else {
             _uiState.value = snapshot.uiState
         }
-        return true
+            onResult(true)
+        }
     }
 
     fun onAnswerChanged(rawInput: String) {
@@ -160,7 +168,7 @@ class InterventionViewModel @Inject constructor(
             else -> return
         }
 
-        val responseTime = System.currentTimeMillis() - questionStartTimeMs
+        val responseTime = timeProvider.nowMillis() - questionStartTimeMs
         val isSuccess = enteredAnswer == question.correctAnswer
 
         viewModelScope.launch {
@@ -168,7 +176,7 @@ class InterventionViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     interventionLogRepository.insertLog(
                         InterventionLog(
-                            timestamp = System.currentTimeMillis(),
+                            timestamp = timeProvider.nowMillis(),
                             deviation = currentDeviation,
                             difficultyControlSignal = currentDifficultyControlSignal,
                             difficultyLevel = currentDifficulty,
@@ -178,7 +186,7 @@ class InterventionViewModel @Inject constructor(
                         )
                     )
 
-                    val dateString = LocalDate.now().toString()
+                    val dateString = timeProvider.today().toString()
                     val existingLimit = adaptiveLimitRepository.getLimitForDate(dateString)
                     val updatedActualScreenTime = max(
                         existingLimit?.actualScreenTimeMinutes ?: 0,
@@ -224,7 +232,7 @@ class InterventionViewModel @Inject constructor(
             else -> return
         }
 
-        val responseTime = System.currentTimeMillis() - questionStartTimeMs
+        val responseTime = timeProvider.nowMillis() - questionStartTimeMs
         isBypassProcessing = true
 
         viewModelScope.launch {
@@ -258,9 +266,9 @@ class InterventionViewModel @Inject constructor(
     }
 
     private suspend fun getRemainingBypasses(): Int {
-        val now = ZonedDateTime.now(ZoneId.systemDefault())
-        val startOfDay = now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val endOfDay = now.toLocalDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val today = timeProvider.today()
+        val startOfDay = today.atStartOfDay(timeProvider.zoneId()).toInstant().toEpochMilli()
+        val endOfDay = today.plusDays(1).atStartOfDay(timeProvider.zoneId()).toInstant().toEpochMilli()
         val count = interventionLogRepository.getBypassCountForDay(startOfDay, endOfDay)
         return maxOf(0, 5 - count)
     }
@@ -273,12 +281,13 @@ class InterventionViewModel @Inject constructor(
     private fun publishState(state: InterventionUiState) {
         _uiState.value = state
         if (state is InterventionUiState.Idle) {
-            activeInterventionSession.clear()
+            viewModelScope.launch { activeInterventionSession.clear() }
             return
         }
 
-        activeInterventionSession.save(
-            ActiveInterventionSnapshot(
+        val now = timeProvider.nowMillis()
+        if (sessionCreatedAtMs == 0L) sessionCreatedAtMs = now
+        val snapshot = ActiveInterventionSnapshot(
                 uiState = state,
                 monitoredUsageMinutes = currentMonitoredUsageMinutes,
                 launchFrequency = currentLaunchFrequency,
@@ -286,8 +295,10 @@ class InterventionViewModel @Inject constructor(
                 deviation = currentDeviation,
                 difficultyControlSignal = currentDifficultyControlSignal,
                 difficulty = currentDifficulty,
-                questionStartTimeMs = questionStartTimeMs
-            )
+                questionStartTimeMs = questionStartTimeMs,
+                createdAtMs = sessionCreatedAtMs,
+                expiresAtMs = sessionCreatedAtMs + ActiveInterventionSession.TTL_MS
         )
+        viewModelScope.launch { activeInterventionSession.save(snapshot) }
     }
 }

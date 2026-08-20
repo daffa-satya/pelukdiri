@@ -7,6 +7,7 @@ import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +33,11 @@ class InterventionViewModelTest {
     private val userPreferencesRepository: UserPreferencesRepository = mockk()
     private val performEmergencyBypassUseCase: PerformEmergencyBypassUseCase = mockk()
     private val lockManager = InterventionLockManager()
-    private val activeInterventionSession = ActiveInterventionSession()
+    private lateinit var activeInterventionSession: ActiveInterventionSession
+    private val timeProvider = object : TimeProvider {
+        override fun nowMillis() = 1_800_000_000_000L
+        override fun zoneId() = java.time.ZoneId.of("Asia/Jakarta")
+    }
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -41,6 +46,9 @@ class InterventionViewModelTest {
         Dispatchers.setMain(testDispatcher)
         
         coEvery { interventionLogRepository.getBypassCountForDay(any(), any()) } returns 0
+        coEvery { userPreferencesRepository.setActiveInterventionSession(any()) } returns Unit
+        coEvery { userPreferencesRepository.activeInterventionSession } returns flowOf(null)
+        activeInterventionSession = ActiveInterventionSession(userPreferencesRepository, timeProvider, lockManager)
 
         viewModel = InterventionViewModel(
             cognitiveQuestionGenerator,
@@ -49,7 +57,8 @@ class InterventionViewModelTest {
             userPreferencesRepository,
             performEmergencyBypassUseCase,
             lockManager,
-            activeInterventionSession
+            activeInterventionSession,
+            timeProvider
         )
     }
 
@@ -96,10 +105,14 @@ class InterventionViewModelTest {
             userPreferencesRepository,
             performEmergencyBypassUseCase,
             lockManager,
-            activeInterventionSession
+            activeInterventionSession,
+            timeProvider
         )
 
-        assertTrue(replacement.restoreActiveIntervention())
+        var restored = false
+        replacement.restoreActiveIntervention { restored = it }
+        advanceUntilIdle()
+        assertTrue(restored)
         assertEquals(originalState, replacement.uiState.value)
     }
 

@@ -15,6 +15,7 @@ interface UserPreferencesRepository {
     val wakeTime: Flow<String?>
     val currentDifficulty: Flow<Int>
     val nextEligibleInterventionAt: Flow<Long>
+    val activeInterventionSession: Flow<String?>
 
     // User profile
     val userNickname: Flow<String>
@@ -39,6 +40,7 @@ interface UserPreferencesRepository {
     suspend fun setWakeTime(time: String?)
     suspend fun setCurrentDifficulty(difficulty: Int)
     suspend fun setNextEligibleInterventionAt(timestamp: Long)
+    suspend fun setActiveInterventionSession(encodedSession: String?)
 
     suspend fun setUserNickname(nickname: String)
     suspend fun setUsername(username: String)

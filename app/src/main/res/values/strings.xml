@@ -331,7 +331,7 @@
     <string name="onboarding_perm_why_1_desc">Mengetahui aplikasi apa yang sedang kamu buka.</string>
     <string name="onboarding_perm_why_2_title">Menampilkan intervensi</string>
     <string name="onboarding_perm_why_2_desc">Menampilkan tantangan singkat sebelum aplikasi terbuka penuh.</string>
-    <string name="onboarding_perm_why_3_title">100% aman</string>
+    <string name="onboarding_perm_why_3_title" formatted="false">100% aman</string>
     <string name="onboarding_perm_why_3_desc">Kami tidak membaca isi layar, teks, atau data pribadi lainnya.</string>
 
     <string name="onboarding_perm_why_usage_title">Mengapa butuh Akses Penggunaan?</string>

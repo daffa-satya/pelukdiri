@@ -19,7 +19,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        getByName("debug") {
+                // signing credential removed before publication
+                // signing credential removed before publication
+                // signing credential removed before publication
+                // signing credential removed before publication
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             optimization {
                 enable = false

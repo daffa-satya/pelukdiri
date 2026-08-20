@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
@@ -86,6 +87,7 @@ private fun UsageBar(
     maxUsage: Long,
     isToday: Boolean
 ) {
+    val locale = Locale.forLanguageTag(LocalConfiguration.current.locales[0].toLanguageTag())
     val ratio = if (maxUsage == 0L) 0f else (usage.toFloat() / maxUsage).coerceIn(.08f, 1f)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -109,7 +111,7 @@ private fun UsageBar(
         }
         Spacer(Modifier.height(DashboardTokens.SmallGap))
         Text(
-            text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+            text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
