@@ -1,6 +1,8 @@
 package com.makhp.pelukdiri.core.domain.usecase
 
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
+import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import javax.inject.Inject
@@ -10,10 +12,11 @@ import javax.inject.Inject
  * within the last 14 days, excluding today.
  */
 class GetAdaptiveHistoryUseCase @Inject constructor(
-    private val usageRepository: UsageRepository
+    private val usageRepository: UsageRepository,
+    private val timeProvider: TimeProvider = SystemTimeProvider()
 ) {
     suspend operator fun invoke(): List<Double> {
-        val today = LocalDate.now()
+        val today = timeProvider.today()
         val startDate = today.minusDays(14)
         val endDate = today.minusDays(1)
         

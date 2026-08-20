@@ -79,6 +79,21 @@ class InterventionActivity : ComponentActivity() {
         excludeCurrentTaskFromRecents()
     }
 
+    override fun onPause() {
+        // Some MIUI versions still render an excluded single-instance task after it has
+        // entered Recents more than once. The unanswered intervention is persisted and the
+        // lock is deliberately not owned by this Activity lifecycle, so removing only this
+        // UI task is safe: returning to a monitored app restores the exact same session.
+        if (!isFinishing && !isChangingConfigurations) {
+            android.util.Log.d(
+                "InterventionActivity",
+                ">>> onPause; removing transient UI task while preserving active session"
+            )
+            finishAndRemoveTask()
+        }
+        super.onPause()
+    }
+
     private fun excludeCurrentTaskFromRecents() {
         val activityManager = getSystemService(ActivityManager::class.java)
         activityManager.appTasks
@@ -90,12 +105,14 @@ class InterventionActivity : ComponentActivity() {
         if (intent == null) return
 
         if (intent.getBooleanExtra(EXTRA_RESTORE_ACTIVE, false)) {
-            if (viewModel.restoreActiveIntervention()) {
-                android.util.Log.d("InterventionActivity", ">>> Restored active intervention")
-            } else {
-                android.util.Log.w("InterventionActivity", ">>> Active intervention snapshot unavailable")
-                lockManager.releaseLock()
-                finishAndRemoveTask()
+            viewModel.restoreActiveIntervention { restored ->
+                if (restored) {
+                    android.util.Log.d("InterventionActivity", ">>> Restored active intervention")
+                } else {
+                    android.util.Log.w("InterventionActivity", ">>> Active intervention snapshot unavailable")
+                    lockManager.releaseLock()
+                    finishAndRemoveTask()
+                }
             }
             return
         }

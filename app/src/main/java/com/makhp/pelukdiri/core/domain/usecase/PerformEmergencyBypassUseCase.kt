@@ -3,8 +3,8 @@ package com.makhp.pelukdiri.core.domain.usecase
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
-import java.time.ZoneId
-import java.time.ZonedDateTime
+import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import javax.inject.Inject
 
 sealed interface BypassResult {
@@ -14,7 +14,8 @@ sealed interface BypassResult {
 
 class PerformEmergencyBypassUseCase @Inject constructor(
     private val interventionLogRepository: InterventionLogRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val timeProvider: TimeProvider = SystemTimeProvider()
 ) {
     suspend operator fun invoke(
         deviation: Double,
@@ -23,9 +24,9 @@ class PerformEmergencyBypassUseCase @Inject constructor(
         penaltyMinutes: Int,
         responseTimeMs: Long
     ): BypassResult {
-        val now = ZonedDateTime.now(ZoneId.systemDefault())
-        val startOfDay = now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val endOfDay = now.toLocalDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val today = timeProvider.today()
+        val startOfDay = today.atStartOfDay(timeProvider.zoneId()).toInstant().toEpochMilli()
+        val endOfDay = today.plusDays(1).atStartOfDay(timeProvider.zoneId()).toInstant().toEpochMilli()
 
         // 1. Backend Enforcement (Check daily limit)
         val currentCount = interventionLogRepository.getBypassCountForDay(startOfDay, endOfDay)
@@ -34,7 +35,7 @@ class PerformEmergencyBypassUseCase @Inject constructor(
             return BypassResult.Exhausted
         }
 
-        val currentTimeMs = System.currentTimeMillis()
+        val currentTimeMs = timeProvider.nowMillis()
         val bypassUntil = currentTimeMs + 180_000L // Exactly 3 minutes
 
         // 2. Persistent State Updates

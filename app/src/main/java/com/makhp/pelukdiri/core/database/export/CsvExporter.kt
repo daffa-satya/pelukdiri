@@ -12,9 +12,11 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.io.FileWriter
-import java.text.SimpleDateFormat
-import java.util.*
+import java.io.OutputStreamWriter
+import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
@@ -29,8 +31,6 @@ class CsvExporter @Inject constructor(
     private val interventionNotificationDao: InterventionNotificationDao,
     private val adaptiveLimitDao: AdaptiveLimitDao
 ) {
-
-    private val dateFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     suspend fun exportFullDatabaseToZip(): Result<File> = withContext(Dispatchers.IO) {
         try {
@@ -49,7 +49,8 @@ class CsvExporter @Inject constructor(
             }
 
             // 2. Create ZIP package
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
+                .withZone(ZoneOffset.UTC).format(Instant.now())
             val zipFileName = "PELUKDIRI_FullExport_$timestamp.zip"
             val exportDir = File(context.getExternalFilesDir(null), "exports")
             if (!exportDir.exists()) exportDir.mkdirs()
@@ -77,10 +78,10 @@ class CsvExporter @Inject constructor(
         val data = usageDao.getAllAppUsageList()
         if (data.isEmpty()) return null
         val file = createTempFile("app_usage.csv")
-        FileWriter(file).use { writer ->
-            writer.append("PackageName,AppName,UsageDurationMillis,LastUsedTimestamp,Date\n")
+        writerFor(file).use { writer ->
+            writer.append("PackageName,AppName,UsageDurationMillis,LastUsedTimestamp,Date\r\n")
             data.forEach {
-                writer.append("\"${it.packageName}\",\"${it.appName}\",${it.usageDurationMillis},${it.lastUsedTimestamp},\"${it.date}\"\n")
+                writer.append(CsvFormat.row(it.packageName, it.appName, it.usageDurationMillis, it.lastUsedTimestamp, it.date))
             }
         }
         return file
@@ -90,10 +91,10 @@ class CsvExporter @Inject constructor(
         val data = usageDao.getAllDailySummariesList()
         if (data.isEmpty()) return null
         val file = createTempFile("daily_summaries.csv")
-        FileWriter(file).use { writer ->
-            writer.append("Date,TotalScreenTimeMillis,TotalScreenOnMillis,MonitoredUsageMillis,UnlockCount,MostUsedApp,WellbeingScore\n")
+        writerFor(file).use { writer ->
+            writer.append("Date,TotalScreenTimeMillis,TotalScreenOnMillis,MonitoredUsageMillis,UnlockCount,MostUsedApp,WellbeingScore\r\n")
             data.forEach {
-                writer.append("\"${it.date}\",${it.totalScreenTimeMillis},${it.totalScreenOnMillis},${it.monitoredUsageMillis},${it.unlockCount},\"${it.mostUsedApp ?: ""}\",${it.wellbeingScore ?: ""}\n")
+                writer.append(CsvFormat.row(it.date, it.totalScreenTimeMillis, it.totalScreenOnMillis, it.monitoredUsageMillis, it.unlockCount, it.mostUsedApp ?: "", it.wellbeingScore))
             }
         }
         return file
@@ -103,10 +104,10 @@ class CsvExporter @Inject constructor(
         val data = usageSensorDao.getAllLogsList()
         if (data.isEmpty()) return null
         val file = createTempFile("usage_sensor_logs.csv")
-        FileWriter(file).use { writer ->
-            writer.append("Timestamp,Date,PackageName,RawScreenTimeMs,AppOpeningFrequency,AmbientLightLux\n")
+        writerFor(file).use { writer ->
+            writer.append("Timestamp,Date,PackageName,RawScreenTimeMs,AppOpeningFrequency,AmbientLightLux\r\n")
             data.forEach {
-                writer.append("${it.timestamp},\"${dateFormatter.format(Date(it.timestamp))}\",\"${it.packageName}\",${it.rawScreenTimeMs},${it.appOpeningFrequency},${it.ambientLightLux}\n")
+                writer.append(CsvFormat.row(it.timestamp, CsvFormat.timestamp(it.timestamp), it.packageName, it.rawScreenTimeMs, it.appOpeningFrequency, it.ambientLightLux))
             }
         }
         return file
@@ -116,10 +117,10 @@ class CsvExporter @Inject constructor(
         val data = interventionNotificationDao.getAllInterventionsList()
         if (data.isEmpty()) return null
         val file = createTempFile("interventions.csv")
-        FileWriter(file).use { writer ->
-            writer.append("ID,Title,Message,Type,Timestamp,Date,IsAcknowledged\n")
+        writerFor(file).use { writer ->
+            writer.append("ID,Title,Message,Type,Timestamp,Date,IsAcknowledged\r\n")
             data.forEach {
-                writer.append("\"${it.id}\",\"${it.title}\",\"${it.message}\",\"${it.type}\",${it.timestamp},\"${dateFormatter.format(Date(it.timestamp))}\",${it.isAcknowledged}\n")
+                writer.append(CsvFormat.row(it.id, it.title, it.message, it.type, it.timestamp, CsvFormat.timestamp(it.timestamp), it.isAcknowledged))
             }
         }
         return file
@@ -129,10 +130,10 @@ class CsvExporter @Inject constructor(
         val data = interventionDao.getAllLogsList()
         if (data.isEmpty()) return null
         val file = createTempFile("intervention_logs.csv")
-        FileWriter(file).use { writer ->
-            writer.append("ID,Timestamp,Date,Deviation,DifficultyControlSignal,DifficultyLevel,ResponseTimeMs,IsSuccess,PenaltyAppliedMinutes\n")
+        writerFor(file).use { writer ->
+            writer.append("ID,Timestamp,Date,Deviation,DifficultyControlSignal,DifficultyLevel,ResponseTimeMs,IsSuccess,IsBypassed,PenaltyAppliedMinutes\r\n")
             data.forEach {
-                writer.append("${it.id},${it.timestamp},\"${dateFormatter.format(Date(it.timestamp))}\",${it.deviation},${it.difficultyControlSignal},${it.difficultyLevel},${it.responseTimeMs},${it.isSuccess},${it.penaltyAppliedMinutes}\n")
+                writer.append(CsvFormat.row(it.id, it.timestamp, CsvFormat.timestamp(it.timestamp), it.deviation, it.difficultyControlSignal, it.difficultyLevel, it.responseTimeMs, it.isSuccess, it.isBypassed, it.penaltyAppliedMinutes))
             }
         }
         return file
@@ -142,10 +143,10 @@ class CsvExporter @Inject constructor(
         val data = adaptiveLimitDao.getAllLimitsList()
         if (data.isEmpty()) return null
         val file = createTempFile("daily_adaptive_limits.csv")
-        FileWriter(file).use { writer ->
-            writer.append("DateString,CalculatedLimitMinutes,ActualScreenTimeMinutes,ReclaimedTimeMinutes\n")
+        writerFor(file).use { writer ->
+            writer.append("DateString,CalculatedLimitMinutes,ActualScreenTimeMinutes,ReclaimedTimeMinutes\r\n")
             data.forEach {
-                writer.append("\"${it.dateString}\",${it.calculatedLimitMinutes},${it.actualScreenTimeMinutes},${it.reclaimedTimeMinutes}\n")
+                writer.append(CsvFormat.row(it.dateString, it.calculatedLimitMinutes, it.actualScreenTimeMinutes, it.reclaimedTimeMinutes))
             }
         }
         return file
@@ -156,4 +157,6 @@ class CsvExporter @Inject constructor(
         if (!exportDir.exists()) exportDir.mkdirs()
         return File(exportDir, fileName)
     }
+
+    private fun writerFor(file: File) = OutputStreamWriter(FileOutputStream(file), StandardCharsets.UTF_8)
 }

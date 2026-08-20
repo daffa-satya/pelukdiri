@@ -115,9 +115,11 @@ class EmergencyBypassAuditTest {
 
         override val emergencyBypassUntil: Flow<Long> get() = flowOf(bypassUntil)
         override val nextEligibleInterventionAt: Flow<Long> get() = flowOf(nextEligibleAt)
+        override val activeInterventionSession = flowOf<String?>(null)
 
         override suspend fun setEmergencyBypassUntil(timestamp: Long) { bypassUntil = timestamp }
         override suspend fun setNextEligibleInterventionAt(timestamp: Long) { nextEligibleAt = timestamp }
+        override suspend fun setActiveInterventionSession(encodedSession: String?) {}
 
         // Unused in this test
         override val isHistoryBackfilled = flowOf(false)

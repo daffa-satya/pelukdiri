@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.collector.UsageEventCollector
 import com.makhp.pelukdiri.collector.UsageEventReconstructor
+import com.makhp.pelukdiri.collector.ScreenInteractiveReconstructor
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
@@ -17,7 +18,7 @@ class UsageEventCollectorValidationTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val appUsageCollector = AppUsageCollector(context)
         val reconstructor = UsageEventReconstructor()
-        val collector = UsageEventCollector(context, appUsageCollector, reconstructor)
+        val collector = UsageEventCollector(context, appUsageCollector, reconstructor, ScreenInteractiveReconstructor())
         
         val target = LocalDate.of(2026, 8, 5)
         val usage = collector.getUsageForDay(target)

@@ -10,6 +10,9 @@ import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.usecase.EvaluateInterventionEligibilityUseCase
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
+import com.makhp.pelukdiri.features.intervention.ActiveInterventionSession
+import com.makhp.pelukdiri.core.domain.InterventionLaunchPolicy
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +47,10 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     @Inject
     lateinit var lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager
+
+    @Inject lateinit var activeInterventionSession: ActiveInterventionSession
+    @Inject lateinit var launchPolicy: InterventionLaunchPolicy
+    @Inject lateinit var timeProvider: TimeProvider
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var currentMonitoredPackages = emptySet<String>()
@@ -93,14 +100,22 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         try {
             val eventType = event?.eventType
-            val packageName = event?.packageName?.toString() ?: return
+            val eventPackage = event?.packageName?.toString() ?: return
+            val activeWindowPackage = rootInActiveWindow?.packageName?.toString()
+            val packageName = ForegroundPackageResolver.resolve(
+                eventPackage = eventPackage,
+                activeWindowPackage = activeWindowPackage
+            )
             
             // TODO: Implement time-based monitoring instead of relying solely on Window State Changes.
             // This would involve checking the active app duration periodically (e.g., every 60s)
             // even if the user hasn't switched windows, to handle cases where they stay 
             // in a target app for hours.
             if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                Log.d("AppBlockerService", ">>> Window Changed: $packageName (Event: $eventType)")
+                Log.d(
+                    "AppBlockerService",
+                    ">>> Window Changed: event=$eventPackage active=$activeWindowPackage resolved=$packageName class=${event.className}"
+                )
                 handlePackageChanged(packageName)
             }
         } catch (e: Exception) {
@@ -110,6 +125,13 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     private suspend fun evaluateIntervention(packageName: String) {
         Log.d("AppBlockerService", ">>> evaluateIntervention called for $packageName")
+
+        val savedSession = activeInterventionSession.restore()
+        if (savedSession != null) {
+            lockManager.acquireLock()
+            restoreActiveIntervention()
+            return
+        }
         
         val decision = evaluateInterventionEligibilityUseCase(packageName)
         val controlResult = decision.controlResult
@@ -183,7 +205,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         foregroundTrackingJob = serviceScope.launch {
             Log.d("AppBlockerService", "Started periodic tracking for: $packageName")
             while (isActive) {
-                val currentTime = System.currentTimeMillis()
+                val currentTime = timeProvider.nowMillis()
                 
                 // Periodically flush data to Room/Prefs (every 30s)
                 if (currentTime - lastSyncTimestamp > SYNC_INTERVAL_MS) {
@@ -212,6 +234,10 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         difficulty: Int
     ): Boolean {
         Log.d("AppBlockerService", ">>> ATTEMPTING LAUNCH FOR: $packageName")
+        if (launchPolicy.consumeForcedFailure()) {
+            Log.w("AppBlockerService", ">>> Debug control forced launch failure")
+            return false
+        }
         val intent = Intent(this, InterventionActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                     Intent.FLAG_ACTIVITY_SINGLE_TOP or 

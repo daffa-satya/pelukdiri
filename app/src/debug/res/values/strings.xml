@@ -1,0 +1,23 @@
+<resources>
+    <string name="test_lab_title">PelukDiri Test Lab</string>
+    <string name="test_lab_runtime">Runtime state</string>
+    <string name="test_lab_engine">Engine scenarios</string>
+    <string name="test_lab_boundaries">Time and failure boundaries</string>
+    <string name="test_lab_intervention">Intervention launch</string>
+    <string name="test_lab_refresh">Refresh</string>
+    <string name="test_lab_system_time">Use system time</string>
+    <string name="test_lab_before">nextEligible − 1 ms</string>
+    <string name="test_lab_exact">nextEligible exact</string>
+    <string name="test_lab_after">nextEligible + 1 ms</string>
+    <string name="test_lab_advance_ttl">Advance 20 minutes</string>
+    <string name="test_lab_fail_launch">Fail next service launch</string>
+    <string name="test_lab_clear_timing">Clear cooldown and bypass</string>
+    <string name="test_lab_clear_session">Clear active session</string>
+    <string name="test_lab_good_performance">Insert good performance</string>
+    <string name="test_lab_poor_performance">Insert poor performance</string>
+    <string name="test_lab_seed_history">Seed 30-minute baseline</string>
+    <string name="test_lab_low_deviation">Low deviation scenario</string>
+    <string name="test_lab_high_deviation">High deviation scenario</string>
+    <string name="test_lab_launch_level">Launch level %1$d</string>
+    <string name="test_lab_difficulty">Set difficulty %1$d</string>
+</resources>

@@ -8,6 +8,8 @@ import com.makhp.pelukdiri.core.domain.model.InterventionDecision
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalTime
@@ -21,11 +23,12 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
     private val controlEngine: ControlEngine,
     private val interventionLogRepository: InterventionLogRepository,
     private val appUsageCollector: AppUsageCollector,
-    private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager
+    private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
+    private val timeProvider: TimeProvider = SystemTimeProvider()
 ) {
     suspend operator fun invoke(packageName: String): InterventionDecision {
-        val currentTimeMs = System.currentTimeMillis()
-        val today = LocalDate.now()
+        val currentTimeMs = timeProvider.nowMillis()
+        val today = timeProvider.today()
 
         // 0. Quick check for active intervention lock
         if (lockManager.isLocked.value) {

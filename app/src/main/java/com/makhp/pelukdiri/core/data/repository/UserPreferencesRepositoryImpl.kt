@@ -40,6 +40,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val WAKE_TIME = stringPreferencesKey("wake_time")
         val CURRENT_DIFFICULTY = intPreferencesKey("current_difficulty")
         val NEXT_ELIGIBLE_INTERVENTION_AT = longPreferencesKey("next_eligible_intervention_at")
+        val ACTIVE_INTERVENTION_SESSION = stringPreferencesKey("active_intervention_session_v1")
         val USER_NICKNAME = stringPreferencesKey("user_nickname")
         val USERNAME = stringPreferencesKey("username")
         val PROFILE_IMAGE_PATH = stringPreferencesKey("profile_image_path")
@@ -164,6 +165,10 @@ class UserPreferencesRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.NEXT_ELIGIBLE_INTERVENTION_AT] ?: 0L
         }
 
+    override val activeInterventionSession: Flow<String?> = context.dataStore.data
+        .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
+        .map { preferences -> preferences[PreferencesKeys.ACTIVE_INTERVENTION_SESSION] }
+
     override val userNickname: Flow<String> = context.dataStore.data
         .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
         .map { preferences -> preferences[PreferencesKeys.USER_NICKNAME] ?: "User" }
@@ -274,6 +279,13 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     override suspend fun setNextEligibleInterventionAt(timestamp: Long) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.NEXT_ELIGIBLE_INTERVENTION_AT] = timestamp
+        }
+    }
+
+    override suspend fun setActiveInterventionSession(encodedSession: String?) {
+        context.dataStore.edit { preferences ->
+            if (encodedSession == null) preferences.remove(PreferencesKeys.ACTIVE_INTERVENTION_SESSION)
+            else preferences[PreferencesKeys.ACTIVE_INTERVENTION_SESSION] = encodedSession
         }
     }
 
