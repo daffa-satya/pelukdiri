@@ -47,7 +47,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
     @Before
     fun setup() {
         coEvery { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
-        every { challengeSelector.select(any()) } returns InterventionChallengeType.MATH
+        every { challengeSelector.select() } returns InterventionChallengeType.MATH
         useCase = EvaluateInterventionEligibilityUseCase(
             usageEventCollector,
             userPreferencesRepository,
@@ -137,7 +137,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
 
     @Test
     fun `pattern and math performance histories are isolated`() = runBlocking {
-        every { challengeSelector.select(any()) } returns InterventionChallengeType.PATTERN
+        every { challengeSelector.select() } returns InterventionChallengeType.PATTERN
         val logs = listOf(
             performanceLog(3L, 500L, challengeType = InterventionChallengeType.PATTERN),
             performanceLog(2L, 100L, challengeType = InterventionChallengeType.MATH),

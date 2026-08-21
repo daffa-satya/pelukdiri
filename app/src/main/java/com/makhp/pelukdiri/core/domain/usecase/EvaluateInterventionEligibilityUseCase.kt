@@ -92,7 +92,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         Log.d("EligibilityUseCase", "Stage: reading performance context")
         val currentDiff = userPreferencesRepository.currentDifficulty.first()
         val recentLogs = interventionLogRepository.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
-        val challengeType = challengeSelector.select(recentLogs.firstOrNull()?.challengeType)
+        val challengeType = challengeSelector.select()
         val currentDifficultyRun = recentLogs
             .takeWhile { it.difficultyLevel == currentDiff }
             .filter { it.challengeType == challengeType }

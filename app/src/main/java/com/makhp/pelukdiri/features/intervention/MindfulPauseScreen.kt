@@ -92,7 +92,9 @@ fun MindfulPauseScreen(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 28.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 when (state) {
@@ -490,7 +492,7 @@ private fun PatternContent(
     Spacer(Modifier.height(if (isLandscape) 8.dp else 18.dp))
     OutlinedButton(
         onClick = onReplayPattern,
-        enabled = !state.isPlaying && state.replaysRemaining > 0,
+        enabled = !state.isPlaying,
     ) {
         Text(
             text = if (state.isPlaying) {
@@ -572,7 +574,7 @@ private fun LandscapePatternContent(
             }
             OutlinedButton(
                 onClick = onReplayPattern,
-                enabled = !state.isPlaying && state.replaysRemaining > 0,
+                enabled = !state.isPlaying,
             ) {
                 Text(
                     if (state.isPlaying) stringResource(R.string.intervention_playing_pattern)
@@ -644,6 +646,11 @@ private fun PatternTile(
         PatternShape.TRIANGLE -> PatternAmber
         PatternShape.PENTAGON -> PatternPink
     }
+    val symbolSize = when (shape) {
+        PatternShape.CIRCLE, PatternShape.SQUARE -> 52.dp
+        PatternShape.TRIANGLE -> 62.dp
+        PatternShape.PENTAGON -> 60.dp
+    }
     val scale by animateFloatAsState(if (highlighted) 1.08f else 1f, label = "patternTileScale")
     Box(
         modifier = modifier
@@ -662,7 +669,7 @@ private fun PatternTile(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.fillMaxSize(0.34f)) {
+        Canvas(Modifier.size(symbolSize)) {
             when (shape) {
                 PatternShape.CIRCLE -> drawCircle(color)
                 PatternShape.SQUARE -> drawRect(color)

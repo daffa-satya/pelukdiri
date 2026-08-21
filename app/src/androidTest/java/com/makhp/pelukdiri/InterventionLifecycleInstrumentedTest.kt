@@ -8,6 +8,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -24,6 +25,8 @@ import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.features.intervention.InterventionUiState
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -118,6 +121,32 @@ class InterventionLifecycleInstrumentedTest {
         scenario.close()
     }
 
+    @Test fun directPatternLaunchDoesNotRestartOnRotation() = runBlocking {
+        dependencies.session().clear()
+        val scenario = ActivityScenario.launch<InterventionActivity>(
+            Intent(context, InterventionActivity::class.java)
+                .putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 90.0)
+                .putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, 5.0)
+                .putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 25f)
+                .putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
+                .putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
+                .putExtra(InterventionActivity.EXTRA_DIFFICULTY, 1)
+                .putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, "PATTERN")
+        )
+
+        val beforeInput = awaitPatternState { !it.isPlaying }
+        compose.onNode(hasContentDescription(shapeDescription(beforeInput.question.sequence.first())))
+            .performClick()
+        val beforeRotation = awaitPatternState { it.answerInput.size == 1 }
+
+        scenario.recreate()
+
+        val afterRotation = awaitPatternState { !it.isPlaying }
+        assertEquals(beforeRotation.question, afterRotation.question)
+        assertEquals(beforeRotation.answerInput, afterRotation.answerInput)
+        scenario.close()
+    }
+
     @Test fun researchDataIsExcludedFromAndroidBackup() {
         val applicationInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
         assertEquals(0, applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP)
@@ -134,5 +163,23 @@ class InterventionLifecycleInstrumentedTest {
         } finally {
             first.useSystemTime()
         }
+    }
+
+    private suspend fun awaitPatternState(
+        predicate: (InterventionUiState.PatternActive) -> Boolean,
+    ): InterventionUiState.PatternActive = withTimeout(12_000) {
+        while (true) {
+            val state = dependencies.session().restore()?.uiState
+            if (state is InterventionUiState.PatternActive && predicate(state)) return@withTimeout state
+            delay(50)
+        }
+        error("unreachable")
+    }
+
+    private fun shapeDescription(shape: PatternShape): String = when (shape) {
+        PatternShape.CIRCLE -> "Lingkaran"
+        PatternShape.SQUARE -> "Persegi"
+        PatternShape.TRIANGLE -> "Segitiga"
+        PatternShape.PENTAGON -> "Pentagon"
     }
 }
