@@ -34,6 +34,7 @@ import com.makhp.pelukdiri.features.dashboard.AppDetailBottomSheet
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.features.dashboard.UiAppUsage
 import com.makhp.pelukdiri.ui.components.AppIcon
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.InsightCard
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.components.formatDuration
@@ -159,7 +160,9 @@ private fun AnalyticsHeader() {
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium
         )
-        Spacer(Modifier.width(Dimens.minTouchTarget))
+        Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
+            PelukDiriLogo(size = 28.dp)
+        }
     }
 }
 

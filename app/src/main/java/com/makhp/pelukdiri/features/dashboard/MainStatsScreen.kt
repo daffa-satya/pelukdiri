@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.makhp.pelukdiri.R
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.features.dashboard.UiAppUsage
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
@@ -108,8 +109,7 @@ fun MainStatsScreen(
             onProgressClick = onProgressClick,
             onSettingsClick = onSettingsClick,
             onViewAllClick = onViewAllClick,
-            onMenuClick = { scope.launch { drawerState.open() } },
-            onDndToggle = viewModel::toggleDnd
+            onMenuClick = { scope.launch { drawerState.open() } }
         )
     }
 }
@@ -128,8 +128,7 @@ private fun DashboardScaffold(
     onProgressClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onViewAllClick: () -> Unit,
-    onMenuClick: () -> Unit,
-    onDndToggle: () -> Unit
+    onMenuClick: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -152,8 +151,7 @@ private fun DashboardScaffold(
                 onGrantBatteryExemption = onGrantBatteryExemption,
                 onViewAllClick = onViewAllClick,
                 onNavigateToAnalytics = onProgressClick,
-                onMenuClick = onMenuClick,
-                onDndToggle = onDndToggle
+                onMenuClick = onMenuClick
             )
         }
     }
@@ -171,8 +169,7 @@ private fun DashboardContent(
     onGrantBatteryExemption: () -> Unit,
     onViewAllClick: () -> Unit,
     onNavigateToAnalytics: () -> Unit,
-    onMenuClick: () -> Unit,
-    onDndToggle: () -> Unit
+    onMenuClick: () -> Unit
 ) {
     var selectedApp by remember { mutableStateOf<UiAppUsage?>(null) }
 
@@ -184,11 +181,9 @@ private fun DashboardContent(
         item(key = "header") { 
             DashboardHeader(
                 profileState = profileState, 
-                isDndActive = state.isDndEnabled,
                 onRefresh = onRefresh, 
                 onBackfill = onBackfill, 
-                onMenuClick = onMenuClick,
-                onDndToggle = onDndToggle
+                onMenuClick = onMenuClick
             ) 
         }
         if (!state.isPermissionGranted) item(key = "perm_usage") { PermissionNotice(stringResource(R.string.dashboard_usage_access_needed), stringResource(R.string.dashboard_open_permission), onGrantUsageAccess) }
@@ -222,11 +217,9 @@ private fun DashboardContent(
 @Composable
 private fun DashboardHeader(
     profileState: ProfileUiState,
-    isDndActive: Boolean,
     onRefresh: () -> Unit,
     onBackfill: () -> Unit,
-    onMenuClick: () -> Unit,
-    onDndToggle: () -> Unit
+    onMenuClick: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -253,13 +246,6 @@ private fun DashboardHeader(
         Spacer(Modifier.width(DashboardTokens.MediumGap))
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.dashboard_header_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        }
-        IconButton(onClick = onDndToggle) { 
-            Icon(
-                if (isDndActive) Icons.Default.NotificationsOff else Icons.Default.NotificationsNone, 
-                contentDescription = stringResource(R.string.notification_settings_title),
-                tint = if (isDndActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-            ) 
         }
         Box {
             IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = null) }
@@ -379,7 +365,9 @@ private fun AppUsageRow(
 private fun EncouragementCard() {
     PelukCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(Dimens.buttonHeight).clip(RoundedCornerShape(DashboardTokens.LargeRadius)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) { Text("🌱", style = MaterialTheme.typography.headlineMedium) }
+            Box(Modifier.size(Dimens.buttonHeight).clip(RoundedCornerShape(DashboardTokens.LargeRadius)).background(MaterialTheme.colorScheme.primaryContainer), contentAlignment = Alignment.Center) { 
+                PelukDiriLogo(size = 32.dp)
+            }
             Spacer(Modifier.width(DashboardTokens.CardPadding))
             Text(stringResource(R.string.dashboard_encouragement), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.makhp.pelukdiri.R
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import kotlinx.coroutines.launch
 
 sealed class OnboardingStep {
@@ -203,7 +204,7 @@ private fun WelcomePage() {
             color = Color(0xFFE8F5E9)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Text("🌿", fontSize = 100.sp)
+                PelukDiriLogo(size = 180.dp)
             }
         }
         
@@ -379,7 +380,7 @@ private fun TermsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("🌿") },
+                title = { PelukDiriLogo(size = 28.dp) },
                 modifier = Modifier.statusBarsPadding(),
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -510,7 +511,7 @@ private fun PermissionsStepScreen(
                 IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                 }
-                Text("🌿", modifier = Modifier.align(Alignment.Center), fontSize = 24.sp)
+                PelukDiriLogo(modifier = Modifier.align(Alignment.Center), size = 28.dp)
             }
         },
         bottomBar = {

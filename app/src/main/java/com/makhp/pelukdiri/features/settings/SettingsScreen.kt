@@ -24,6 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
 
@@ -244,28 +245,6 @@ private fun SettingsLayout(
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = stringResource(R.string.settings_notifications_title),
-                        description = stringResource(R.string.settings_notifications_desc),
-                        icon = Icons.Default.Notifications,
-                        onClick = onNavigateToNotifications,
-                        trailing = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (state.notificationStatus == "Aktif") "Aktif" else "Nonaktif",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.width(Dimens.spaceExtraSmall))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    )
-                    SettingsDivider()
-                    SettingsItem(
                         title = stringResource(R.string.settings_export_csv_title),
                         description = stringResource(R.string.settings_export_csv_desc),
                         icon = Icons.Default.FileDownload,
@@ -295,6 +274,20 @@ private fun SettingsLayout(
                         description = stringResource(R.string.settings_about_desc),
                         icon = Icons.Default.Info,
                         onClick = onNavigateToAbout
+                    )
+                    SettingsDivider()
+                    SettingsItem(
+                        title = stringResource(R.string.settings_notifications_title),
+                        description = stringResource(R.string.settings_notifications_desc),
+                        icon = Icons.Default.Notifications,
+                        onClick = onNavigateToNotifications,
+                        trailing = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     )
                 }
             }
@@ -357,7 +350,7 @@ private fun SettingsHeader() {
             style = MaterialTheme.typography.headlineMedium
         )
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            Text("🌿", style = MaterialTheme.typography.headlineSmall)
+            PelukDiriLogo(size = 28.dp)
         }
     }
 }
