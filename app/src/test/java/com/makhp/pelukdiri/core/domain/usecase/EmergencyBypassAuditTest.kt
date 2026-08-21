@@ -100,6 +100,7 @@ class EmergencyBypassAuditTest {
         override suspend fun insertLog(log: InterventionLog) { logs.add(log) }
         override fun getAllLogs(): Flow<List<InterventionLog>> = flowOf(logs)
         override suspend fun getAllLogsList(): List<InterventionLog> = logs
+        override suspend fun getRecentLogs(limit: Int): List<InterventionLog> = logs.asReversed().take(limit)
         override suspend fun getAverageResponseTime(difficulty: Int): Double? = null
         override suspend fun getRecentValidSuccessfulLogsByDifficulty(difficulty: Int, limit: Int): List<InterventionLog> = emptyList()
         override suspend fun getLatestLog(): InterventionLog? = logs.lastOrNull()

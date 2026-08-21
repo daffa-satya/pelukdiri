@@ -12,5 +12,8 @@ data class SettingsUiState(
     val isFixedLimitEnabled: Boolean = false,
     val fixedDailyLimitMinutes: Int = 60,
     val sleepTime: String = "22:00",
-    val wakeTime: String = "06:00"
+    val wakeTime: String = "06:00",
+    val isExporting: Boolean = false,
+    val exportedFilePath: String? = null,
+    val exportError: String? = null,
 )

@@ -12,11 +12,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
 
 @Composable
@@ -28,6 +30,7 @@ fun InterventionOverlayScreen(
     val hapticFeedback = LocalHapticFeedback.current
     var showBypassDialog by remember { mutableStateOf(false) }
     var hasStarted by remember { mutableStateOf(false) }
+    var dismissRequested by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
         if (uiState !is InterventionUiState.Idle) {
@@ -39,7 +42,8 @@ fun InterventionOverlayScreen(
         }
         
         // Only dismiss if we have already started the intervention flow and then returned to Idle
-        if (hasStarted && uiState is InterventionUiState.Idle && !showBypassDialog) {
+        if (hasStarted && uiState is InterventionUiState.Idle && !showBypassDialog && !dismissRequested) {
+            dismissRequested = true
             onDismiss()
         }
     }
@@ -47,19 +51,19 @@ fun InterventionOverlayScreen(
     if (showBypassDialog) {
         AlertDialog(
             onDismissRequest = { showBypassDialog = false },
-            title = { Text("Konfirmasi Darurat") },
-            text = { Text("Bypass akan memberikan akses selama 3 menit, namun tindakan ini akan mencatat penalti pada limit harian Anda. Lanjutkan?") },
+            title = { Text(stringResource(R.string.intervention_emergency_confirm_title)) },
+            text = { Text(stringResource(R.string.intervention_emergency_confirm_msg)) },
             confirmButton = {
                 TextButton(onClick = {
                     showBypassDialog = false
                     viewModel.emergencyBypass()
                 }) {
-                    Text("Lanjutkan")
+                    Text(stringResource(R.string.intervention_continue))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBypassDialog = false }) {
-                    Text("Batal")
+                    Text(stringResource(R.string.intervention_cancel))
                 }
             }
         )
@@ -68,24 +72,8 @@ fun InterventionOverlayScreen(
     val onAnswerChanged = remember(viewModel) { { input: String -> viewModel.onAnswerChanged(input) } }
     val onSubmitAnswer = remember(viewModel) { { viewModel.submitAnswer() } }
     val onBypassClick = remember { { showBypassDialog = true } }
-    val onStartSample = remember(viewModel) {
-        {
-            viewModel.startIntervention(
-                monitoredUsageMinutes = 95.0,
-                launchFrequency = 14,
-                ambientLightLux = 12.5f,
-                deviation = 0.5,
-                difficultyControlSignal = 0.6,
-                difficulty = 3
-            )
-        }
-    }
-    val onReset = remember(viewModel, onDismiss) {
-        {
-            viewModel.resetToIdle()
-            onDismiss()
-        }
-    }
+    val onReset = remember(viewModel) { { viewModel.resetToIdle() } }
+    val onRetry = remember(viewModel) { { viewModel.retryLastOperation() } }
 
     MindfulPauseScreen(
         state = uiState,
@@ -93,7 +81,7 @@ fun InterventionOverlayScreen(
         onSubmitAnswer = onSubmitAnswer,
         onEmergencyClick = onBypassClick,
         onReset = onReset,
-        onStartSample = onStartSample
+        onRetry = onRetry,
     )
 }
 
@@ -121,7 +109,7 @@ private fun InterventionOverlayScreenPreview() {
             onSubmitAnswer = {},
             onEmergencyClick = {},
             onReset = {},
-            onStartSample = {}
+            onRetry = {},
         )
     }
 }
