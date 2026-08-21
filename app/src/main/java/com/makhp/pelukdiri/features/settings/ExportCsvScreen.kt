@@ -47,7 +47,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
@@ -225,7 +227,7 @@ private fun ExportCsvHeader(onBackClick: () -> Unit) {
             style = MaterialTheme.typography.headlineMedium
         )
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            Text("🌿", style = MaterialTheme.typography.headlineSmall)
+            PelukDiriLogo(size = 28.dp)
         }
     }
 }

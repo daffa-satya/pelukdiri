@@ -96,10 +96,7 @@ class UsageSyncWorker @AssistedInject constructor(
     }
 
     private suspend fun handleNotifications() {
-        val isDnd = userPreferencesRepository.isDndEnabled.firstOrNull() ?: false
-        android.util.Log.d("UsageSyncWorker", "handleNotifications: isDndEnabled=$isDnd")
-        if (isDnd) return
-
+        // MANDATORY: DND check removed as per user request to delete DND
         val today = LocalDate.now()
         val todayStr = today.toString()
         val calendar = Calendar.getInstance()
@@ -119,40 +116,35 @@ class UsageSyncWorker @AssistedInject constructor(
             adaptiveLimitMinutes = limitMinutes
         )
 
-        // 1. Daily Summary (around 20:00)
+        // 1. Daily Summary (around 20:00) - MANDATORY
         if (currentHour >= 20) {
             val lastSentDate = userPreferencesRepository.lastDailySummaryDate.firstOrNull()
-            val isEnabled = userPreferencesRepository.isDailySummaryEnabled.firstOrNull() ?: true
-            android.util.Log.d("UsageSyncWorker", "DailySummary check: isEnabled=$isEnabled, lastSent=$lastSentDate, current=$todayStr")
-            if (isEnabled && lastSentDate != todayStr) {
+            android.util.Log.d("UsageSyncWorker", "DailySummary check: lastSent=$lastSentDate, current=$todayStr")
+            if (lastSentDate != todayStr) {
                 notificationHelper.showDailySummaryNotification(monitoredUsageMillis)
                 userPreferencesRepository.setLastDailySummaryDate(todayStr)
             }
         }
 
-        // 2. Weekly Reflection (Sundays around 19:00)
+        // 2. Weekly Reflection (Sundays around 19:00) - MANDATORY
         if (dayOfWeek == Calendar.SUNDAY && currentHour >= 19) {
             val weekId = "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.WEEK_OF_YEAR)}"
             val lastSentWeek = userPreferencesRepository.lastWeeklyReflectionDate.firstOrNull()
-            val isEnabled = userPreferencesRepository.isWeeklyReflectionEnabled.firstOrNull() ?: true
-            android.util.Log.d("UsageSyncWorker", "WeeklyReflection check: isEnabled=$isEnabled, lastSent=$lastSentWeek, current=$weekId")
-            if (isEnabled && lastSentWeek != weekId) {
+            android.util.Log.d("UsageSyncWorker", "WeeklyReflection check: lastSent=$lastSentWeek, current=$weekId")
+            if (lastSentWeek != weekId) {
                 notificationHelper.showWeeklyReflectionNotification()
                 userPreferencesRepository.setLastWeeklyReflectionDate(weekId)
             }
         }
 
-        // 3. Limit Reminder (when usage > 90% of limit)
+        // 3. Limit Reminder (when usage > 90% of limit) - MANDATORY
         if (limitMinutes != null && limitMinutes > 0) {
             val limitMillis = limitMinutes * 60_000L
             val threshold = 0.9f
-            android.util.Log.d("UsageSyncWorker", "LimitReminder check: usage=$monitoredUsageMillis, limit=$limitMillis, threshold=${limitMillis * threshold}")
             if (monitoredUsageMillis >= limitMillis * threshold) {
                 val lastSentTime = userPreferencesRepository.lastLimitReminderTimestamp.firstOrNull() ?: 0L
                 val oneHourMillis = 60 * 60 * 1000L
-                val isEnabled = userPreferencesRepository.isLimitReminderEnabled.firstOrNull() ?: true
-                android.util.Log.d("UsageSyncWorker", "LimitReminder trigger: isEnabled=$isEnabled, lastSentTime=$lastSentTime, diff=${System.currentTimeMillis() - lastSentTime}")
-                if (isEnabled && System.currentTimeMillis() - lastSentTime > oneHourMillis) {
+                if (System.currentTimeMillis() - lastSentTime > oneHourMillis) {
                     notificationHelper.showLimitReminderNotification()
                     userPreferencesRepository.setLastLimitReminderTimestamp(System.currentTimeMillis())
                 }

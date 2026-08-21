@@ -15,8 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 
 @Composable
 fun InsightCard(
@@ -34,7 +36,11 @@ fun InsightCard(
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = emoji, style = MaterialTheme.typography.headlineMedium)
+                if (emoji == "🌿" || emoji == "🌱") {
+                    PelukDiriLogo(size = 40.dp)
+                } else {
+                    Text(text = emoji, style = MaterialTheme.typography.headlineMedium)
+                }
             }
             Spacer(modifier = Modifier.width(DashboardTokens.CardPadding))
             Column(modifier = Modifier.weight(1f)) {
