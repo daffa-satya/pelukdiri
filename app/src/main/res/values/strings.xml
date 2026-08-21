@@ -87,6 +87,8 @@
     <string name="settings_terms_title">Ketentuan</string>
     <string name="settings_terms_desc">Baca syarat dan ketentuan penggunaan PELUKDIRI.</string>
     <string name="settings_about_title">Tentang</string>
+    <string name="settings_informed_consent_title">Informed Consent</string>
+    <string name="settings_informed_consent_desc">Persetujuan partisipasi penelitian.</string>
     <string name="settings_about_desc">Informasi tentang PELUKDIRI, versi aplikasi, dan tim pengembang.</string>
     <string name="settings_logout_title">Keluar</string>
     <string name="settings_logout_desc">Keluar dari aplikasi PELUKDIRI di perangkat ini.</string>
