@@ -26,10 +26,9 @@ class NotificationSettingsViewModel @Inject constructor(
     val uiState: StateFlow<NotificationSettingsUiState> = combine(
         userPreferencesRepository.isDailySummaryEnabled,
         userPreferencesRepository.isWeeklyReflectionEnabled,
-        userPreferencesRepository.isLimitReminderEnabled,
-        userPreferencesRepository.isInterventionReminderEnabled
-    ) { daily, weekly, limit, intervention ->
-        NotificationSettingsUiState(daily, weekly, limit, intervention)
+        userPreferencesRepository.isLimitReminderEnabled
+    ) { daily, weekly, limit ->
+        NotificationSettingsUiState(daily, weekly, limit, true) // intervention internal always enabled
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

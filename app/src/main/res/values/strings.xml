@@ -35,6 +35,7 @@
     <string name="analytics_period_weekly">Mingguan</string>
     <string name="analytics_period_monthly">Bulanan</string>
     <string name="analytics_metric_total_screentime">Total Waktu Layar</string>
+    <string name="analytics_metric_social_media_screentime">Waktu Layar Sosmed</string>
     <string name="analytics_avg_screentime">Rerata Waktu Layar</string>
     <string name="analytics_metric_unlocks">Buka Kunci</string>
     <string name="analytics_metric_longest_session">Sesi Terlama</string>
@@ -385,7 +386,7 @@
     <!-- Daily Usage Notification -->
     <string name="notification_daily_usage_channel_name">Daily Usage Status</string>
     <string name="notification_daily_usage_channel_description">Displays your current usage and adaptive limit throughout the day.</string>
-    <string name="notification_usage_label">Penggunaan: %1$s</string>
-    <string name="notification_limit_label">Batas adaptif: %1$s</string>
+    <string name="notification_usage_label">Kamu sudah menggunakan %1$s hari ini</string>
+    <string name="notification_limit_label">Batas adaptifmu: %1$s</string>
     <string name="notification_insufficient_data">Data tidak mencukupi</string>
 </resources>

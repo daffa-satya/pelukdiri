@@ -1,7 +1,6 @@
 package com.makhp.pelukdiri.features.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,19 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.DoNotDisturbOn
 import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,12 +32,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
@@ -67,7 +64,7 @@ fun NotificationSettingsScreen(
         ) {
             item {
                 Text(
-                    text = "Kelola notifikasi yang ingin kamu terima.\nKamu bisa mengaktifkan atau menonaktifkan sesuai kebutuhanmu.",
+                    text = "Aplikasi akan mengirimkan notifikasi secara otomatis untuk membantumu tetap sadar akan penggunaan layar.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -78,83 +75,27 @@ fun NotificationSettingsScreen(
             }
             
             item {
-                SettingsSection(title = "Pengaturan Notifikasi") {
-                    NotificationToggleItem(
-                        title = "Daily Summary",
-                        description = "Dapatkan ringkasan penggunaan harianmu setiap malam.",
+                SettingsSection(title = "Daftar Notifikasi") {
+                    NotificationInfoItem(
+                        title = stringResource(R.string.notification_settings_daily_summary),
+                        description = stringResource(R.string.notification_settings_daily_summary_desc),
                         icon = Icons.Default.CalendarMonth,
-                        checked = true,
                         time = "20.00"
                     )
                     SettingsDivider()
-                    NotificationToggleItem(
-                        title = "Weekly Reflection",
-                        description = "Lihat refleksi dan progres mingguanmu setiap hari Minggu.",
+                    NotificationInfoItem(
+                        title = stringResource(R.string.notification_settings_weekly_reflection),
+                        description = stringResource(R.string.notification_settings_weekly_reflection_desc),
                         icon = Icons.Default.Timeline,
-                        checked = true,
                         time = "19.00"
                     )
                     SettingsDivider()
-                    NotificationToggleItem(
-                        title = "Limit Reminder",
-                        description = "Pengingat ketika kamu mendekati atau mencapai batas waktu layar adaptif.",
+                    NotificationInfoItem(
+                        title = stringResource(R.string.notification_settings_limit_reminder),
+                        description = stringResource(R.string.notification_settings_limit_reminder_desc),
                         icon = Icons.Default.HourglassBottom,
-                        checked = true,
-                        time = "Saat mendekati limit"
+                        time = stringResource(R.string.notification_settings_limit_reminder_time)
                     )
-                    SettingsDivider()
-                    NotificationToggleItem(
-                        title = "Intervention Reminder",
-                        description = "Pengingat untuk mengerjakan intervensi cerdas yang membantumu tetap fokus.",
-                        icon = Icons.Default.Psychology,
-                        checked = true,
-                        time = "Saat intervensi muncul"
-                    )
-                }
-            }
-            
-            item {
-                PelukCard(
-                    modifier = Modifier.fillMaxWidth().clickable { /* Handle DND */ }
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(Dimens.minTouchTarget - Dimens.spaceSmall)
-                                .clip(RoundedCornerShape(DashboardTokens.SmallRadius))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DoNotDisturbOn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(Modifier.width(DashboardTokens.MediumGap))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = "Mode Jangan Ganggu",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "Nonaktifkan semua notifikasi sementara waktu.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = "Nonaktif",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
             
@@ -167,10 +108,10 @@ fun NotificationSettingsScreen(
                         .padding(DashboardTokens.CardPadding),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🌿", style = MaterialTheme.typography.titleLarge)
+                    PelukDiriLogo(size = 32.dp)
                     Spacer(Modifier.width(DashboardTokens.MediumGap))
                     Text(
-                        text = "Kamu akan tetap menerima notifikasi penting meskipun beberapa notifikasi dinonaktifkan.",
+                        text = "Kamu akan tetap menerima notifikasi penting ini secara rutin.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f)
@@ -191,7 +132,7 @@ private fun NotificationSettingsHeader(onBackClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClick) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali ke pengaturan")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
         }
         Text(
             text = "Notifikasi",
@@ -200,7 +141,7 @@ private fun NotificationSettingsHeader(onBackClick: () -> Unit) {
             style = MaterialTheme.typography.headlineMedium
         )
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            Text("🌿", style = MaterialTheme.typography.headlineSmall)
+            PelukDiriLogo(size = 28.dp)
         }
     }
 }
@@ -225,12 +166,12 @@ private fun NotificationNoticeBanner() {
             Spacer(Modifier.width(DashboardTokens.CardPadding))
             Column {
                 Text(
-                    text = "Notifikasi aktif membantu",
+                    text = "Notifikasi Otomatis",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Agar kamu tetap teringat dan termotivasi untuk mengelola waktu layar dengan lebih baik.",
+                    text = "PELUKDIRI memastikan kamu tetap terhubung dengan progres digitalmu.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -240,11 +181,10 @@ private fun NotificationNoticeBanner() {
 }
 
 @Composable
-private fun NotificationToggleItem(
+private fun NotificationInfoItem(
     title: String,
     description: String,
     icon: ImageVector,
-    checked: Boolean,
     time: String? = null
 ) {
     Column(
@@ -280,7 +220,6 @@ private fun NotificationToggleItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            SettingsSwitch(checked = checked, onCheckedChange = {})
         }
         
         if (time != null) {

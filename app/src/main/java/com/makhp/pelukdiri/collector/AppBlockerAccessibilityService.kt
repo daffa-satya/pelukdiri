@@ -11,6 +11,7 @@ import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.features.intervention.ActiveInterventionSession
 import com.makhp.pelukdiri.core.domain.InterventionLaunchPolicy
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
+import com.makhp.pelukdiri.core.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +45,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     @Inject lateinit var activeInterventionSession: ActiveInterventionSession
     @Inject lateinit var launchPolicy: InterventionLaunchPolicy
     @Inject lateinit var timeProvider: TimeProvider
+    @Inject lateinit var notificationHelper: NotificationHelper
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var currentMonitoredPackages = emptySet<String>()
@@ -272,6 +274,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             putExtra(InterventionActivity.EXTRA_DIFFICULTY, difficulty)
             putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, challengeType.name)
         }
+        
+        notificationHelper.showInterventionReminderNotification()
+
         return try {
             startActivity(intent)
             Log.d("AppBlockerService", ">>> startActivity() called successfully")

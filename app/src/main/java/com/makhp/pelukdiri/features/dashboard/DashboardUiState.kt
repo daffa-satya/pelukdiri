@@ -27,7 +27,8 @@ sealed interface DashboardUiState {
         val isHistoryBackfilled: Boolean = false,
         val isExporting: Boolean = false,
         val exportedFile: File? = null,
-        val exportError: String? = null
+        val exportError: String? = null,
+        val isDndEnabled: Boolean = false
     ) : DashboardUiState
     
     data class Error(val message: String) : DashboardUiState

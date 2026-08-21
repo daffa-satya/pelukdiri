@@ -1,8 +1,7 @@
 package com.makhp.pelukdiri.ui.components
 
-import android.content.pm.PackageManager
+import android.content.Context
 import android.graphics.drawable.Drawable
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -10,14 +9,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
+import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AppIcon(
@@ -27,23 +32,26 @@ fun AppIcon(
     size: androidx.compose.ui.unit.Dp = 40.dp
 ) {
     val context = LocalContext.current
-    val packageManager = context.packageManager
     
-    val icon: Drawable? = remember(packageName) {
-        try {
-            packageManager.getApplicationIcon(packageName)
-        } catch (_: PackageManager.NameNotFoundException) {
-            null
+    // Load drawable in background to avoid blocking UI thread
+    val iconResult by produceState<Drawable?>(initialValue = null, packageName) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                context.packageManager.getApplicationIcon(packageName)
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 
-    if (icon != null) {
-        Image(
-            bitmap = icon.toBitmap().asImageBitmap(),
+    if (iconResult != null) {
+        AsyncImage(
+            model = iconResult,
             contentDescription = "Icon for $appName",
             modifier = modifier
                 .size(size)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Fit
         )
     } else {
         // Fallback to initial

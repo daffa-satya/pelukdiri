@@ -22,6 +22,7 @@ sealed interface AnalyticsUiState {
         val topApps: ImmutableList<UiAppUsage>,
         val hourlyUsage: ImmutableList<Long>,
         val interventionCount: Int,
+        val socialMediaUsageMillis: Long = 0L,
         val adaptiveLimitMinutes: Int? = null,
         val funFact: String = ""
     ) : AnalyticsUiState
