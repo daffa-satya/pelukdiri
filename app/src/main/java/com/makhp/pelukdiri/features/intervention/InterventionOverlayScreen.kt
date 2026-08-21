@@ -74,6 +74,10 @@ fun InterventionOverlayScreen(
     val onBypassClick = remember { { showBypassDialog = true } }
     val onReset = remember(viewModel) { { viewModel.resetToIdle() } }
     val onRetry = remember(viewModel) { { viewModel.retryLastOperation() } }
+    val onPatternSelected = remember(viewModel) { { shape: com.makhp.pelukdiri.core.domain.model.PatternShape ->
+        viewModel.onPatternSelected(shape)
+    } }
+    val onReplayPattern = remember(viewModel) { { viewModel.replayPattern() } }
 
     MindfulPauseScreen(
         state = uiState,
@@ -82,6 +86,8 @@ fun InterventionOverlayScreen(
         onEmergencyClick = onBypassClick,
         onReset = onReset,
         onRetry = onRetry,
+        onPatternSelected = onPatternSelected,
+        onReplayPattern = onReplayPattern,
     )
 }
 
@@ -110,6 +116,8 @@ private fun InterventionOverlayScreenPreview() {
             onEmergencyClick = {},
             onReset = {},
             onRetry = {},
+            onPatternSelected = {},
+            onReplayPattern = {},
         )
     }
 }

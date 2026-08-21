@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.core.domain.engine.ControlEngine
 import com.makhp.pelukdiri.core.domain.engine.DeviationEngine
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
@@ -91,7 +92,10 @@ class DebugTestLabActivity : ComponentActivity() {
                     onPerformance = ::insertPerformance,
                     onSeedHistory = ::seedHistory,
                     onScenario = ::runScenario,
-                    onLaunch = ::launchIntervention
+                    onLaunch = { level -> launchIntervention(level) },
+                    onLaunchPattern = { level ->
+                        launchIntervention(level, challengeType = InterventionChallengeType.PATTERN)
+                    },
                 )
             }
         }
@@ -155,7 +159,11 @@ class DebugTestLabActivity : ComponentActivity() {
         status = "usage=$usage history=$history\nbaseline=${deviation.baseline} MAD=${deviation.mad} D=${deviation.deviation}\nP=${result.performance} Q=${result.sensitivity} nextDifficulty=${result.nextDifficulty} interval=${result.intervalMinutes}m"
     }
 
-    private fun launchIntervention(level: Int, afterLaunch: () -> Unit = {}) {
+    private fun launchIntervention(
+        level: Int,
+        afterLaunch: () -> Unit = {},
+        challengeType: InterventionChallengeType = InterventionChallengeType.MATH,
+    ) {
         lifecycleScope.launch {
             val launchedAt = controls.nowMillis()
             preferences.setNextEligibleInterventionAt(
@@ -170,6 +178,7 @@ class DebugTestLabActivity : ComponentActivity() {
                 putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
                 putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
                 putExtra(InterventionActivity.EXTRA_DIFFICULTY, level)
+                putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, challengeType.name)
             })
             afterLaunch()
         }
@@ -204,7 +213,8 @@ private fun DebugTestLabScreen(
     onPerformance: (Boolean) -> Unit,
     onSeedHistory: () -> Unit,
     onScenario: (Boolean) -> Unit,
-    onLaunch: (Int) -> Unit
+    onLaunch: (Int) -> Unit,
+    onLaunchPattern: (Int) -> Unit,
 ) {
     Surface(Modifier.fillMaxSize()) {
         Column(
@@ -235,6 +245,9 @@ private fun DebugTestLabScreen(
             Action(stringResource(R.string.test_lab_clear_session), onClearSession)
             Text(stringResource(R.string.test_lab_intervention), style = MaterialTheme.typography.titleMedium)
             (1..3).forEach { level -> Action(stringResource(R.string.test_lab_launch_level, level), { onLaunch(level) }) }
+            (1..5).forEach { level ->
+                Action(stringResource(R.string.test_lab_launch_pattern_level, level), { onLaunchPattern(level) })
+            }
         }
     }
 }
@@ -244,10 +257,10 @@ private fun DebugTestLabScreen(
 }
 
 @Preview(showBackground = true) @Composable private fun LabLightPreview() {
-    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
 }
 
 @Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable private fun LabDarkPreview() {
-    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
 }

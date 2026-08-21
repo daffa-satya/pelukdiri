@@ -2,6 +2,8 @@ package com.makhp.pelukdiri.features.intervention
 
 import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
+import com.makhp.pelukdiri.core.domain.model.PatternQuestion
+import com.makhp.pelukdiri.core.domain.model.PatternShape
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
@@ -42,6 +44,27 @@ class ActiveInterventionSessionTest {
 
     @Test fun `codec round trips exact question input and metadata`() {
         assertEquals(snapshot, ActiveInterventionCodec.decode(ActiveInterventionCodec.encode(snapshot)))
+    }
+
+    @Test fun `codec round trips exact pattern playback and input`() {
+        val patternSnapshot = snapshot.copy(
+            uiState = InterventionUiState.PatternActive(
+                question = PatternQuestion(
+                    listOf(PatternShape.CIRCLE, PatternShape.PENTAGON, PatternShape.SQUARE),
+                    level = 1,
+                ),
+                assessment = RiskAssessmentResult(0.12, 1, 0, 120),
+                answerInput = listOf(PatternShape.CIRCLE),
+                isPlaying = false,
+                playbackIndex = null,
+                replaysRemaining = 0,
+                remainingBypasses = 4,
+            )
+        )
+        assertEquals(
+            patternSnapshot,
+            ActiveInterventionCodec.decode(ActiveInterventionCodec.encode(patternSnapshot)),
+        )
     }
 
     @Test fun `session remains valid immediately before ttl`() = runTest {

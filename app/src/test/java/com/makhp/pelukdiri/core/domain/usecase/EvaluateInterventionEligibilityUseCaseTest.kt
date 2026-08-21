@@ -5,6 +5,8 @@ import com.makhp.pelukdiri.collector.UsageEventCollector
 import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import com.makhp.pelukdiri.core.domain.engine.ControlEngine
 import com.makhp.pelukdiri.core.domain.engine.DeviationEngine
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeSelector
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.model.ControlMode
 import com.makhp.pelukdiri.core.domain.model.ControlResult
@@ -38,12 +40,14 @@ class EvaluateInterventionEligibilityUseCaseTest {
     private val deviationEngine: DeviationEngine = mockk()
     private val controlEngine: ControlEngine = mockk()
     private val interventionLogRepository: InterventionLogRepository = mockk()
+    private val challengeSelector: InterventionChallengeSelector = mockk()
     private val appUsageCollector: AppUsageCollector = mockk()
     private val lockManager = InterventionLockManager()
 
     @Before
     fun setup() {
         coEvery { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
+        every { challengeSelector.select(any()) } returns InterventionChallengeType.MATH
         useCase = EvaluateInterventionEligibilityUseCase(
             usageEventCollector,
             userPreferencesRepository,
@@ -51,6 +55,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
             deviationEngine,
             controlEngine,
             interventionLogRepository,
+            challengeSelector,
             appUsageCollector,
             lockManager
         )
@@ -131,6 +136,29 @@ class EvaluateInterventionEligibilityUseCaseTest {
     }
 
     @Test
+    fun `pattern and math performance histories are isolated`() = runBlocking {
+        every { challengeSelector.select(any()) } returns InterventionChallengeType.PATTERN
+        val logs = listOf(
+            performanceLog(3L, 500L, challengeType = InterventionChallengeType.PATTERN),
+            performanceLog(2L, 100L, challengeType = InterventionChallengeType.MATH),
+            performanceLog(1L, 1_000L, challengeType = InterventionChallengeType.PATTERN),
+        )
+        stubEligibleEvaluation(recentLogs = logs)
+
+        val result = useCase(targetPackage)
+
+        assertEquals(InterventionChallengeType.PATTERN, result.challengeType)
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(),
+                match { it.responseTimeMs == 500L },
+                match { it == listOf(1_000L) },
+                any(), any(), any(), 2, any(), any()
+            )
+        }
+    }
+
+    @Test
     fun `unmonitored package cannot trigger the engine`() = runBlocking {
         every { usageEventCollector.getUsageForDay(any()) } returns emptyList()
         every { userPreferencesRepository.monitoredPackages } returns flowOf(emptySet())
@@ -175,6 +203,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
         responseTimeMs: Long,
         difficulty: Int = 2,
         isSuccess: Boolean = true,
+        challengeType: InterventionChallengeType = InterventionChallengeType.MATH,
     ) = InterventionLog(
         id = id,
         timestamp = id,
@@ -184,7 +213,8 @@ class EvaluateInterventionEligibilityUseCaseTest {
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,
         isBypassed = false,
-        penaltyAppliedMinutes = 0
+        penaltyAppliedMinutes = 0,
+        challengeType = challengeType,
     )
 
     private fun controlResult() = ControlResult(

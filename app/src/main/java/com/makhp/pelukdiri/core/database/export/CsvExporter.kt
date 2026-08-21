@@ -123,9 +123,9 @@ class CsvExporter @Inject constructor(
         val data = interventionDao.getAllLogsList()
         val file = createTempFile("intervention_logs.csv")
         writerFor(file).use { writer ->
-            writer.append("ID,Timestamp,Date,Deviation,DifficultyControlSignal,DifficultyLevel,ResponseTimeMs,IsSuccess,IsBypassed,PenaltyAppliedMinutes\r\n")
+            writer.append("ID,Timestamp,Date,Deviation,DifficultyControlSignal,DifficultyLevel,ChallengeType,ResponseTimeMs,IsSuccess,IsBypassed,PenaltyAppliedMinutes\r\n")
             data.forEach {
-                writer.append(CsvFormat.row(it.id, it.timestamp, CsvFormat.timestamp(it.timestamp), it.deviation, it.difficultyControlSignal, it.difficultyLevel, it.responseTimeMs, it.isSuccess, it.isBypassed, it.penaltyAppliedMinutes))
+                writer.append(CsvFormat.row(it.id, it.timestamp, CsvFormat.timestamp(it.timestamp), it.deviation, it.difficultyControlSignal, it.difficultyLevel, it.challengeType, it.responseTimeMs, it.isSuccess, it.isBypassed, it.penaltyAppliedMinutes))
             }
         }
         return file

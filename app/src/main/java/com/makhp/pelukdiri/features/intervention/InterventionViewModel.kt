@@ -5,8 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.core.domain.engine.CognitiveQuestionGenerator
 import com.makhp.pelukdiri.core.domain.engine.CooldownAnchor
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeSelector
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
+import com.makhp.pelukdiri.core.domain.engine.PatternQuestionGenerator
 import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
+import com.makhp.pelukdiri.core.domain.model.PatternShape
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
@@ -17,6 +21,8 @@ import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +36,8 @@ import javax.inject.Inject
 @HiltViewModel
 class InterventionViewModel @Inject constructor(
     private val cognitiveQuestionGenerator: CognitiveQuestionGenerator,
+    private val patternQuestionGenerator: PatternQuestionGenerator,
+    private val challengeSelector: InterventionChallengeSelector,
     private val interventionLogRepository: InterventionLogRepository,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
@@ -43,6 +51,7 @@ class InterventionViewModel @Inject constructor(
     val uiState: StateFlow<InterventionUiState> = _uiState.asStateFlow()
 
     private var questionJob: kotlinx.coroutines.Job? = null
+    private var patternPlaybackJob: Job? = null
     private var questionStartTimeMs: Long = 0L
     private var currentMonitoredUsageMinutes: Double = 0.0
     private var currentDeviation: Double = 0.0
@@ -50,6 +59,7 @@ class InterventionViewModel @Inject constructor(
     private var currentDifficulty: Int = 2
     private var currentLaunchFrequency: Int = 0
     private var currentAmbientLightLux: Float = 0f
+    private var currentChallengeType = InterventionChallengeType.MATH
     private var isBypassProcessing: Boolean = false
     private var isBypassCommitted: Boolean = false
     private var isAnswerProcessing: Boolean = false
@@ -64,10 +74,12 @@ class InterventionViewModel @Inject constructor(
         ambientLightLux: Float,
         deviation: Double,
         difficultyControlSignal: Double,
-        difficulty: Int
+        difficulty: Int,
+        challengeType: InterventionChallengeType = InterventionChallengeType.AUTO,
     ) {
         // Cancel any pending generation to ensure state integrity
         questionJob?.cancel()
+        patternPlaybackJob?.cancel()
 
         currentMonitoredUsageMinutes = monitoredUsageMinutes
         currentDeviation = deviation
@@ -75,6 +87,8 @@ class InterventionViewModel @Inject constructor(
         currentDifficulty = difficulty
         currentLaunchFrequency = launchFrequency
         currentAmbientLightLux = ambientLightLux
+        currentChallengeType = challengeType.takeUnless { it == InterventionChallengeType.AUTO }
+            ?: challengeSelector.select()
         sessionCreatedAtMs = timeProvider.nowMillis()
         isBypassCommitted = false
         pendingCompletionEligibleAtMs = null
@@ -83,7 +97,6 @@ class InterventionViewModel @Inject constructor(
 
         questionJob = viewModelScope.launch {
             try {
-                val question = cognitiveQuestionGenerator.generateQuestion(difficulty)
                 val dateString = timeProvider.today().toString()
                 val adaptiveLimit = adaptiveLimitRepository.getLimitForDate(dateString)
 
@@ -98,11 +111,24 @@ class InterventionViewModel @Inject constructor(
 
                 val remaining = getRemainingBypasses()
                 questionStartTimeMs = timeProvider.nowMillis()
-                publishState(InterventionUiState.QuestionActive(
-                    question = question,
-                    assessment = assessment,
-                    remainingBypasses = remaining
-                ))
+                if (currentChallengeType == InterventionChallengeType.PATTERN) {
+                    startPatternPlayback(
+                        InterventionUiState.PatternActive(
+                            question = patternQuestionGenerator.generateQuestion(difficulty),
+                            assessment = assessment,
+                            remainingBypasses = remaining,
+                        ),
+                        resetResponseTimer = true,
+                    )
+                } else {
+                    publishState(
+                        InterventionUiState.QuestionActive(
+                            question = cognitiveQuestionGenerator.generateQuestion(difficulty),
+                            assessment = assessment,
+                            remainingBypasses = remaining,
+                        )
+                    )
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -128,18 +154,31 @@ class InterventionViewModel @Inject constructor(
                 currentDifficulty = snapshot.difficulty
                 questionStartTimeMs = snapshot.questionStartTimeMs
                 sessionCreatedAtMs = snapshot.createdAtMs
+                currentChallengeType = when (snapshot.uiState) {
+                    is InterventionUiState.PatternActive,
+                    is InterventionUiState.PatternCorrectAnswer,
+                    is InterventionUiState.PatternIncorrectAnswer -> InterventionChallengeType.PATTERN
+                    else -> InterventionChallengeType.MATH
+                }
 
-                if (snapshot.uiState is InterventionUiState.Loading) {
-                    startIntervention(
+                when (val state = snapshot.uiState) {
+                    InterventionUiState.Loading -> startIntervention(
                         monitoredUsageMinutes = snapshot.monitoredUsageMinutes,
                         launchFrequency = snapshot.launchFrequency,
                         ambientLightLux = snapshot.ambientLightLux,
                         deviation = snapshot.deviation,
                         difficultyControlSignal = snapshot.difficultyControlSignal,
-                        difficulty = snapshot.difficulty
+                        difficulty = snapshot.difficulty,
+                        challengeType = currentChallengeType,
                     )
-                } else {
-                    _uiState.value = snapshot.uiState
+                    is InterventionUiState.PatternActive -> {
+                        if (state.isPlaying) {
+                            startPatternPlayback(state, resetResponseTimer = state.replaysRemaining > 0)
+                        } else {
+                            _uiState.value = state
+                        }
+                    }
+                    else -> _uiState.value = state
                 }
                 onResult(true)
             } catch (error: Exception) {
@@ -169,6 +208,77 @@ class InterventionViewModel @Inject constructor(
             is InterventionUiState.MaxPenalized -> state.copy(answerInput = sanitizedInput)
             else -> state
         })
+    }
+
+    fun onPatternSelected(shape: PatternShape) {
+        val state = _uiState.value as? InterventionUiState.PatternActive ?: return
+        if (state.isPlaying || isAnswerProcessing || state.answerInput.size >= state.question.sequence.size) return
+
+        val updated = state.copy(answerInput = state.answerInput + shape)
+        publishState(updated)
+        if (updated.answerInput.size == updated.question.sequence.size) {
+            submitPatternAnswer(updated)
+        }
+    }
+
+    fun replayPattern() {
+        val state = _uiState.value as? InterventionUiState.PatternActive ?: return
+        if (!isAnswerProcessing && !state.isPlaying && state.replaysRemaining > 0) {
+            startPatternPlayback(
+                state.copy(answerInput = emptyList(), replaysRemaining = state.replaysRemaining - 1),
+                resetResponseTimer = false,
+            )
+        }
+    }
+
+    private fun startPatternPlayback(
+        state: InterventionUiState.PatternActive,
+        resetResponseTimer: Boolean,
+    ) {
+        patternPlaybackJob?.cancel()
+        val resetState = state.copy(answerInput = emptyList(), isPlaying = true, playbackIndex = null)
+        publishState(resetState)
+        patternPlaybackJob = viewModelScope.launch {
+            resetState.question.sequence.indices.forEach { index ->
+                publishState(resetState.copy(playbackIndex = index))
+                delay(PATTERN_HIGHLIGHT_MS)
+                publishState(resetState.copy(playbackIndex = null))
+                delay(PATTERN_GAP_MS)
+            }
+            if (resetResponseTimer) questionStartTimeMs = timeProvider.nowMillis()
+            publishState(resetState.copy(isPlaying = false, playbackIndex = null))
+        }
+    }
+
+    private fun submitPatternAnswer(state: InterventionUiState.PatternActive) {
+        if (isAnswerProcessing) return
+        val responseTime = (timeProvider.nowMillis() - questionStartTimeMs).coerceAtLeast(0L)
+        val isSuccess = state.answerInput == state.question.sequence
+        isAnswerProcessing = true
+        viewModelScope.launch {
+            try {
+                persistOutcome(isSuccess, state.assessment, responseTime)
+                publishState(
+                    if (isSuccess) {
+                        InterventionUiState.PatternCorrectAnswer(
+                            state.question, state.assessment, responseTime
+                        )
+                    } else {
+                        InterventionUiState.PatternIncorrectAnswer(
+                            state.question,
+                            state.assessment,
+                            state.answerInput,
+                            responseTime,
+                            getRemainingBypasses(),
+                        )
+                    }
+                )
+            } catch (error: Exception) {
+                showOperationError(FailedInterventionOperation.SUBMIT_ANSWER, error)
+            } finally {
+                isAnswerProcessing = false
+            }
+        }
     }
 
     fun submitAnswer() {
@@ -225,7 +335,8 @@ class InterventionViewModel @Inject constructor(
                             difficultyLevel = currentDifficulty,
                             responseTimeMs = responseTime,
                             isSuccess = isSuccess,
-                            penaltyAppliedMinutes = assessment.penaltyMinutes
+                            penaltyAppliedMinutes = assessment.penaltyMinutes,
+                            challengeType = currentChallengeType,
                         )
                     )
                 }
@@ -253,6 +364,38 @@ class InterventionViewModel @Inject constructor(
         }
     }
 
+    private suspend fun persistOutcome(
+        isSuccess: Boolean,
+        assessment: RiskAssessmentResult,
+        responseTime: Long,
+    ) = withContext(Dispatchers.IO) {
+        val dateString = timeProvider.today().toString()
+        val existingLimit = adaptiveLimitRepository.getLimitForDate(dateString)
+        adaptiveLimitRepository.insertOrUpdateLimit(
+            DailyAdaptiveLimit(
+                dateString = dateString,
+                calculatedLimitMinutes = assessment.calculatedLimitMinutes,
+                actualScreenTimeMinutes = max(
+                    existingLimit?.actualScreenTimeMinutes ?: 0,
+                    currentMonitoredUsageMinutes.roundToInt(),
+                ),
+                reclaimedTimeMinutes = assessment.penaltyMinutes,
+            )
+        )
+        interventionLogRepository.insertLog(
+            InterventionLog(
+                timestamp = timeProvider.nowMillis(),
+                deviation = currentDeviation,
+                difficultyControlSignal = currentDifficultyControlSignal,
+                difficultyLevel = currentDifficulty,
+                responseTimeMs = responseTime,
+                isSuccess = isSuccess,
+                penaltyAppliedMinutes = assessment.penaltyMinutes,
+                challengeType = currentChallengeType,
+            )
+        )
+    }
+
     fun emergencyBypass() {
         if (isBypassProcessing) return
 
@@ -261,6 +404,8 @@ class InterventionViewModel @Inject constructor(
             is InterventionUiState.QuestionActive -> currentState.assessment
             is InterventionUiState.MaxPenalized -> currentState.assessment
             is InterventionUiState.IncorrectAnswer -> currentState.assessment
+            is InterventionUiState.PatternActive -> currentState.assessment
+            is InterventionUiState.PatternIncorrectAnswer -> currentState.assessment
             else -> return
         }
 
@@ -279,7 +424,8 @@ class InterventionViewModel @Inject constructor(
                         difficultyControlSignal = currentDifficultyControlSignal,
                         difficulty = currentDifficulty,
                         penaltyMinutes = assessment.penaltyMinutes,
-                        responseTimeMs = responseTime
+                        responseTimeMs = responseTime,
+                        challengeType = currentChallengeType,
                     )
 
                 when (result) {
@@ -292,6 +438,8 @@ class InterventionViewModel @Inject constructor(
                             is InterventionUiState.QuestionActive -> state.copy(bypassDenied = true, remainingBypasses = 0)
                             is InterventionUiState.MaxPenalized -> state.copy(bypassDenied = true, remainingBypasses = 0)
                             is InterventionUiState.IncorrectAnswer -> state.copy(remainingBypasses = 0)
+                            is InterventionUiState.PatternActive -> state.copy(bypassDenied = true, remainingBypasses = 0)
+                            is InterventionUiState.PatternIncorrectAnswer -> state.copy(remainingBypasses = 0)
                             else -> state
                         })
                     }
@@ -350,9 +498,13 @@ class InterventionViewModel @Inject constructor(
                 currentDeviation,
                 currentDifficultyControlSignal,
                 currentDifficulty,
+                currentChallengeType,
             )
             FailedInterventionOperation.RESTORE -> restoreActiveIntervention { }
-            FailedInterventionOperation.SUBMIT_ANSWER -> submitAnswer()
+            FailedInterventionOperation.SUBMIT_ANSWER -> when (val state = _uiState.value) {
+                is InterventionUiState.PatternActive -> submitPatternAnswer(state)
+                else -> submitAnswer()
+            }
             FailedInterventionOperation.EMERGENCY_BYPASS -> emergencyBypass()
             FailedInterventionOperation.COMPLETE -> resetToIdle()
         }
@@ -403,5 +555,7 @@ class InterventionViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "InterventionViewModel"
+        const val PATTERN_HIGHLIGHT_MS = 550L
+        const val PATTERN_GAP_MS = 180L
     }
 }

@@ -142,7 +142,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                     ambientLux = decision.ambientLux,
                     deviation = controlResult.deviation ?: 0.0,
                     difficultyControlSignal = controlResult.normalizedDifficultyControl,
-                    difficulty = controlResult.nextDifficulty
+                    difficulty = controlResult.nextDifficulty,
+                    challengeType = decision.challengeType,
                 )
 
                 // Rollback lock if launch failed
@@ -249,7 +250,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         ambientLux: Float,
         deviation: Double,
         difficultyControlSignal: Double,
-        difficulty: Int
+        difficulty: Int,
+        challengeType: com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType,
     ): Boolean {
         Log.d("AppBlockerService", ">>> ATTEMPTING LAUNCH FOR: $packageName")
         if (launchPolicy.consumeForcedFailure()) {
@@ -268,6 +270,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             putExtra(InterventionActivity.EXTRA_DEVIATION, deviation)
             putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, difficultyControlSignal)
             putExtra(InterventionActivity.EXTRA_DIFFICULTY, difficulty)
+            putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, challengeType.name)
         }
         return try {
             startActivity(intent)

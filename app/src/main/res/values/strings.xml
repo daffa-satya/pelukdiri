@@ -272,6 +272,15 @@
     <string name="intervention_submit">Kirim Jawaban</string>
     <string name="intervention_replay_pattern">Ulangi Pola</string>
     <string name="intervention_playing_pattern">Memutar pola...</string>
+    <string name="intervention_pattern_correct">Urutan pola berhasil diingat.</string>
+    <string name="intervention_pattern_incorrect">Urutan yang dipilih belum tepat.</string>
+    <string name="intervention_response_time">Waktu respons: %1$d ms</string>
+    <string name="intervention_bypass_exhausted">Kuota darurat telah habis hari ini.</string>
+    <string name="intervention_shape_circle">Lingkaran</string>
+    <string name="intervention_shape_square">Persegi</string>
+    <string name="intervention_shape_triangle">Segitiga</string>
+    <string name="intervention_shape_pentagon">Pentagon</string>
+    <string name="intervention_pattern_progress">%1$d dari %2$d bentuk dipilih</string>
     <string name="intervention_completed_title">Intervensi Selesai!</string>
     <string name="intervention_completed_msg">Bagus! Kamu sudah mengambil kendali kembali. Gunakan aplikasimu dengan bijak.</string>
     <string name="intervention_continue_to_app">Lanjutkan ke Aplikasi</string>

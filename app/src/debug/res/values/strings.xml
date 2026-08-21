@@ -19,5 +19,6 @@
     <string name="test_lab_low_deviation">Low deviation scenario</string>
     <string name="test_lab_high_deviation">High deviation scenario</string>
     <string name="test_lab_launch_level">Launch level %1$d</string>
+    <string name="test_lab_launch_pattern_level">Launch pattern level %1$d</string>
     <string name="test_lab_difficulty">Set difficulty %1$d</string>
 </resources>

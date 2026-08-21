@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
@@ -12,6 +13,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
+import com.makhp.pelukdiri.core.domain.model.PatternQuestion
+import com.makhp.pelukdiri.core.domain.model.PatternShape
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
 import com.makhp.pelukdiri.debug.DebugRuntimeControls
 import com.makhp.pelukdiri.debug.DebugTestEntryPoint
@@ -80,6 +83,39 @@ class InterventionLifecycleInstrumentedTest {
         )
         assertTrue(interventionInfo.flags and ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS != 0)
         assertNotNull(packageManager.getActivityInfo(ComponentName(context, "com.makhp.pelukdiri.debug.DebugTestLabActivity"), 0))
+    }
+
+    @Test fun exactPatternAndInputSurviveActivityRecreation() = runBlocking {
+        val now = System.currentTimeMillis()
+        dependencies.session().save(
+            ActiveInterventionSnapshot(
+                InterventionUiState.PatternActive(
+                    question = PatternQuestion(
+                        listOf(PatternShape.CIRCLE, PatternShape.PENTAGON, PatternShape.SQUARE),
+                        1,
+                    ),
+                    assessment = RiskAssessmentResult(0.4, 1, 0, 120),
+                    answerInput = listOf(PatternShape.CIRCLE),
+                    isPlaying = false,
+                    replaysRemaining = 0,
+                    remainingBypasses = 4,
+                ),
+                90.0, 5, 25f, 0.4, 0.5, 1, now, now,
+                now + ActiveInterventionSession.TTL_MS,
+            )
+        )
+        val scenario = ActivityScenario.launch<InterventionActivity>(
+            Intent(context, InterventionActivity::class.java)
+                .putExtra(InterventionActivity.EXTRA_RESTORE_ACTIVE, true)
+        )
+        val progress = hasContentDescription("1 dari 3 bentuk dipilih")
+        compose.waitUntil(5_000) { compose.onAllNodes(progress).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(progress).assertExists()
+
+        scenario.recreate()
+        compose.waitUntil(5_000) { compose.onAllNodes(progress).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(progress).assertExists()
+        scenario.close()
     }
 
     @Test fun researchDataIsExcludedFromAndroidBackup() {
