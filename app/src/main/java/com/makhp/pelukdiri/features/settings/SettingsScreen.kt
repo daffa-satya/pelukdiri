@@ -113,8 +113,9 @@ fun SettingsScreen(
             text = { Text(stringResource(R.string.settings_export_confirm_msg)) },
             confirmButton = {
                 Button(
-                    onClick = { 
-                        showExportDialog = false 
+                    onClick = {
+                        showExportDialog = false
+                        viewModel.exportDatabase()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
@@ -128,6 +129,47 @@ fun SettingsScreen(
             },
             containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (state.isExporting) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.settings_export_progress_title)) },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+                    Spacer(Modifier.width(Dimens.spaceMedium))
+                    Text(stringResource(R.string.settings_export_progress_msg))
+                }
+            },
+            confirmButton = {},
+        )
+    }
+
+    state.exportedFilePath?.let { path ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearExportResult,
+            title = { Text(stringResource(R.string.settings_export_success_title)) },
+            text = { Text(stringResource(R.string.settings_export_success_msg, path)) },
+            confirmButton = {
+                Button(onClick = viewModel::clearExportResult) {
+                    Text(stringResource(R.string.settings_export_close))
+                }
+            },
+        )
+    }
+
+    state.exportError?.let { error ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearExportResult,
+            title = { Text(stringResource(R.string.settings_export_error_title)) },
+            text = { Text(error) },
+            confirmButton = {
+                Button(onClick = viewModel::clearExportResult) {
+                    Text(stringResource(R.string.settings_export_close))
+                }
+            },
         )
     }
 }
