@@ -101,17 +101,10 @@ class InterventionActivity : ComponentActivity() {
     }
 
     override fun onPause() {
-        // Some MIUI versions still render an excluded single-instance task after it has
-        // entered Recents more than once. The unanswered intervention is persisted and the
-        // lock is deliberately not owned by this Activity lifecycle, so removing only this
-        // UI task is safe: returning to a monitored app restores the exact same session.
-        if (!isFinishing && !isChangingConfigurations) {
-            android.util.Log.d(
-                "InterventionActivity",
-                ">>> onPause; removing transient UI task while preserving active session"
-            )
-            finishAndRemoveTask()
-        }
+        // We removed the auto-finish logic here because it was causing the activity
+        // to exit unexpectedly on some devices when system overlays or other
+        // transient focus losses occurred. The active session is still preserved
+        // by the service if the user manually leaves.
         super.onPause()
     }
 

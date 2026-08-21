@@ -34,6 +34,7 @@ import com.makhp.pelukdiri.features.dashboard.AppDetailBottomSheet
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.features.dashboard.UiAppUsage
 import com.makhp.pelukdiri.ui.components.AppIcon
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.InsightCard
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.components.formatDuration
@@ -134,13 +135,7 @@ private fun AnalyticsContent(
                 onAppClick = { selectedApp = it }
             ) 
         }
-        item(key = "insight") {
-            InsightCard(
-                emoji = "💡",
-                title = stringResource(R.string.analytics_fun_fact_title),
-                message = state.funFact
-            )
-        }
+
     }
 
     selectedApp?.let { app ->
@@ -165,7 +160,9 @@ private fun AnalyticsHeader() {
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium
         )
-        Spacer(Modifier.width(Dimens.minTouchTarget))
+        Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
+            PelukDiriLogo(size = 28.dp)
+        }
     }
 }
 
@@ -460,16 +457,16 @@ private fun MetricGrid(state: AnalyticsUiState.Success) {
             horizontalArrangement = Arrangement.spacedBy(DashboardTokens.SmallGap)
         ) {
             MetricCard(
+                label = stringResource(R.string.analytics_metric_social_media_screentime),
+                value = formatDuration(state.socialMediaUsageMillis),
+                change = stringResource(R.string.analytics_vs_yesterday, "↘ 15%"), // Simplified comparison for now
+                modifier = Modifier.weight(1f)
+            )
+            MetricCard(
                 label = if (isDaily) stringResource(R.string.analytics_metric_total_screentime) 
                         else stringResource(R.string.analytics_avg_screentime),
                 value = formatDuration(state.summary?.totalScreenTimeMillis ?: 0),
                 change = stringResource(R.string.analytics_vs_yesterday, "↘ 23%"),
-                modifier = Modifier.weight(1f)
-            )
-            MetricCard(
-                label = stringResource(R.string.analytics_metric_unlocks),
-                value = "${state.summary?.unlockCount ?: 0}",
-                change = stringResource(R.string.analytics_vs_yesterday, "↘ 13%"),
                 modifier = Modifier.weight(1f)
             )
         }

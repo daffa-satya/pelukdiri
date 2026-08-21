@@ -49,6 +49,10 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val IS_WEEKLY_REFLECTION_ENABLED = booleanPreferencesKey("is_weekly_reflection_enabled")
         val IS_LIMIT_REMINDER_ENABLED = booleanPreferencesKey("is_limit_reminder_enabled")
         val IS_INTERVENTION_REMINDER_ENABLED = booleanPreferencesKey("is_intervention_reminder_enabled")
+        val IS_DND_ENABLED = booleanPreferencesKey("is_dnd_enabled_global")
+        val LAST_DAILY_SUMMARY_DATE = stringPreferencesKey("last_daily_summary_date")
+        val LAST_WEEKLY_REFLECTION_DATE = stringPreferencesKey("last_weekly_reflection_date")
+        val LAST_LIMIT_REMINDER_TIMESTAMP = longPreferencesKey("last_limit_reminder_timestamp")
     }
 
     private val defaultTargetApps = setOf(
@@ -201,6 +205,22 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
         .map { preferences -> preferences[PreferencesKeys.IS_INTERVENTION_REMINDER_ENABLED] ?: true }
 
+    override val isDndEnabled: Flow<Boolean> = context.dataStore.data
+        .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
+        .map { preferences -> preferences[PreferencesKeys.IS_DND_ENABLED] ?: false }
+
+    override val lastDailySummaryDate: Flow<String?> = context.dataStore.data
+        .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
+        .map { preferences -> preferences[PreferencesKeys.LAST_DAILY_SUMMARY_DATE] }
+
+    override val lastWeeklyReflectionDate: Flow<String?> = context.dataStore.data
+        .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
+        .map { preferences -> preferences[PreferencesKeys.LAST_WEEKLY_REFLECTION_DATE] }
+
+    override val lastLimitReminderTimestamp: Flow<Long> = context.dataStore.data
+        .catch { exception -> if (exception is IOException) emit(emptyPreferences()) else throw exception }
+        .map { preferences -> preferences[PreferencesKeys.LAST_LIMIT_REMINDER_TIMESTAMP] ?: 0L }
+
     override suspend fun setHistoryBackfilled(isBackfilled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_HISTORY_BACKFILLED] = isBackfilled
@@ -322,5 +342,29 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setInterventionReminderEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences -> preferences[PreferencesKeys.IS_INTERVENTION_REMINDER_ENABLED] = enabled }
+    }
+
+    override suspend fun setDndEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences -> preferences[PreferencesKeys.IS_DND_ENABLED] = enabled }
+    }
+
+    override suspend fun setLastDailySummaryDate(date: String?) {
+        context.dataStore.edit { preferences ->
+            if (date == null) preferences.remove(PreferencesKeys.LAST_DAILY_SUMMARY_DATE)
+            else preferences[PreferencesKeys.LAST_DAILY_SUMMARY_DATE] = date
+        }
+    }
+
+    override suspend fun setLastWeeklyReflectionDate(date: String?) {
+        context.dataStore.edit { preferences ->
+            if (date == null) preferences.remove(PreferencesKeys.LAST_WEEKLY_REFLECTION_DATE)
+            else preferences[PreferencesKeys.LAST_WEEKLY_REFLECTION_DATE] = date
+        }
+    }
+
+    override suspend fun setLastLimitReminderTimestamp(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LAST_LIMIT_REMINDER_TIMESTAMP] = timestamp
+        }
     }
 }

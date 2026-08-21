@@ -41,10 +41,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
+import com.makhp.pelukdiri.ui.components.AppIcon
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.components.formatDuration
 import com.makhp.pelukdiri.ui.theme.Dimens
@@ -140,7 +143,7 @@ private fun AppsInterventionHeader(onBackClick: () -> Unit) {
             style = MaterialTheme.typography.headlineMedium
         )
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            Text("🌿", style = MaterialTheme.typography.headlineSmall)
+            PelukDiriLogo(size = 28.dp)
         }
     }
 }
@@ -209,19 +212,11 @@ private fun AppSelectionItem(
             .clickable { onToggle() }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(DashboardTokens.AppIconSize)
-                    .clip(RoundedCornerShape(DashboardTokens.SmallRadius))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = app.appName.firstOrNull()?.toString() ?: "?",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            AppIcon(
+                packageName = app.packageName,
+                appName = app.appName,
+                size = DashboardTokens.AppIconSize
+            )
             
             Spacer(Modifier.width(DashboardTokens.MediumGap))
             

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.core.domain.model.AggressivenessLevel
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
+import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
 
@@ -102,7 +103,7 @@ private fun AdaptiveModeInfoCard() {
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Text("🌿", style = MaterialTheme.typography.headlineMedium)
+                PelukDiriLogo(size = 40.dp)
             }
             Spacer(Modifier.width(DashboardTokens.CardPadding))
             Column(Modifier.weight(1f)) {
@@ -329,7 +330,7 @@ private fun AdaptiveModeHeader(onBackClick: () -> Unit) {
             style = MaterialTheme.typography.headlineMedium
         )
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            Text("🌿", style = MaterialTheme.typography.headlineSmall)
+            PelukDiriLogo(size = 28.dp)
         }
     }
 }
