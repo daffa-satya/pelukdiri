@@ -34,19 +34,16 @@ class CsvExporter @Inject constructor(
 
     suspend fun exportFullDatabaseToZip(): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val csvFiles = mutableListOf<File>()
-            
-            // 1. Export all tables to CSV
-            exportAppUsage()?.let { csvFiles.add(it) }
-            exportDailySummaries()?.let { csvFiles.add(it) }
-            exportUsageSensorLogs()?.let { csvFiles.add(it) }
-            exportInterventions()?.let { csvFiles.add(it) }
-            exportInterventionLogs()?.let { csvFiles.add(it) }
-            exportDailyAdaptiveLimits()?.let { csvFiles.add(it) }
-
-            if (csvFiles.isEmpty()) {
-                return@withContext Result.failure(Exception("No data found to export"))
-            }
+            // Always include every expected CSV. Empty tables still produce a
+            // header-only file so exports have a stable, machine-readable schema.
+            val csvFiles = listOf(
+                exportAppUsage(),
+                exportDailySummaries(),
+                exportUsageSensorLogs(),
+                exportInterventions(),
+                exportInterventionLogs(),
+                exportDailyAdaptiveLimits(),
+            )
 
             // 2. Create ZIP package
             val timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")
@@ -74,9 +71,8 @@ class CsvExporter @Inject constructor(
         }
     }
 
-    private suspend fun exportAppUsage(): File? {
+    private suspend fun exportAppUsage(): File {
         val data = usageDao.getAllAppUsageList()
-        if (data.isEmpty()) return null
         val file = createTempFile("app_usage.csv")
         writerFor(file).use { writer ->
             writer.append("PackageName,AppName,UsageDurationMillis,LastUsedTimestamp,Date\r\n")
@@ -87,9 +83,8 @@ class CsvExporter @Inject constructor(
         return file
     }
 
-    private suspend fun exportDailySummaries(): File? {
+    private suspend fun exportDailySummaries(): File {
         val data = usageDao.getAllDailySummariesList()
-        if (data.isEmpty()) return null
         val file = createTempFile("daily_summaries.csv")
         writerFor(file).use { writer ->
             writer.append("Date,TotalScreenTimeMillis,TotalScreenOnMillis,MonitoredUsageMillis,UnlockCount,MostUsedApp,WellbeingScore\r\n")
@@ -100,9 +95,8 @@ class CsvExporter @Inject constructor(
         return file
     }
 
-    private suspend fun exportUsageSensorLogs(): File? {
+    private suspend fun exportUsageSensorLogs(): File {
         val data = usageSensorDao.getAllLogsList()
-        if (data.isEmpty()) return null
         val file = createTempFile("usage_sensor_logs.csv")
         writerFor(file).use { writer ->
             writer.append("Timestamp,Date,PackageName,RawScreenTimeMs,AppOpeningFrequency,AmbientLightLux\r\n")
@@ -113,9 +107,8 @@ class CsvExporter @Inject constructor(
         return file
     }
 
-    private suspend fun exportInterventions(): File? {
+    private suspend fun exportInterventions(): File {
         val data = interventionNotificationDao.getAllInterventionsList()
-        if (data.isEmpty()) return null
         val file = createTempFile("interventions.csv")
         writerFor(file).use { writer ->
             writer.append("ID,Title,Message,Type,Timestamp,Date,IsAcknowledged\r\n")
@@ -126,9 +119,8 @@ class CsvExporter @Inject constructor(
         return file
     }
 
-    private suspend fun exportInterventionLogs(): File? {
+    private suspend fun exportInterventionLogs(): File {
         val data = interventionDao.getAllLogsList()
-        if (data.isEmpty()) return null
         val file = createTempFile("intervention_logs.csv")
         writerFor(file).use { writer ->
             writer.append("ID,Timestamp,Date,Deviation,DifficultyControlSignal,DifficultyLevel,ResponseTimeMs,IsSuccess,IsBypassed,PenaltyAppliedMinutes\r\n")
@@ -139,9 +131,8 @@ class CsvExporter @Inject constructor(
         return file
     }
 
-    private suspend fun exportDailyAdaptiveLimits(): File? {
+    private suspend fun exportDailyAdaptiveLimits(): File {
         val data = adaptiveLimitDao.getAllLimitsList()
-        if (data.isEmpty()) return null
         val file = createTempFile("daily_adaptive_limits.csv")
         writerFor(file).use { writer ->
             writer.append("DateString,CalculatedLimitMinutes,ActualScreenTimeMinutes,ReclaimedTimeMinutes\r\n")
