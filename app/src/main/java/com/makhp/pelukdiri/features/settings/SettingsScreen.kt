@@ -165,13 +165,7 @@ private fun SettingsLayout(
             
             item(key = "preferences") {
                 SettingsSection(title = stringResource(R.string.settings_preferences_section)) {
-                    SettingsItem(
-                        title = stringResource(R.string.settings_adaptive_mode_title),
-                        description = stringResource(R.string.settings_adaptive_mode_desc),
-                        icon = Icons.Default.Tune,
-                        onClick = onNavigateToAdaptiveMode
-                    )
-                    SettingsDivider()
+
                     SettingsItem(
                         title = stringResource(R.string.settings_sleep_time_title),
                         description = stringResource(R.string.settings_sleep_time_desc),

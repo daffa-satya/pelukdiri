@@ -53,13 +53,15 @@ class DashboardViewModel @Inject constructor(
             val isOptimized = isBatteryOptimizationIgnored()
             val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
             val monitored = userPreferencesRepository.monitoredPackages.first()
+            val dnd = userPreferencesRepository.isDndEnabled.first()
             
             _uiState.value = dashboardState(
                 isPermissionGranted = isGranted,
                 isAccessibilityEnabled = isAccessibilityEnabled,
                 isBatteryOptimizationIgnored = isOptimized,
                 isHistoryBackfilled = isBackfilled,
-                monitoredPackages = monitored
+                monitoredPackages = monitored,
+                isDndEnabled = dnd
             )
         }
     }
@@ -84,13 +86,15 @@ class DashboardViewModel @Inject constructor(
                 val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
 
                 val monitored = userPreferencesRepository.monitoredPackages.first()
+                val dnd = userPreferencesRepository.isDndEnabled.first()
                 _uiState.value = dashboardState(
                     isPermissionGranted = isGranted,
                     isAccessibilityEnabled = isAccessibilityEnabled,
                     isBatteryOptimizationIgnored = isOptimized,
                     isHistoryBackfilled = isBackfilled,
                     monitoredPackages = monitored,
-                    isRefreshing = false
+                    isRefreshing = false,
+                    isDndEnabled = dnd
                 )
             } catch (e: Exception) {
                 _uiState.value = DashboardUiState.Error(e.message ?: "Failed to refresh data")
@@ -104,7 +108,8 @@ class DashboardViewModel @Inject constructor(
         isBatteryOptimizationIgnored: Boolean,
         isHistoryBackfilled: Boolean,
         monitoredPackages: Set<String>,
-        isRefreshing: Boolean = false
+        isRefreshing: Boolean = false,
+        isDndEnabled: Boolean = false
     ): DashboardUiState.Success {
         val today = LocalDate.now()
         val yesterday = today.minusDays(1)
@@ -142,7 +147,8 @@ class DashboardViewModel @Inject constructor(
             weeklySummaries = usageRepository.getUsageHistory(today.minusDays(6), today).first().toImmutableList(),
             topApps = enrichedTodayApps.toImmutableList(),
             yesterdayTopApps = yesterdayApps.values.map { UiAppUsage(it) }.toImmutableList(),
-            isRefreshing = isRefreshing
+            isRefreshing = isRefreshing,
+            isDndEnabled = isDndEnabled
         )
     }
 
@@ -153,6 +159,7 @@ class DashboardViewModel @Inject constructor(
             val isOptimized = isBatteryOptimizationIgnored()
             val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
             val monitored = userPreferencesRepository.monitoredPackages.first()
+            val dnd = userPreferencesRepository.isDndEnabled.first()
 
             _uiState.update { state ->
                 if (state is DashboardUiState.Success) {
@@ -161,12 +168,21 @@ class DashboardViewModel @Inject constructor(
                         isAccessibilityEnabled = isAccessibilityEnabled,
                         isBatteryOptimizationIgnored = isOptimized,
                         isHistoryBackfilled = isBackfilled,
-                        monitoredPackages = monitored.toImmutableSet()
+                        monitoredPackages = monitored.toImmutableSet(),
+                        isDndEnabled = dnd
                     )
                 } else {
                     state
                 }
             }
+        }
+    }
+
+    fun toggleDnd() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val current = userPreferencesRepository.isDndEnabled.first()
+            userPreferencesRepository.setDndEnabled(!current)
+            updatePermissionStatus()
         }
     }
 

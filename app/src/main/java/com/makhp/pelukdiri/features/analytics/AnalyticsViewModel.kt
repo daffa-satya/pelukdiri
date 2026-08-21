@@ -163,15 +163,41 @@ class AnalyticsViewModel @Inject constructor(
             }.sortedByDescending { it.usageDurationMillis }.toImmutableList()
 
             val logs = usageSensorRepository.getLogsInRange(startMillis, endMillis)
-            val hourlyUsage = logs
-                .groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zone).hour }
-                .mapValues { (_, hourLogs) -> 
-                    val total = hourLogs.sumOf { it.rawScreenTimeMs }
-                    if (period == AnalyticsPeriod.DAILY) total else total / history.size.coerceAtLeast(1)
+            
+            // Map logs to hours and find max cumulative per hour
+            // Logic: Each log entry is a snapshot of 'total usage today' for a specific app.
+            // 1. Group logs by timestamp to get snapshots.
+            // 2. For each snapshot, sum the usage of all apps to get 'Total Cumulative Usage' at that moment.
+            // 3. For each hour, take the latest (highest) cumulative usage value.
+            val hourlyCumulative = logs.groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zone).hour }
+                .mapValues { (_, hourLogs) ->
+                    hourLogs.groupBy { it.timestamp }
+                        .map { (_, snapshotLogs) -> snapshotLogs.sumOf { it.rawScreenTimeMs } }
+                        .maxOrNull() ?: 0L
                 }
+
+            val hourlyUsageList = MutableList(24) { 0L }
+            var lastCumulative = 0L
+            for (h in 0..23) {
+                val currentCumulative = hourlyCumulative[h]
+                if (currentCumulative != null) {
+                    // Usage in this hour = current total - previous total
+                    // Coerce to 0 in case of data reset, and max 1 hour (3600000ms)
+                    val delta = (currentCumulative - lastCumulative).coerceIn(0L, 3600000L)
+                    hourlyUsageList[h] = delta
+                    lastCumulative = currentCumulative
+                } else {
+                    // No data for this hour, keep lastCumulative the same, usage is 0
+                    hourlyUsageList[h] = 0L
+                }
+            }
             
             val interventions = interventionLogRepository.getAllLogsList().count { it.timestamp in startMillis..endMillis }
             
+            val socialMediaUsage = topApps
+                .filter { socialMediaPackages.contains(it.packageName) }
+                .sumOf { it.usageDurationMillis }
+
             val limit = if (period == AnalyticsPeriod.DAILY) {
                 adaptiveLimitRepository.getLimitForDate(date.toString())?.calculatedLimitMinutes
             } else null
@@ -181,8 +207,9 @@ class AnalyticsViewModel @Inject constructor(
                 selectedPeriod = period,
                 summary = aggregatedSummary,
                 topApps = topApps,
-                hourlyUsage = List(24) { hour -> hourlyUsage[hour] ?: 0L }.toImmutableList(),
+                hourlyUsage = hourlyUsageList.toImmutableList(),
                 interventionCount = interventions,
+                socialMediaUsageMillis = socialMediaUsage,
                 adaptiveLimitMinutes = limit
             )
 

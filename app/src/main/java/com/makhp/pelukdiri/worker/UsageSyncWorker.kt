@@ -17,6 +17,7 @@ import com.makhp.pelukdiri.core.domain.model.UsageSensorLog
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageSensorRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.usecase.InitializeDailyAdaptiveLimitUseCase
 import com.makhp.pelukdiri.core.util.NotificationHelper
 import dagger.assisted.Assisted
@@ -36,7 +37,8 @@ class UsageSyncWorker @AssistedInject constructor(
     private val appUsageCollector: AppUsageCollector,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val initializeDailyAdaptiveLimitUseCase: InitializeDailyAdaptiveLimitUseCase,
-    private val notificationHelper: NotificationHelper
+    private val notificationHelper: NotificationHelper,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -83,21 +85,85 @@ class UsageSyncWorker @AssistedInject constructor(
             // 4. Initialize today's adaptive limit if missing (Idempotent)
             initializeDailyAdaptiveLimitUseCase()
 
-            // 5. Update Daily Usage Notification
-            val today = LocalDate.now()
-            val summary = usageRepository.getDailySummary(today).firstOrNull()
-            val limit = adaptiveLimitRepository.getLimitForDate(today.toString())
-
-            notificationHelper.updateDailyUsageNotification(
-                totalUsageMillis = summary?.monitoredUsageMillis ?: 0L,
-                adaptiveLimitMinutes = limit?.calculatedLimitMinutes
-            )
+            // 5. Update Notifications
+            handleNotifications()
 
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
             Result.retry()
         }
+    }
+
+    private suspend fun handleNotifications() {
+        val isDnd = userPreferencesRepository.isDndEnabled.firstOrNull() ?: false
+        android.util.Log.d("UsageSyncWorker", "handleNotifications: isDndEnabled=$isDnd")
+        if (isDnd) return
+
+        val today = LocalDate.now()
+        val todayStr = today.toString()
+        val calendar = Calendar.getInstance()
+        val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // Sunday = 1
+
+        val summary = usageRepository.getDailySummary(today).firstOrNull()
+        val limit = adaptiveLimitRepository.getLimitForDate(todayStr)
+        val monitoredUsageMillis = summary?.monitoredUsageMillis ?: 0L
+        val limitMinutes = limit?.calculatedLimitMinutes
+
+        android.util.Log.d("UsageSyncWorker", "Sending status notification: usage=$monitoredUsageMillis, limit=$limitMinutes")
+        
+        // 4. Update the persistent daily status notification
+        notificationHelper.updateDailyUsageNotification(
+            totalUsageMillis = monitoredUsageMillis,
+            adaptiveLimitMinutes = limitMinutes
+        )
+
+        // 1. Daily Summary (around 20:00)
+        if (currentHour >= 20) {
+            val lastSentDate = userPreferencesRepository.lastDailySummaryDate.firstOrNull()
+            val isEnabled = userPreferencesRepository.isDailySummaryEnabled.firstOrNull() ?: true
+            android.util.Log.d("UsageSyncWorker", "DailySummary check: isEnabled=$isEnabled, lastSent=$lastSentDate, current=$todayStr")
+            if (isEnabled && lastSentDate != todayStr) {
+                notificationHelper.showDailySummaryNotification(monitoredUsageMillis)
+                userPreferencesRepository.setLastDailySummaryDate(todayStr)
+            }
+        }
+
+        // 2. Weekly Reflection (Sundays around 19:00)
+        if (dayOfWeek == Calendar.SUNDAY && currentHour >= 19) {
+            val weekId = "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.WEEK_OF_YEAR)}"
+            val lastSentWeek = userPreferencesRepository.lastWeeklyReflectionDate.firstOrNull()
+            val isEnabled = userPreferencesRepository.isWeeklyReflectionEnabled.firstOrNull() ?: true
+            android.util.Log.d("UsageSyncWorker", "WeeklyReflection check: isEnabled=$isEnabled, lastSent=$lastSentWeek, current=$weekId")
+            if (isEnabled && lastSentWeek != weekId) {
+                notificationHelper.showWeeklyReflectionNotification()
+                userPreferencesRepository.setLastWeeklyReflectionDate(weekId)
+            }
+        }
+
+        // 3. Limit Reminder (when usage > 90% of limit)
+        if (limitMinutes != null && limitMinutes > 0) {
+            val limitMillis = limitMinutes * 60_000L
+            val threshold = 0.9f
+            android.util.Log.d("UsageSyncWorker", "LimitReminder check: usage=$monitoredUsageMillis, limit=$limitMillis, threshold=${limitMillis * threshold}")
+            if (monitoredUsageMillis >= limitMillis * threshold) {
+                val lastSentTime = userPreferencesRepository.lastLimitReminderTimestamp.firstOrNull() ?: 0L
+                val oneHourMillis = 60 * 60 * 1000L
+                val isEnabled = userPreferencesRepository.isLimitReminderEnabled.firstOrNull() ?: true
+                android.util.Log.d("UsageSyncWorker", "LimitReminder trigger: isEnabled=$isEnabled, lastSentTime=$lastSentTime, diff=${System.currentTimeMillis() - lastSentTime}")
+                if (isEnabled && System.currentTimeMillis() - lastSentTime > oneHourMillis) {
+                    notificationHelper.showLimitReminderNotification()
+                    userPreferencesRepository.setLastLimitReminderTimestamp(System.currentTimeMillis())
+                }
+            }
+        }
+
+        // 4. Update the persistent daily status notification
+        notificationHelper.updateDailyUsageNotification(
+            totalUsageMillis = monitoredUsageMillis,
+            adaptiveLimitMinutes = limitMinutes
+        )
     }
 
     private fun createForegroundInfo(): ForegroundInfo {
