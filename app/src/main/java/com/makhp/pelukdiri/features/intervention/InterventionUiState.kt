@@ -9,6 +9,10 @@ sealed interface InterventionUiState {
     data object Idle : InterventionUiState
     data object Loading : InterventionUiState
 
+    data class Error(
+        val operation: FailedInterventionOperation
+    ) : InterventionUiState
+
     data class QuestionActive(
         val question: MathQuestion,
         val assessment: RiskAssessmentResult,
@@ -38,4 +42,12 @@ sealed interface InterventionUiState {
         val remainingBypasses: Int = 5,
         val bypassDenied: Boolean = false
     ) : InterventionUiState
+}
+
+enum class FailedInterventionOperation {
+    START,
+    RESTORE,
+    SUBMIT_ANSWER,
+    EMERGENCY_BYPASS,
+    COMPLETE,
 }

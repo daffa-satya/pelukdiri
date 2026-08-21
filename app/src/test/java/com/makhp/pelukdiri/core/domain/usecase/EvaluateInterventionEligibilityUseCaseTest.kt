@@ -90,12 +90,11 @@ class EvaluateInterventionEligibilityUseCaseTest {
     fun `performance uses same difficulty excludes bypasses and omits current response from baseline`() = runBlocking {
         val latest = performanceLog(id = 10L, responseTimeMs = 500L)
         val previous = (1L..5L).map { id -> performanceLog(id = id, responseTimeMs = 1_000L) }
-        stubEligibleEvaluation(latestPerformance = latest, successfulHistory = listOf(latest) + previous)
+        stubEligibleEvaluation(recentLogs = listOf(latest) + previous)
 
         useCase(targetPackage)
 
-        coVerify { interventionLogRepository.getLatestValidPerformanceLogByDifficulty(2) }
-        coVerify { interventionLogRepository.getRecentValidSuccessfulLogsByDifficulty(2, 6) }
+        coVerify { interventionLogRepository.getRecentLogs(32) }
         verify {
             controlEngine.calculateNextIntervention(
                 any(),
@@ -107,6 +106,26 @@ class EvaluateInterventionEligibilityUseCaseTest {
                 2,
                 any(),
                 any()
+            )
+        }
+    }
+
+    @Test
+    fun `performance ignores stale successes from before a difficulty transition`() = runBlocking {
+        val staleLevelTwo = (1L..6L).map { id -> performanceLog(id, 1_000L) }
+        val latestLevelThree = performanceLog(
+            id = 20L,
+            responseTimeMs = 2_000L,
+            difficulty = 3,
+            isSuccess = false,
+        )
+        stubEligibleEvaluation(recentLogs = listOf(latestLevelThree) + staleLevelTwo.reversed())
+
+        useCase(targetPackage)
+
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(), null, emptyList(), any(), any(), any(), 2, any(), any()
             )
         }
     }
@@ -124,8 +143,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
 
     private fun stubEligibleEvaluation(
         usage: List<AppUsage> = listOf(AppUsage(targetPackage, "Target", 10 * 60_000L, 0L)),
-        latestPerformance: InterventionLog? = null,
-        successfulHistory: List<InterventionLog> = emptyList()
+        recentLogs: List<InterventionLog> = emptyList(),
     ) {
         every { usageEventCollector.getUsageForDay(any()) } returns usage
         every { userPreferencesRepository.monitoredPackages } returns flowOf(setOf(targetPackage))
@@ -144,8 +162,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
             relativeMagnitude = 0.1,
             status = DeviationStatus.Success
         )
-        coEvery { interventionLogRepository.getLatestValidPerformanceLogByDifficulty(2) } returns latestPerformance
-        coEvery { interventionLogRepository.getRecentValidSuccessfulLogsByDifficulty(2, 6) } returns successfulHistory
+        coEvery { interventionLogRepository.getRecentLogs(32) } returns recentLogs
         every {
             controlEngine.calculateNextIntervention(
                 any(), any(), any(), any(), any(), any(), any(), any(), any()
@@ -153,14 +170,19 @@ class EvaluateInterventionEligibilityUseCaseTest {
         } returns controlResult()
     }
 
-    private fun performanceLog(id: Long, responseTimeMs: Long) = InterventionLog(
+    private fun performanceLog(
+        id: Long,
+        responseTimeMs: Long,
+        difficulty: Int = 2,
+        isSuccess: Boolean = true,
+    ) = InterventionLog(
         id = id,
         timestamp = id,
         deviation = 0.2,
         difficultyControlSignal = 0.5,
-        difficultyLevel = 2,
+        difficultyLevel = difficulty,
         responseTimeMs = responseTimeMs,
-        isSuccess = true,
+        isSuccess = isSuccess,
         isBypassed = false,
         penaltyAppliedMinutes = 0
     )

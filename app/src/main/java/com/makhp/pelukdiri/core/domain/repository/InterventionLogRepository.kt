@@ -7,6 +7,7 @@ interface InterventionLogRepository {
     suspend fun insertLog(log: InterventionLog)
     fun getAllLogs(): Flow<List<InterventionLog>>
     suspend fun getAllLogsList(): List<InterventionLog>
+    suspend fun getRecentLogs(limit: Int): List<InterventionLog>
     suspend fun getAverageResponseTime(difficulty: Int): Double?
     suspend fun getRecentValidSuccessfulLogsByDifficulty(difficulty: Int, limit: Int): List<InterventionLog>
     suspend fun getLatestValidPerformanceLogByDifficulty(difficulty: Int): InterventionLog?

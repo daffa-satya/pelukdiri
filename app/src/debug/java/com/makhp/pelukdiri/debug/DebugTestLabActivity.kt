@@ -2,6 +2,8 @@ package com.makhp.pelukdiri.debug
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.lifecycleScope
@@ -38,6 +40,7 @@ import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import com.makhp.pelukdiri.features.intervention.ActiveInterventionSession
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
+import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -53,11 +56,25 @@ class DebugTestLabActivity : ComponentActivity() {
     @Inject lateinit var controlEngine: ControlEngine
     @Inject lateinit var activeSession: ActiveInterventionSession
     @Inject lateinit var usageDao: UsageDao
+    @Inject lateinit var lockManager: InterventionLockManager
 
     private var status by mutableStateOf("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent.action == ACTION_LAUNCH_INTERVENTION) {
+            val level = intent.getIntExtra(EXTRA_DIFFICULTY, 3)
+            val targetPackage = intent.getStringExtra(EXTRA_TARGET_PACKAGE) ?: DEFAULT_TARGET_PACKAGE
+            packageManager.getLaunchIntentForPackage(targetPackage)?.let { targetIntent ->
+                startActivity(targetIntent.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                })
+            }
+            Handler(Looper.getMainLooper()).postDelayed({
+                launchIntervention(level, ::finishAndRemoveTask)
+            }, TARGET_SETTLE_DELAY_MS)
+            return
+        }
         refresh()
         setContent {
             PELUKDIRITheme {
@@ -69,7 +86,7 @@ class DebugTestLabActivity : ComponentActivity() {
                     onAdvanceTtl = { controls.advanceBy(ActiveInterventionSession.TTL_MS); refresh() },
                     onFailLaunch = { controls.forceNextLaunchFailure(); status = "Next accessibility-service launch will fail once." },
                     onClearTiming = { mutate { preferences.setNextEligibleInterventionAt(0L); preferences.setEmergencyBypassUntil(0L) } },
-                    onClearSession = { mutate { activeSession.clear() } },
+                    onClearSession = { mutate { activeSession.clear(); lockManager.releaseLock() } },
                     onSetDifficulty = { level -> mutate { preferences.setCurrentDifficulty(level) } },
                     onPerformance = ::insertPerformance,
                     onSeedHistory = ::seedHistory,
@@ -138,19 +155,38 @@ class DebugTestLabActivity : ComponentActivity() {
         status = "usage=$usage history=$history\nbaseline=${deviation.baseline} MAD=${deviation.mad} D=${deviation.deviation}\nP=${result.performance} Q=${result.sensitivity} nextDifficulty=${result.nextDifficulty} interval=${result.intervalMinutes}m"
     }
 
-    private fun launchIntervention(level: Int) {
-        startActivity(Intent(this, InterventionActivity::class.java).apply {
-            putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 90.0)
-            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, 5.0)
-            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 25f)
-            putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
-            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
-            putExtra(InterventionActivity.EXTRA_DIFFICULTY, level)
-        })
+    private fun launchIntervention(level: Int, afterLaunch: () -> Unit = {}) {
+        lifecycleScope.launch {
+            val launchedAt = controls.nowMillis()
+            preferences.setNextEligibleInterventionAt(
+                launchedAt + TEST_LAUNCH_INTERVAL_MINUTES * 60_000L
+            )
+            preferences.setCurrentDifficulty(level)
+            lockManager.acquireLock()
+            startActivity(Intent(this@DebugTestLabActivity, InterventionActivity::class.java).apply {
+                putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 90.0)
+                putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, TEST_LAUNCH_INTERVAL_MINUTES.toDouble())
+                putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 25f)
+                putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
+                putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
+                putExtra(InterventionActivity.EXTRA_DIFFICULTY, level)
+            })
+            afterLaunch()
+        }
     }
 
     private fun mutate(block: suspend () -> Unit) {
         lifecycleScope.launch { block(); loadStatus() }
+    }
+
+    companion object {
+        const val ACTION_LAUNCH_INTERVENTION =
+            "com.makhp.pelukdiri.debug.action.LAUNCH_INTERVENTION"
+        const val EXTRA_DIFFICULTY = "difficulty"
+        const val EXTRA_TARGET_PACKAGE = "target_package"
+        private const val DEFAULT_TARGET_PACKAGE = "com.google.android.youtube"
+        private const val TARGET_SETTLE_DELAY_MS = 750L
+        private const val TEST_LAUNCH_INTERVAL_MINUTES = 5L
     }
 }
 

@@ -95,6 +95,12 @@
     <string name="settings_export_confirm_title">Ekspor Data</string>
     <string name="settings_export_confirm_msg">Data 7 hari terakhir akan dikemas dalam format CSV. Lanjutkan ekspor?</string>
     <string name="settings_export_button">Ekspor</string>
+    <string name="settings_export_progress_title">Mengekspor data</string>
+    <string name="settings_export_progress_msg">Sedang menyiapkan file ZIP…</string>
+    <string name="settings_export_success_title">Ekspor selesai</string>
+    <string name="settings_export_success_msg">File tersimpan di:\n%1$s</string>
+    <string name="settings_export_error_title">Ekspor gagal</string>
+    <string name="settings_export_close">Tutup</string>
 
     <string name="settings_sleep_time_title">Jam Tidur</string>
     <string name="settings_sleep_time_desc">Atur waktu istirahatmu agar intervensi lebih optimal.</string>
@@ -253,6 +259,12 @@
     <string name="intervention_incorrect_title">Jawaban Belum Tepat</string>
     <string name="intervention_incorrect_msg">Coba lebih teliti lagi ya!</string>
     <string name="intervention_retry">Coba Lagi</string>
+    <string name="intervention_error_title">PelukDiri mengalami kendala</string>
+    <string name="intervention_error_start">Tantangan belum dapat disiapkan. Pertanyaan dan status intervensi tetap aman.</string>
+    <string name="intervention_error_restore">Intervensi yang aktif belum dapat dipulihkan. Coba lagi untuk melanjutkan pertanyaan yang sama.</string>
+    <string name="intervention_error_submit">Jawaban belum dapat disimpan. Coba lagi tanpa mengubah jawaban Anda.</string>
+    <string name="intervention_error_bypass">Mode darurat belum dapat diselesaikan. Coba lagi; kuota tidak akan digunakan dua kali.</string>
+    <string name="intervention_error_complete">Intervensi belum dapat ditutup dengan aman. Coba lagi untuk menyelesaikannya.</string>
     <string name="intervention_emergency_button">Mode Darurat (3 Menit)</string>
     <string name="intervention_math_title">Selesaikan soal ini</string>
     <string name="intervention_pattern_title">Lengkapi pola ini</string>

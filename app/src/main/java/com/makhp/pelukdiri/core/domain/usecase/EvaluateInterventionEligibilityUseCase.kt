@@ -11,6 +11,7 @@ import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.flow.first
+import android.util.Log
 import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
@@ -42,7 +43,9 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 1. Authoritative measurement
+        Log.d("EligibilityUseCase", "Stage: collecting usage events")
         val usageList = usageEventCollector.getUsageForDay(today)
+        Log.d("EligibilityUseCase", "Stage: reading monitored packages")
         val monitoredPackages = userPreferencesRepository.monitoredPackages.first()
         
         val totalUsageMillis = usageList.sumOf { it.usageDurationMillis }
@@ -64,6 +67,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 2. Cooldown & Quota check
+        Log.d("EligibilityUseCase", "Stage: reading cooldown and bypass")
         val nextEligible = userPreferencesRepository.nextEligibleInterventionAt.first()
         val bypassUntil = userPreferencesRepository.emergencyBypassUntil.first()
         
@@ -78,12 +82,17 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 3. Deviation
+        Log.d("EligibilityUseCase", "Stage: reading adaptive history")
         val history = getAdaptiveHistoryUseCase()
         val devResult = deviationEngine.calculate(currentMonitoredUsageMinutes, history)
         
         // 4. Performance & Sensitivity
+        Log.d("EligibilityUseCase", "Stage: reading performance context")
         val currentDiff = userPreferencesRepository.currentDifficulty.first()
-        val latestLog = interventionLogRepository.getLatestValidPerformanceLogByDifficulty(currentDiff)
+        val currentDifficultyRun = interventionLogRepository.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
+            .takeWhile { it.difficultyLevel == currentDiff }
+            .filter { !it.isBypassed && it.responseTimeMs > 0L }
+        val latestLog = currentDifficultyRun.firstOrNull()
         val lastPerformance = latestLog?.let { 
             PerformanceMetrics(
                 responseTimeMs = it.responseTimeMs, 
@@ -91,8 +100,9 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
                 difficulty = it.difficultyLevel
             ) 
         }
-        val perfHistory = interventionLogRepository.getRecentValidSuccessfulLogsByDifficulty(currentDiff, 6)
-            .filterNot { it.id == latestLog?.id }
+        val perfHistory = currentDifficultyRun
+            .drop(1)
+            .filter { it.isSuccess }
             .take(5)
             .map { it.responseTimeMs }
             
@@ -105,6 +115,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 5. Control Decision
+        Log.d("EligibilityUseCase", "Stage: calculating control result")
         val controlResult = controlEngine.calculateNextIntervention(
             deviation = devResult.deviation,
             lastPerformance = lastPerformance,
@@ -117,6 +128,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         )
         
         val shouldTrigger = devResult.deviation != null && devResult.deviation > 0.05
+        Log.d("EligibilityUseCase", "Stage: complete trigger=$shouldTrigger")
         
         return InterventionDecision(
             shouldTrigger = shouldTrigger,
@@ -125,5 +137,9 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             totalUsageMinutes = currentTotalUsageMinutes,
             ambientLux = lux
         )
+    }
+
+    private companion object {
+        const val PERFORMANCE_RUN_QUERY_LIMIT = 32
     }
 }

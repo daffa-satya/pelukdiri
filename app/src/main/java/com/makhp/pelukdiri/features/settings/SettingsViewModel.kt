@@ -1,12 +1,12 @@
 package com.makhp.pelukdiri.features.settings
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.makhp.pelukdiri.core.database.export.CsvExporter
 import com.makhp.pelukdiri.core.domain.model.AggressivenessLevel
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -14,10 +14,12 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
-    @ApplicationContext private val context: Context
+    private val csvExporter: CsvExporter,
 ) : ViewModel() {
 
-    val uiState: StateFlow<SettingsUiState> = combine(
+    private val exportState = MutableStateFlow(ExportState())
+
+    private val preferencesState = combine(
         userPreferencesRepository.aggressivenessLevel,
         userPreferencesRepository.isFixedLimitEnabled,
         userPreferencesRepository.fixedDailyLimitMinutes,
@@ -31,6 +33,14 @@ class SettingsViewModel @Inject constructor(
             sleepTime = sleep ?: "22:00",
             wakeTime = wake ?: "06:00",
             appVersion = "1.0.0 (Beta)"
+        )
+    }
+
+    val uiState: StateFlow<SettingsUiState> = combine(preferencesState, exportState) { settings, export ->
+        settings.copy(
+            isExporting = export.isExporting,
+            exportedFilePath = export.exportedFilePath,
+            exportError = export.error,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -67,8 +77,33 @@ class SettingsViewModel @Inject constructor(
             userPreferencesRepository.setWakeTime(time)
         }
     }
+
+    fun exportDatabase() {
+        if (exportState.value.isExporting) return
+        exportState.value = ExportState(isExporting = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            csvExporter.exportFullDatabaseToZip().fold(
+                onSuccess = { file ->
+                    exportState.value = ExportState(exportedFilePath = file.absolutePath)
+                },
+                onFailure = { error ->
+                    exportState.value = ExportState(error = error.message ?: "Export failed")
+                },
+            )
+        }
+    }
+
+    fun clearExportResult() {
+        exportState.value = ExportState()
+    }
     
     fun logout() {
         // Handle logout logic
     }
+
+    private data class ExportState(
+        val isExporting: Boolean = false,
+        val exportedFilePath: String? = null,
+        val error: String? = null,
+    )
 }

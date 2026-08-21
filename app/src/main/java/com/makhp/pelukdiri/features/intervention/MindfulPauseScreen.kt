@@ -19,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -27,7 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -35,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
 
 private val ScreenScrim = Color(0xB3000000)
@@ -46,9 +50,10 @@ fun MindfulPauseScreen(
     onSubmitAnswer: () -> Unit,
     onEmergencyClick: () -> Unit,
     onReset: () -> Unit,
-    onStartSample: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -70,22 +75,34 @@ fun MindfulPauseScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 when (state) {
-                    is InterventionUiState.Idle -> IdleContent(onStartSample)
+                    is InterventionUiState.Idle -> LoadingContent()
                     is InterventionUiState.Loading -> LoadingContent()
-                    is InterventionUiState.QuestionActive -> QuestionContent(state, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
-                    is InterventionUiState.MaxPenalized -> QuestionContent(
-                        state = InterventionUiState.QuestionActive(
+                    is InterventionUiState.Error -> ErrorContent(state.operation, onRetry)
+                    is InterventionUiState.QuestionActive -> if (isLandscape) {
+                        LandscapeQuestionContent(state, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
+                    } else {
+                        QuestionContent(state, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
+                    }
+                    is InterventionUiState.MaxPenalized -> {
+                        val questionState = InterventionUiState.QuestionActive(
                             question = state.question,
                             assessment = state.assessment,
                             answerInput = state.answerInput,
                             remainingBypasses = state.remainingBypasses,
                             bypassDenied = state.bypassDenied
-                        ),
-                        onAnswerChanged = onAnswerChanged,
-                        onSubmitAnswer = onSubmitAnswer,
-                        onEmergencyClick = onEmergencyClick,
-                        isMaxPenalized = true
-                    )
+                        )
+                        if (isLandscape) {
+                            LandscapeQuestionContent(
+                                questionState, onAnswerChanged, onSubmitAnswer,
+                                onEmergencyClick, isMaxPenalized = true
+                            )
+                        } else {
+                            QuestionContent(
+                                questionState, onAnswerChanged, onSubmitAnswer,
+                                onEmergencyClick, isMaxPenalized = true
+                            )
+                        }
+                    }
                     is InterventionUiState.CorrectAnswer -> ResultContent(isSuccess = true, state = state, onReset = onReset)
                     is InterventionUiState.IncorrectAnswer -> ResultContent(isSuccess = false, state = state, onReset = onReset)
                 }
@@ -95,31 +112,154 @@ fun MindfulPauseScreen(
 }
 
 @Composable
-private fun IdleContent(onStartSample: () -> Unit) {
+private fun ErrorContent(
+    operation: FailedInterventionOperation,
+    onRetry: () -> Unit,
+) {
     Text(
-        text = "Siap untuk Jeda?",
-        color = MaterialTheme.colorScheme.onSurface,
-        fontSize = 24.sp,
+        text = stringResource(R.string.intervention_error_title),
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(12.dp))
+    Text(
+        text = stringResource(
+            when (operation) {
+                FailedInterventionOperation.START -> R.string.intervention_error_start
+                FailedInterventionOperation.RESTORE -> R.string.intervention_error_restore
+                FailedInterventionOperation.SUBMIT_ANSWER -> R.string.intervention_error_submit
+                FailedInterventionOperation.EMERGENCY_BYPASS -> R.string.intervention_error_bypass
+                FailedInterventionOperation.COMPLETE -> R.string.intervention_error_complete
+            }
+        ),
+        color = MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.bodyLarge,
+        textAlign = TextAlign.Center,
     )
     Spacer(Modifier.height(24.dp))
     Button(
-        onClick = onStartSample,
+        onClick = onRetry,
         modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(10.dp)
     ) {
-        Text("Mulai Tantangan", fontSize = 18.sp)
+        Text(stringResource(R.string.intervention_retry))
     }
 }
 
 @Composable
 private fun LoadingContent() {
-    Text(
-        text = "Menyiapkan...",
-        color = MaterialTheme.colorScheme.onSurface,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Medium,
-    )
+    CircularProgressIndicator()
+}
+
+@Composable
+private fun LandscapeQuestionContent(
+    state: InterventionUiState.QuestionActive,
+    onAnswerChanged: (String) -> Unit,
+    onSubmitAnswer: () -> Unit,
+    onEmergencyClick: () -> Unit,
+    isMaxPenalized: Boolean = false,
+) {
+    val displayExpr = remember(state.question.expression) {
+        state.question.expression.replace("*", "×").replace("/", "÷")
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(0.9f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "Ambil Jeda Sejenak",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            if (isMaxPenalized) {
+                Text(
+                    text = "Penalti Maksimum Diterapkan",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Text(
+                text = "Tingkat Kesulitan: ${state.assessment.level}",
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = displayExpr,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.width(10.dp))
+                OutlinedTextField(
+                    value = state.answerInput,
+                    onValueChange = {},
+                    modifier = Modifier.width(86.dp),
+                    readOnly = true,
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 22.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                )
+            }
+            Text(
+                text = "Sisa Darurat: ${state.remainingBypasses}",
+                color = if (state.remainingBypasses > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (state.bypassDenied) {
+                Text(
+                    text = "Kuota darurat telah habis hari ini.",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 11.sp,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                OutlinedButton(
+                    onClick = onEmergencyClick,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    enabled = state.remainingBypasses > 0,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                        disabledContentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.38f),
+                    ),
+                ) { Text("Darurat") }
+                Button(
+                    onClick = onSubmitAnswer,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    enabled = state.answerInput.isNotEmpty(),
+                ) { Text("Kirim") }
+            }
+        }
+
+        NumericKeypad(
+            onNumberClick = { number -> onAnswerChanged(state.answerInput + number) },
+            onClearClick = { onAnswerChanged("") },
+            onBackspaceClick = {
+                if (state.answerInput.isNotEmpty()) onAnswerChanged(state.answerInput.dropLast(1))
+            },
+            modifier = Modifier.weight(1.1f),
+        )
+    }
 }
 
 @Composable
@@ -310,8 +450,9 @@ private fun NumericKeypad(
     onNumberClick: (Int) -> Unit,
     onClearClick: () -> Unit,
     onBackspaceClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
             listOf(1, 2, 3),
             listOf(4, 5, 6),
@@ -383,7 +524,7 @@ private fun MindfulPauseScreenPreview() {
             onSubmitAnswer = {},
             onEmergencyClick = {},
             onReset = {},
-            onStartSample = {}
+            onRetry = {},
         )
     }
 }
@@ -417,7 +558,7 @@ private fun MindfulPauseFailurePreview() {
             onSubmitAnswer = {},
             onEmergencyClick = {},
             onReset = {},
-            onStartSample = {},
+            onRetry = {},
         )
     }
 }
