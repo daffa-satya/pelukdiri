@@ -3,6 +3,7 @@ package com.makhp.pelukdiri
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -79,6 +80,11 @@ class InterventionLifecycleInstrumentedTest {
         )
         assertTrue(interventionInfo.flags and ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS != 0)
         assertNotNull(packageManager.getActivityInfo(ComponentName(context, "com.makhp.pelukdiri.debug.DebugTestLabActivity"), 0))
+    }
+
+    @Test fun researchDataIsExcludedFromAndroidBackup() {
+        val applicationInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
+        assertEquals(0, applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP)
     }
 
     @Test fun debugClockOverrideSurvivesProviderRecreation() {
