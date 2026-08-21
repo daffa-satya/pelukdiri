@@ -230,7 +230,7 @@ class InterventionViewModelTest {
     }
 
     @Test
-    fun `pattern replay is available once`() = runTest {
+    fun `pattern can be replayed indefinitely`() = runTest {
         val sequence = listOf(PatternShape.CIRCLE, PatternShape.SQUARE, PatternShape.TRIANGLE)
         coEvery { patternQuestionGenerator.generateQuestion(1) } returns PatternQuestion(sequence, 1)
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
@@ -245,6 +245,11 @@ class InterventionViewModelTest {
         val afterReplay = viewModel.uiState.value as InterventionUiState.PatternActive
         assertEquals(0, afterReplay.replaysRemaining)
         viewModel.replayPattern()
-        assertEquals(afterReplay, viewModel.uiState.value)
+        advanceUntilIdle()
+
+        val afterSecondReplay = viewModel.uiState.value as InterventionUiState.PatternActive
+        assertEquals(false, afterSecondReplay.isPlaying)
+        assertEquals(0, afterSecondReplay.replaysRemaining)
+        assertEquals(emptyList<PatternShape>(), afterSecondReplay.answerInput)
     }
 }

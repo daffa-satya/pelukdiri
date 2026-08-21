@@ -56,7 +56,14 @@ class InterventionActivity : ComponentActivity() {
             override fun handleOnBackPressed() = Unit
         })
 
-        processIntent(intent)
+        if (savedInstanceState == null) {
+            processIntent(intent)
+        } else if (viewModel.uiState.value == InterventionUiState.Idle) {
+            // A retained ViewModel already owns the exact session during a normal
+            // configuration change. Only restore from storage when Android also
+            // had to recreate the process and therefore supplied a fresh ViewModel.
+            restoreActiveInterventionOrFinish()
+        }
 
         setContent {
             PELUKDIRITheme {
@@ -119,15 +126,7 @@ class InterventionActivity : ComponentActivity() {
         if (intent == null) return
 
         if (intent.getBooleanExtra(EXTRA_RESTORE_ACTIVE, false)) {
-            viewModel.restoreActiveIntervention { restored ->
-                if (restored) {
-                    android.util.Log.d("InterventionActivity", ">>> Restored active intervention")
-                } else {
-                    android.util.Log.w("InterventionActivity", ">>> Active intervention snapshot unavailable")
-                    lockManager.releaseLock()
-                    finishAndRemoveTask()
-                }
-            }
+            restoreActiveInterventionOrFinish()
             return
         }
 
@@ -153,6 +152,18 @@ class InterventionActivity : ComponentActivity() {
             )
         } else {
             android.util.Log.w("InterventionActivity", ">>> No valid monitored usage data in intent. MonitoredUsage: $monitoredUsage")
+        }
+    }
+
+    private fun restoreActiveInterventionOrFinish() {
+        viewModel.restoreActiveIntervention { restored ->
+            if (restored) {
+                android.util.Log.d("InterventionActivity", ">>> Restored active intervention")
+            } else {
+                android.util.Log.w("InterventionActivity", ">>> Active intervention snapshot unavailable")
+                lockManager.releaseLock()
+                finishAndRemoveTask()
+            }
         }
     }
 

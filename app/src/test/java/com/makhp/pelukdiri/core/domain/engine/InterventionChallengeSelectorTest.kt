@@ -4,17 +4,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class InterventionChallengeSelectorTest {
-    private val selector = InterventionChallengeSelector()
+    @Test fun `heads selects math`() {
+        val selector = InterventionChallengeSelector { true }
+        assertEquals(InterventionChallengeType.MATH, selector.select())
+    }
 
-    @Test fun `first challenge is math and subsequent challenge alternates`() {
-        assertEquals(InterventionChallengeType.MATH, selector.select(null))
-        assertEquals(
-            InterventionChallengeType.PATTERN,
-            selector.select(InterventionChallengeType.MATH),
-        )
-        assertEquals(
-            InterventionChallengeType.MATH,
-            selector.select(InterventionChallengeType.PATTERN),
-        )
+    @Test fun `tails selects pattern`() {
+        val selector = InterventionChallengeSelector { false }
+        assertEquals(InterventionChallengeType.PATTERN, selector.select())
     }
 }

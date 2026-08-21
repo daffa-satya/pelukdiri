@@ -223,9 +223,11 @@ class InterventionViewModel @Inject constructor(
 
     fun replayPattern() {
         val state = _uiState.value as? InterventionUiState.PatternActive ?: return
-        if (!isAnswerProcessing && !state.isPlaying && state.replaysRemaining > 0) {
+        if (!isAnswerProcessing && !state.isPlaying) {
             startPatternPlayback(
-                state.copy(answerInput = emptyList(), replaysRemaining = state.replaysRemaining - 1),
+                // Keep zero as a persisted marker that this is a replay, while
+                // allowing any number of subsequent replays.
+                state.copy(answerInput = emptyList(), replaysRemaining = 0),
                 resetResponseTimer = false,
             )
         }
@@ -239,6 +241,7 @@ class InterventionViewModel @Inject constructor(
         val resetState = state.copy(answerInput = emptyList(), isPlaying = true, playbackIndex = null)
         publishState(resetState)
         patternPlaybackJob = viewModelScope.launch {
+            delay(PATTERN_PREPARATION_MS)
             resetState.question.sequence.indices.forEach { index ->
                 publishState(resetState.copy(playbackIndex = index))
                 delay(PATTERN_HIGHLIGHT_MS)
@@ -555,7 +558,8 @@ class InterventionViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "InterventionViewModel"
-        const val PATTERN_HIGHLIGHT_MS = 550L
-        const val PATTERN_GAP_MS = 180L
+        const val PATTERN_PREPARATION_MS = 1_000L
+        const val PATTERN_HIGHLIGHT_MS = 700L
+        const val PATTERN_GAP_MS = 250L
     }
 }
