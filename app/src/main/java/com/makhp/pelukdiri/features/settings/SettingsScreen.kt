@@ -36,6 +36,7 @@ fun SettingsScreen(
     onNavigateToAdaptiveMode: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToApps: () -> Unit,
+    onNavigateToInformedConsent: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToTerms: () -> Unit,
     onNavigateToAbout: () -> Unit,
@@ -53,6 +54,7 @@ fun SettingsScreen(
         onNavigateToAdaptiveMode = onNavigateToAdaptiveMode,
         onNavigateToNotifications = onNavigateToNotifications,
         onNavigateToApps = onNavigateToApps,
+        onNavigateToInformedConsent = onNavigateToInformedConsent,
         onSleepTimeClick = { showTimePickerDialog = "sleep" },
         onWakeTimeClick = { showTimePickerDialog = "wake" },
         onExportClick = { showExportDialog = true },
@@ -183,6 +185,7 @@ private fun SettingsLayout(
     onNavigateToAdaptiveMode: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToApps: () -> Unit,
+    onNavigateToInformedConsent: () -> Unit,
     onSleepTimeClick: () -> Unit,
     onWakeTimeClick: () -> Unit,
     onExportClick: () -> Unit,
@@ -267,6 +270,13 @@ private fun SettingsLayout(
                         description = stringResource(R.string.settings_terms_desc),
                         icon = Icons.Default.Description,
                         onClick = onNavigateToTerms
+                    )
+                    SettingsDivider()
+                    SettingsItem(
+                        title = stringResource(R.string.settings_informed_consent_title),
+                        description = stringResource(R.string.settings_informed_consent_desc),
+                        icon = Icons.Default.Assignment,
+                        onClick = onNavigateToInformedConsent
                     )
                     SettingsDivider()
                     SettingsItem(
