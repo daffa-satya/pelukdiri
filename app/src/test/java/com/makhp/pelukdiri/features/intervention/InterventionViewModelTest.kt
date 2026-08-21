@@ -2,7 +2,12 @@ package com.makhp.pelukdiri.features.intervention
 
 import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import com.makhp.pelukdiri.core.domain.engine.CognitiveQuestionGenerator
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeSelector
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
+import com.makhp.pelukdiri.core.domain.engine.PatternQuestionGenerator
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
+import com.makhp.pelukdiri.core.domain.model.PatternQuestion
+import com.makhp.pelukdiri.core.domain.model.PatternShape
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
@@ -11,6 +16,7 @@ import com.makhp.pelukdiri.core.domain.usecase.BypassResult
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +38,8 @@ class InterventionViewModelTest {
 
     private lateinit var viewModel: InterventionViewModel
     private val cognitiveQuestionGenerator: CognitiveQuestionGenerator = mockk()
+    private val patternQuestionGenerator: PatternQuestionGenerator = mockk()
+    private val challengeSelector: InterventionChallengeSelector = mockk()
     private val interventionLogRepository: InterventionLogRepository = mockk()
     private val adaptiveLimitRepository: AdaptiveLimitRepository = mockk()
     private val userPreferencesRepository: UserPreferencesRepository = mockk()
@@ -50,12 +58,15 @@ class InterventionViewModelTest {
         Dispatchers.setMain(testDispatcher)
         
         coEvery { interventionLogRepository.getBypassCountForDay(any(), any()) } returns 0
+        every { challengeSelector.select() } returns InterventionChallengeType.MATH
         coEvery { userPreferencesRepository.setActiveInterventionSession(any()) } returns Unit
         coEvery { userPreferencesRepository.activeInterventionSession } returns flowOf(null)
         activeInterventionSession = ActiveInterventionSession(userPreferencesRepository, timeProvider, lockManager)
 
         viewModel = InterventionViewModel(
             cognitiveQuestionGenerator,
+            patternQuestionGenerator,
+            challengeSelector,
             interventionLogRepository,
             adaptiveLimitRepository,
             userPreferencesRepository,
@@ -104,6 +115,8 @@ class InterventionViewModelTest {
 
         val replacement = InterventionViewModel(
             cognitiveQuestionGenerator,
+            patternQuestionGenerator,
+            challengeSelector,
             interventionLogRepository,
             adaptiveLimitRepository,
             userPreferencesRepository,
@@ -177,7 +190,7 @@ class InterventionViewModelTest {
     fun `failed bypass restores the same action and succeeds on retry`() = runTest {
         coEvery { cognitiveQuestionGenerator.generateQuestion(1) } returns MathQuestion("1+1", 2, 1)
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
-        coEvery { performEmergencyBypassUseCase(any(), any(), any(), any(), any()) } throws
+        coEvery { performEmergencyBypassUseCase(any(), any(), any(), any(), any(), any()) } throws
             IllegalStateException("preferences unavailable") andThen BypassResult.Success(4)
 
         viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
@@ -192,7 +205,46 @@ class InterventionViewModelTest {
         advanceUntilIdle()
         assertEquals(InterventionUiState.Idle, viewModel.uiState.value)
         coVerify(exactly = 2) {
-            performEmergencyBypassUseCase(any(), any(), any(), any(), any())
+            performEmergencyBypassUseCase(any(), any(), any(), any(), any(), any())
         }
+    }
+
+    @Test
+    fun `forced pattern plays sequence and exact recall succeeds`() = runTest {
+        val sequence = listOf(PatternShape.CIRCLE, PatternShape.PENTAGON, PatternShape.SQUARE)
+        coEvery { patternQuestionGenerator.generateQuestion(1) } returns PatternQuestion(sequence, 1)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+        coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
+        coEvery { interventionLogRepository.insertLog(any()) } returns Unit
+
+        viewModel.startIntervention(
+            10.0, 1, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
+        )
+        advanceUntilIdle()
+
+        val active = viewModel.uiState.value as InterventionUiState.PatternActive
+        assertEquals(false, active.isPlaying)
+        sequence.forEach(viewModel::onPatternSelected)
+        viewModel.uiState.filterIsInstance<InterventionUiState.PatternCorrectAnswer>().first()
+        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { it.isSuccess }) }
+    }
+
+    @Test
+    fun `pattern replay is available once`() = runTest {
+        val sequence = listOf(PatternShape.CIRCLE, PatternShape.SQUARE, PatternShape.TRIANGLE)
+        coEvery { patternQuestionGenerator.generateQuestion(1) } returns PatternQuestion(sequence, 1)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+
+        viewModel.startIntervention(
+            10.0, 1, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
+        )
+        advanceUntilIdle()
+        viewModel.replayPattern()
+        advanceUntilIdle()
+
+        val afterReplay = viewModel.uiState.value as InterventionUiState.PatternActive
+        assertEquals(0, afterReplay.replaysRemaining)
+        viewModel.replayPattern()
+        assertEquals(afterReplay, viewModel.uiState.value)
     }
 }

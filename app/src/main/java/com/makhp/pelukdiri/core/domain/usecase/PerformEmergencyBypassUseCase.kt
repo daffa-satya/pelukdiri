@@ -5,6 +5,7 @@ import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import javax.inject.Inject
 
 sealed interface BypassResult {
@@ -22,7 +23,8 @@ class PerformEmergencyBypassUseCase @Inject constructor(
         difficultyControlSignal: Double,
         difficulty: Int,
         penaltyMinutes: Int,
-        responseTimeMs: Long
+        responseTimeMs: Long,
+        challengeType: InterventionChallengeType = InterventionChallengeType.MATH,
     ): BypassResult {
         val today = timeProvider.today()
         val startOfDay = today.atStartOfDay(timeProvider.zoneId()).toInstant().toEpochMilli()
@@ -50,7 +52,8 @@ class PerformEmergencyBypassUseCase @Inject constructor(
                 responseTimeMs = responseTimeMs,
                 isSuccess = false,
                 isBypassed = true,
-                penaltyAppliedMinutes = penaltyMinutes
+                penaltyAppliedMinutes = penaltyMinutes,
+                challengeType = challengeType,
             )
         )
 

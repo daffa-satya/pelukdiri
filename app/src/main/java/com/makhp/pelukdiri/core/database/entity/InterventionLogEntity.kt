@@ -14,5 +14,6 @@ data class InterventionLogEntity(
     val responseTimeMs: Long,
     val isSuccess: Boolean,
     val isBypassed: Boolean = false,
-    val penaltyAppliedMinutes: Int
+    val penaltyAppliedMinutes: Int,
+    val challengeType: String = "MATH",
 )

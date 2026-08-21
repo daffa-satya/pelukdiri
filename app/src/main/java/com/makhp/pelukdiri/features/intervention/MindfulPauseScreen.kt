@@ -2,7 +2,10 @@ package com.makhp.pelukdiri.features.intervention
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,12 +29,18 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,8 +48,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
+import com.makhp.pelukdiri.core.domain.model.PatternShape
+import com.makhp.pelukdiri.core.domain.model.PatternQuestion
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
+import com.makhp.pelukdiri.ui.theme.PatternAmber
+import com.makhp.pelukdiri.ui.theme.PatternBlue
+import com.makhp.pelukdiri.ui.theme.PatternGreen
+import com.makhp.pelukdiri.ui.theme.PatternPink
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 private val ScreenScrim = Color(0xB3000000)
 
@@ -51,6 +70,8 @@ fun MindfulPauseScreen(
     onEmergencyClick: () -> Unit,
     onReset: () -> Unit,
     onRetry: () -> Unit,
+    onPatternSelected: (PatternShape) -> Unit,
+    onReplayPattern: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -83,6 +104,13 @@ fun MindfulPauseScreen(
                     } else {
                         QuestionContent(state, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
                     }
+                    is InterventionUiState.PatternActive -> PatternContent(
+                        state = state,
+                        isLandscape = isLandscape,
+                        onPatternSelected = onPatternSelected,
+                        onReplayPattern = onReplayPattern,
+                        onEmergencyClick = onEmergencyClick,
+                    )
                     is InterventionUiState.MaxPenalized -> {
                         val questionState = InterventionUiState.QuestionActive(
                             question = state.question,
@@ -105,6 +133,8 @@ fun MindfulPauseScreen(
                     }
                     is InterventionUiState.CorrectAnswer -> ResultContent(isSuccess = true, state = state, onReset = onReset)
                     is InterventionUiState.IncorrectAnswer -> ResultContent(isSuccess = false, state = state, onReset = onReset)
+                    is InterventionUiState.PatternCorrectAnswer -> ResultContent(isSuccess = true, state = state, onReset = onReset)
+                    is InterventionUiState.PatternIncorrectAnswer -> ResultContent(isSuccess = false, state = state, onReset = onReset)
                 }
             }
         }
@@ -391,6 +421,280 @@ private fun QuestionContent(
 }
 
 @Composable
+private fun PatternContent(
+    state: InterventionUiState.PatternActive,
+    isLandscape: Boolean,
+    onPatternSelected: (PatternShape) -> Unit,
+    onReplayPattern: () -> Unit,
+    onEmergencyClick: () -> Unit,
+) {
+    if (isLandscape) {
+        LandscapePatternContent(state, onPatternSelected, onReplayPattern, onEmergencyClick)
+        return
+    }
+    val highlightedShape = state.playbackIndex?.let(state.question.sequence::getOrNull)
+    val gridSize = 310.dp
+    val progressDescription = stringResource(
+        R.string.intervention_pattern_progress,
+        state.answerInput.size,
+        state.question.sequence.size,
+    )
+
+    Text(
+        text = stringResource(R.string.intervention_pattern_title),
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = stringResource(R.string.intervention_pattern_hint),
+        color = MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = TextAlign.Center,
+    )
+    Spacer(Modifier.height(if (isLandscape) 10.dp else 24.dp))
+
+    PatternGrid(
+        highlightedShape = highlightedShape,
+        enabled = !state.isPlaying && !state.bypassDenied,
+        onPatternSelected = onPatternSelected,
+        modifier = Modifier.size(gridSize),
+    )
+
+    Spacer(Modifier.height(if (isLandscape) 8.dp else 20.dp))
+    Row(
+        modifier = Modifier.semantics { contentDescription = progressDescription },
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        state.question.sequence.indices.forEach { index ->
+            val filled = index < state.answerInput.size
+            val playing = index == state.playbackIndex
+            Box(
+                Modifier
+                    .size(if (playing) 12.dp else 10.dp)
+                    .background(
+                        color = when {
+                            playing -> MaterialTheme.colorScheme.primary
+                            filled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            else -> MaterialTheme.colorScheme.outlineVariant
+                        },
+                        shape = RoundedCornerShape(50),
+                    )
+            )
+        }
+    }
+
+    Spacer(Modifier.height(if (isLandscape) 8.dp else 18.dp))
+    OutlinedButton(
+        onClick = onReplayPattern,
+        enabled = !state.isPlaying && state.replaysRemaining > 0,
+    ) {
+        Text(
+            text = if (state.isPlaying) {
+                stringResource(R.string.intervention_playing_pattern)
+            } else {
+                stringResource(R.string.intervention_replay_pattern)
+            }
+        )
+    }
+
+    Spacer(Modifier.height(if (isLandscape) 6.dp else 14.dp))
+    OutlinedButton(
+        onClick = onEmergencyClick,
+        enabled = state.remainingBypasses > 0,
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+    ) {
+        Text(stringResource(R.string.intervention_emergency_button))
+    }
+    if (state.bypassDenied) {
+        Text(
+            text = stringResource(R.string.intervention_bypass_exhausted),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
+private fun LandscapePatternContent(
+    state: InterventionUiState.PatternActive,
+    onPatternSelected: (PatternShape) -> Unit,
+    onReplayPattern: () -> Unit,
+    onEmergencyClick: () -> Unit,
+) {
+    val progressDescription = stringResource(
+        R.string.intervention_pattern_progress,
+        state.answerInput.size,
+        state.question.sequence.size,
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(0.9f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.intervention_pattern_title),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.intervention_pattern_hint),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+            Row(
+                modifier = Modifier.semantics { contentDescription = progressDescription },
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                state.question.sequence.indices.forEach { index ->
+                    Box(
+                        Modifier
+                            .size(9.dp)
+                            .background(
+                                if (index < state.answerInput.size) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(50),
+                            )
+                    )
+                }
+            }
+            OutlinedButton(
+                onClick = onReplayPattern,
+                enabled = !state.isPlaying && state.replaysRemaining > 0,
+            ) {
+                Text(
+                    if (state.isPlaying) stringResource(R.string.intervention_playing_pattern)
+                    else stringResource(R.string.intervention_replay_pattern)
+                )
+            }
+            OutlinedButton(
+                onClick = onEmergencyClick,
+                enabled = state.remainingBypasses > 0,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+            ) {
+                Text(stringResource(R.string.intervention_emergency_button))
+            }
+        }
+        PatternGrid(
+            highlightedShape = state.playbackIndex?.let(state.question.sequence::getOrNull),
+            enabled = !state.isPlaying && !state.bypassDenied,
+            onPatternSelected = onPatternSelected,
+            modifier = Modifier.weight(1.1f).aspectRatio(1f),
+        )
+    }
+}
+
+@Composable
+private fun PatternGrid(
+    highlightedShape: PatternShape?,
+    enabled: Boolean,
+    onPatternSelected: (PatternShape) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        PatternShape.entries.chunked(2).forEach { shapes ->
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                shapes.forEach { shape ->
+                    PatternTile(
+                        shape = shape,
+                        label = stringResource(
+                            when (shape) {
+                                PatternShape.CIRCLE -> R.string.intervention_shape_circle
+                                PatternShape.SQUARE -> R.string.intervention_shape_square
+                                PatternShape.TRIANGLE -> R.string.intervention_shape_triangle
+                                PatternShape.PENTAGON -> R.string.intervention_shape_pentagon
+                            }
+                        ),
+                        highlighted = highlightedShape == shape,
+                        enabled = enabled,
+                        onClick = { onPatternSelected(shape) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PatternTile(
+    shape: PatternShape,
+    label: String,
+    highlighted: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val color = when (shape) {
+        PatternShape.CIRCLE -> PatternGreen
+        PatternShape.SQUARE -> PatternBlue
+        PatternShape.TRIANGLE -> PatternAmber
+        PatternShape.PENTAGON -> PatternPink
+    }
+    val scale by animateFloatAsState(if (highlighted) 1.08f else 1f, label = "patternTileScale")
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                alpha = if (enabled || highlighted) 1f else 0.72f
+            }
+            .background(
+                if (highlighted) color.copy(alpha = 0.22f) else Color.Transparent,
+                RoundedCornerShape(22.dp),
+            )
+            .border(3.dp, color.copy(alpha = if (highlighted) 1f else 0.55f), RoundedCornerShape(22.dp))
+            .semantics { contentDescription = label }
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.fillMaxSize(0.34f)) {
+            when (shape) {
+                PatternShape.CIRCLE -> drawCircle(color)
+                PatternShape.SQUARE -> drawRect(color)
+                PatternShape.TRIANGLE -> {
+                    val path = Path().apply {
+                        moveTo(size.width / 2f, 0f)
+                        lineTo(size.width, size.height)
+                        lineTo(0f, size.height)
+                        close()
+                    }
+                    drawPath(path, color)
+                }
+                PatternShape.PENTAGON -> {
+                    val radius = size.minDimension / 2f
+                    val centerX = size.width / 2f
+                    val centerY = size.height / 2f
+                    val path = Path()
+                    repeat(5) { index ->
+                        val angle = -PI / 2 + index * 2 * PI / 5
+                        val x = centerX + radius * cos(angle).toFloat()
+                        val y = centerY + radius * sin(angle).toFloat()
+                        if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    path.close()
+                    drawPath(path, color)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ResultContent(
     isSuccess: Boolean,
     state: InterventionUiState,
@@ -427,6 +731,24 @@ private fun ResultContent(
             Text(
                 text = "Jawaban Benar: ${state.question.correctAnswer}",
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        is InterventionUiState.PatternCorrectAnswer -> {
+            Text(
+                text = stringResource(R.string.intervention_pattern_correct),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.intervention_response_time, state.responseTimeMs),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        is InterventionUiState.PatternIncorrectAnswer -> {
+            Text(
+                text = stringResource(R.string.intervention_pattern_incorrect),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
             )
         }
         else -> {}
@@ -525,6 +847,8 @@ private fun MindfulPauseScreenPreview() {
             onEmergencyClick = {},
             onReset = {},
             onRetry = {},
+            onPatternSelected = {},
+            onReplayPattern = {},
         )
     }
 }
@@ -559,6 +883,54 @@ private fun MindfulPauseFailurePreview() {
             onEmergencyClick = {},
             onReset = {},
             onRetry = {},
+            onPatternSelected = {},
+            onReplayPattern = {},
+        )
+    }
+}
+
+@Preview(
+    name = "Pattern Light",
+    showBackground = true,
+    widthDp = 412,
+    heightDp = 915,
+    uiMode = Configuration.UI_MODE_NIGHT_NO,
+)
+@Preview(
+    name = "Pattern Dark",
+    showBackground = true,
+    widthDp = 412,
+    heightDp = 915,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Composable
+private fun MindfulPausePatternPreview() {
+    PELUKDIRITheme {
+        MindfulPauseScreen(
+            state = InterventionUiState.PatternActive(
+                question = PatternQuestion(
+                    sequence = listOf(
+                        PatternShape.CIRCLE,
+                        PatternShape.SQUARE,
+                        PatternShape.TRIANGLE,
+                        PatternShape.PENTAGON,
+                        PatternShape.CIRCLE,
+                        PatternShape.TRIANGLE,
+                        PatternShape.SQUARE,
+                    ),
+                    level = 5,
+                ),
+                assessment = RiskAssessmentResult(0.7, 5, 0, 120),
+                isPlaying = false,
+                remainingBypasses = 5,
+            ),
+            onAnswerChanged = {},
+            onSubmitAnswer = {},
+            onEmergencyClick = {},
+            onReset = {},
+            onRetry = {},
+            onPatternSelected = {},
+            onReplayPattern = {},
         )
     }
 }

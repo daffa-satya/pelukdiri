@@ -14,6 +14,10 @@ val PelukText = Color(0xFF1A1C20) // Deep slate instead of pure black
 val PelukSecondaryText = Color(0xFF636E72)
 val PelukDivider = Color(0xFFDFE6E9)
 val PelukNavigationInactive = Color(0xFFB2BEC3)
+val PatternGreen = Color(0xFF43B956)
+val PatternBlue = Color(0xFF2196E8)
+val PatternAmber = Color(0xFFFFB81C)
+val PatternPink = Color(0xFFF51B62)
 
 // Dark Mode Tones
 val CharcoalDark = Color(0xFF121316)

@@ -11,6 +11,7 @@ import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.core.domain.model.Intervention
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.InterventionType
 import com.makhp.pelukdiri.core.domain.model.UsageSensorLog
 import java.time.LocalDate
@@ -98,7 +99,9 @@ fun InterventionLogEntity.toDomainModel(): InterventionLog {
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,
         isBypassed = isBypassed,
-        penaltyAppliedMinutes = penaltyAppliedMinutes
+        penaltyAppliedMinutes = penaltyAppliedMinutes,
+        challengeType = runCatching { InterventionChallengeType.valueOf(challengeType) }
+            .getOrDefault(InterventionChallengeType.MATH),
     )
 }
 
@@ -112,7 +115,8 @@ fun InterventionLog.toEntity(): InterventionLogEntity {
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,
         isBypassed = isBypassed,
-        penaltyAppliedMinutes = penaltyAppliedMinutes
+        penaltyAppliedMinutes = penaltyAppliedMinutes,
+        challengeType = challengeType.name,
     )
 }
 

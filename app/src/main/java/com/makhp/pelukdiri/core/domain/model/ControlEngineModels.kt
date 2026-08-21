@@ -1,5 +1,7 @@
 package com.makhp.pelukdiri.core.domain.model
 
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
+
 /**
  * Explainable output for Control Engine decisions.
  */
@@ -29,7 +31,8 @@ data class InterventionDecision(
     val controlResult: ControlResult?,
     val monitoredUsageMinutes: Double,
     val totalUsageMinutes: Double,
-    val ambientLux: Float
+    val ambientLux: Float,
+    val challengeType: InterventionChallengeType = InterventionChallengeType.MATH,
 )
 
 enum class ControlMode {

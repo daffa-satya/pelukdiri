@@ -78,7 +78,12 @@ object DatabaseModule {
             PelukDiriDatabase::class.java,
             "pelukdiri_db"
         )
-            .addMigrations(migration1To2, migration2To3)
+            .addMigrations(
+                migration1To2,
+                migration2To3,
+                PelukDiriDatabase.MIGRATION_3_4,
+                PelukDiriDatabase.MIGRATION_5_6,
+            )
             .fallbackToDestructiveMigration()
             .build()
     }

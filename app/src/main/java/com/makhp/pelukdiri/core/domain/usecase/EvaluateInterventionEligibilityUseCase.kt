@@ -4,6 +4,7 @@ import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.collector.UsageEventCollector
 import com.makhp.pelukdiri.core.domain.engine.ControlEngine
 import com.makhp.pelukdiri.core.domain.engine.DeviationEngine
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeSelector
 import com.makhp.pelukdiri.core.domain.model.InterventionDecision
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
@@ -23,6 +24,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
     private val deviationEngine: DeviationEngine,
     private val controlEngine: ControlEngine,
     private val interventionLogRepository: InterventionLogRepository,
+    private val challengeSelector: InterventionChallengeSelector,
     private val appUsageCollector: AppUsageCollector,
     private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
     private val timeProvider: TimeProvider = SystemTimeProvider()
@@ -89,8 +91,11 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         // 4. Performance & Sensitivity
         Log.d("EligibilityUseCase", "Stage: reading performance context")
         val currentDiff = userPreferencesRepository.currentDifficulty.first()
-        val currentDifficultyRun = interventionLogRepository.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
+        val recentLogs = interventionLogRepository.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
+        val challengeType = challengeSelector.select(recentLogs.firstOrNull()?.challengeType)
+        val currentDifficultyRun = recentLogs
             .takeWhile { it.difficultyLevel == currentDiff }
+            .filter { it.challengeType == challengeType }
             .filter { !it.isBypassed && it.responseTimeMs > 0L }
         val latestLog = currentDifficultyRun.firstOrNull()
         val lastPerformance = latestLog?.let { 
@@ -135,7 +140,8 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             controlResult = controlResult,
             monitoredUsageMinutes = currentMonitoredUsageMinutes,
             totalUsageMinutes = currentTotalUsageMinutes,
-            ambientLux = lux
+            ambientLux = lux,
+            challengeType = challengeType,
         )
     }
 

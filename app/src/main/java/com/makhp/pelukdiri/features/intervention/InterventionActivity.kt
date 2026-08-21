@@ -17,6 +17,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -136,6 +137,9 @@ class InterventionActivity : ComponentActivity() {
         val deviation = intent.getDoubleExtra(EXTRA_DEVIATION, 0.0)
         val difficultyControlSignal = intent.getDoubleExtra(EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.0)
         val difficulty = intent.getIntExtra(EXTRA_DIFFICULTY, 2)
+        val challengeType = intent.getStringExtra(EXTRA_CHALLENGE_TYPE)
+            ?.let { runCatching { InterventionChallengeType.valueOf(it) }.getOrNull() }
+            ?: InterventionChallengeType.AUTO
 
         if (monitoredUsage >= 0.0) {
             viewModel.startIntervention(
@@ -144,7 +148,8 @@ class InterventionActivity : ComponentActivity() {
                 ambientLightLux = ambientLux,
                 deviation = deviation,
                 difficultyControlSignal = difficultyControlSignal,
-                difficulty = difficulty
+                difficulty = difficulty,
+                challengeType = challengeType,
             )
         } else {
             android.util.Log.w("InterventionActivity", ">>> No valid monitored usage data in intent. MonitoredUsage: $monitoredUsage")
@@ -220,6 +225,7 @@ class InterventionActivity : ComponentActivity() {
         const val EXTRA_DEVIATION = "EXTRA_DEVIATION"
         const val EXTRA_DIFFICULTY_CONTROL_SIGNAL = "EXTRA_DIFFICULTY_CONTROL_SIGNAL"
         const val EXTRA_DIFFICULTY = "EXTRA_DIFFICULTY"
+        const val EXTRA_CHALLENGE_TYPE = "EXTRA_CHALLENGE_TYPE"
         const val EXTRA_RESTORE_ACTIVE = "EXTRA_RESTORE_ACTIVE"
     }
 }
