@@ -4,9 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
-import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.usecase.EvaluateInterventionEligibilityUseCase
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
@@ -22,6 +20,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -29,12 +28,6 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     @Inject
     lateinit var appUsageCollector: AppUsageCollector
-
-    @Inject
-    lateinit var interventionLogRepository: InterventionLogRepository
-
-    @Inject
-    lateinit var adaptiveLimitRepository: AdaptiveLimitRepository
 
     @Inject
     lateinit var userPreferencesRepository: UserPreferencesRepository
@@ -58,6 +51,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private var foregroundTrackingJob: Job? = null
     private val TICK_INTERVAL_MS = 5_000L
     private val EVALUATION_THROTTLE_MS = 30_000L
+    private val EVALUATION_TIMEOUT_MS = 10_000L
     private val SYNC_INTERVAL_MS = 30_000L
     private var lastSyncTimestamp: Long = 0L
     private var lastEvaluationTimestamp: Long = 0L
@@ -107,10 +101,6 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                 activeWindowPackage = activeWindowPackage
             )
             
-            // TODO: Implement time-based monitoring instead of relying solely on Window State Changes.
-            // This would involve checking the active app duration periodically (e.g., every 60s)
-            // even if the user hasn't switched windows, to handle cases where they stay 
-            // in a target app for hours.
             if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
                 Log.d(
                     "AppBlockerService",
@@ -126,14 +116,18 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private suspend fun evaluateIntervention(packageName: String) {
         Log.d("AppBlockerService", ">>> evaluateIntervention called for $packageName")
 
+        Log.d("AppBlockerService", "Evaluation stage: restoring active session")
         val savedSession = activeInterventionSession.restore()
+        Log.d("AppBlockerService", "Evaluation stage: active session restored=${savedSession != null}")
         if (savedSession != null) {
             lockManager.acquireLock()
             restoreActiveIntervention()
             return
         }
         
+        Log.d("AppBlockerService", "Evaluation stage: calculating eligibility")
         val decision = evaluateInterventionEligibilityUseCase(packageName)
+        Log.d("AppBlockerService", "Evaluation stage: eligibility complete trigger=${decision.shouldTrigger}")
         val controlResult = decision.controlResult
 
         if (decision.shouldTrigger && controlResult != null) {
@@ -166,7 +160,19 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     }
 
     private fun handlePackageChanged(newPackage: String) {
-        if (newPackage == currentForegroundPackage) return
+        if (newPackage == currentForegroundPackage) {
+            if (ForegroundTrackingPolicy.shouldRestart(
+                    resolvedPackage = newPackage,
+                    currentPackage = currentForegroundPackage,
+                    monitoredPackages = currentMonitoredPackages,
+                    trackingJobActive = foregroundTrackingJob?.isActive == true,
+                )
+            ) {
+                Log.w("AppBlockerService", "Evaluator missing for $newPackage; restarting tracking")
+                if (lockManager.isLocked.value) restoreActiveIntervention() else startForegroundTracking(newPackage)
+            }
+            return
+        }
         
         Log.d("AppBlockerService", "Package switched from $currentForegroundPackage to $newPackage")
 
@@ -201,26 +207,38 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     }
 
     private fun startForegroundTracking(packageName: String) {
+        foregroundTrackingJob?.cancel()
         appUsageCollector.startLightSensor()
-        foregroundTrackingJob = serviceScope.launch {
+        val trackingJob = serviceScope.launch {
             Log.d("AppBlockerService", "Started periodic tracking for: $packageName")
             while (isActive) {
                 val currentTime = timeProvider.nowMillis()
                 
                 // Periodically flush data to Room/Prefs (every 30s)
                 if (currentTime - lastSyncTimestamp > SYNC_INTERVAL_MS) {
-                    usageRepository.refreshUsageData()
+                    runCatching { usageRepository.refreshUsageData() }
+                        .onFailure { Log.e("AppBlockerService", "Periodic usage sync failed", it) }
                     lastSyncTimestamp = currentTime
                 }
 
                 // Throttle evaluation to 30s
                 if (currentTime - lastEvaluationTimestamp >= EVALUATION_THROTTLE_MS) {
-                    evaluateIntervention(packageName)
+                    runCatching {
+                        withTimeout(EVALUATION_TIMEOUT_MS) { evaluateIntervention(packageName) }
+                    }
+                        .onFailure { Log.e("AppBlockerService", "Periodic intervention evaluation failed", it) }
                     lastEvaluationTimestamp = currentTime
                 }
                 
                 delay(TICK_INTERVAL_MS)
             }
+        }
+        foregroundTrackingJob = trackingJob
+        trackingJob.invokeOnCompletion { cause ->
+            if (cause != null && cause !is kotlinx.coroutines.CancellationException) {
+                Log.e("AppBlockerService", "Foreground evaluator stopped unexpectedly", cause)
+            }
+            if (foregroundTrackingJob === trackingJob) foregroundTrackingJob = null
         }
     }
 

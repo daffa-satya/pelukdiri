@@ -12,3 +12,6 @@ tmp/
 usagestats_*.txt
 AGENTS.md
 STATE.md
+/.artifacts/
+/exit
+/pelukdiri_db_audit.sqlite

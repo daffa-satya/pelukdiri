@@ -7,13 +7,17 @@ import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
+import com.makhp.pelukdiri.core.domain.usecase.BypassResult
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -128,5 +132,67 @@ class InterventionViewModelTest {
 
         val state = viewModel.uiState.value as InterventionUiState.QuestionActive
         assertEquals("12", state.answerInput)
+    }
+
+    @Test
+    fun `start failure shows retryable error and recovers`() = runTest {
+        coEvery { cognitiveQuestionGenerator.generateQuestion(1) } throws
+            IllegalStateException("generator unavailable") andThen
+            MathQuestion("1+1", 2, 1)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+
+        viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
+        advanceUntilIdle()
+
+        val error = viewModel.uiState.value as InterventionUiState.Error
+        assertEquals(FailedInterventionOperation.START, error.operation)
+
+        viewModel.retryLastOperation()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is InterventionUiState.QuestionActive)
+    }
+
+    @Test
+    fun `failed answer preserves state and retry does not create an extra successful insert`() = runTest {
+        coEvery { cognitiveQuestionGenerator.generateQuestion(1) } returns MathQuestion("1+1", 2, 1)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+        coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
+        coEvery { interventionLogRepository.insertLog(any()) } throws
+            IllegalStateException("database unavailable") andThen Unit
+
+        viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
+        advanceUntilIdle()
+        viewModel.onAnswerChanged("2")
+        viewModel.submitAnswer()
+
+        val error = viewModel.uiState.filterIsInstance<InterventionUiState.Error>().first()
+        assertEquals(FailedInterventionOperation.SUBMIT_ANSWER, error.operation)
+
+        viewModel.retryLastOperation()
+        viewModel.uiState.filterIsInstance<InterventionUiState.CorrectAnswer>().first()
+        coVerify(exactly = 2) { interventionLogRepository.insertLog(any()) }
+    }
+
+    @Test
+    fun `failed bypass restores the same action and succeeds on retry`() = runTest {
+        coEvery { cognitiveQuestionGenerator.generateQuestion(1) } returns MathQuestion("1+1", 2, 1)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+        coEvery { performEmergencyBypassUseCase(any(), any(), any(), any(), any()) } throws
+            IllegalStateException("preferences unavailable") andThen BypassResult.Success(4)
+
+        viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
+        advanceUntilIdle()
+        viewModel.emergencyBypass()
+        advanceUntilIdle()
+
+        val error = viewModel.uiState.value as InterventionUiState.Error
+        assertEquals(FailedInterventionOperation.EMERGENCY_BYPASS, error.operation)
+
+        viewModel.retryLastOperation()
+        advanceUntilIdle()
+        assertEquals(InterventionUiState.Idle, viewModel.uiState.value)
+        coVerify(exactly = 2) {
+            performEmergencyBypassUseCase(any(), any(), any(), any(), any())
+        }
     }
 }

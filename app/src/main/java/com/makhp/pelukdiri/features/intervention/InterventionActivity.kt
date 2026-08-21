@@ -1,6 +1,10 @@
 package com.makhp.pelukdiri.features.intervention
 
 import android.app.ActivityManager
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import javax.inject.Inject
 import androidx.activity.ComponentActivity
@@ -22,6 +26,10 @@ class InterventionActivity : ComponentActivity() {
 
     @Inject
     lateinit var lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager
+
+    private val audioManager by lazy { getSystemService(AudioManager::class.java) }
+    private val audioFocusListener = AudioManager.OnAudioFocusChangeListener { }
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +85,11 @@ class InterventionActivity : ComponentActivity() {
     override fun onPostResume() {
         super.onPostResume()
         excludeCurrentTaskFromRecents()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        requestTransientAudioFocus()
     }
 
     override fun onPause() {
@@ -139,6 +152,7 @@ class InterventionActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        abandonTransientAudioFocus()
         super.onStop()
         android.util.Log.d(
             "InterventionActivity",
@@ -146,6 +160,48 @@ class InterventionActivity : ComponentActivity() {
         )
         // The lock belongs to the unanswered intervention, not to the visible Activity
         // lifecycle. It is released only by resetToIdle after an answer or bypass.
+    }
+
+    private fun requestTransientAudioFocus() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    .setOnAudioFocusChangeListener(audioFocusListener)
+                    .setWillPauseWhenDucked(true)
+                    .build()
+                audioFocusRequest = request
+                audioManager.requestAudioFocus(request)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(
+                    audioFocusListener,
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT,
+                )
+            }
+        } catch (error: RuntimeException) {
+            android.util.Log.w("InterventionActivity", ">>> Unable to pause active media", error)
+        }
+    }
+
+    private fun abandonTransientAudioFocus() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
+                audioFocusRequest = null
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.abandonAudioFocus(audioFocusListener)
+            }
+        } catch (error: RuntimeException) {
+            android.util.Log.w("InterventionActivity", ">>> Unable to release media pause", error)
+        }
     }
 
     override fun onDestroy() {

@@ -18,6 +18,9 @@ interface InterventionDao {
     @Query("SELECT * FROM intervention_logs ORDER BY timestamp ASC")
     suspend fun getAllLogsList(): List<InterventionLogEntity>
 
+    @Query("SELECT * FROM intervention_logs ORDER BY timestamp DESC, id DESC LIMIT :limit")
+    suspend fun getRecentLogs(limit: Int): List<InterventionLogEntity>
+
     @Query("SELECT AVG(responseTimeMs) FROM intervention_logs WHERE difficultyLevel = :difficulty")
     suspend fun getAverageResponseTime(difficulty: Int): Double?
 

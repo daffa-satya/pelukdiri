@@ -1,8 +1,10 @@
 package com.makhp.pelukdiri.features.intervention
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.core.domain.engine.CognitiveQuestionGenerator
+import com.makhp.pelukdiri.core.domain.engine.CooldownAnchor
 import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
@@ -14,9 +16,11 @@ import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -47,7 +51,12 @@ class InterventionViewModel @Inject constructor(
     private var currentLaunchFrequency: Int = 0
     private var currentAmbientLightLux: Float = 0f
     private var isBypassProcessing: Boolean = false
+    private var isBypassCommitted: Boolean = false
+    private var isAnswerProcessing: Boolean = false
+    private var isCompletionProcessing: Boolean = false
+    private var pendingCompletionEligibleAtMs: Long? = null
     private var sessionCreatedAtMs: Long = 0L
+    private var stateBeforeError: InterventionUiState? = null
 
     fun startIntervention(
         monitoredUsageMinutes: Double,
@@ -67,62 +76,76 @@ class InterventionViewModel @Inject constructor(
         currentLaunchFrequency = launchFrequency
         currentAmbientLightLux = ambientLightLux
         sessionCreatedAtMs = timeProvider.nowMillis()
+        isBypassCommitted = false
+        pendingCompletionEligibleAtMs = null
+        stateBeforeError = null
         publishState(InterventionUiState.Loading)
 
         questionJob = viewModelScope.launch {
-            val question = cognitiveQuestionGenerator.generateQuestion(difficulty)
-            val dateString = timeProvider.today().toString()
-            val adaptiveLimit = adaptiveLimitRepository.getLimitForDate(dateString)
+            try {
+                val question = cognitiveQuestionGenerator.generateQuestion(difficulty)
+                val dateString = timeProvider.today().toString()
+                val adaptiveLimit = adaptiveLimitRepository.getLimitForDate(dateString)
 
-            val assessment = RiskAssessmentResult(
-                // RiskAssessmentResult is a legacy UI contract; this value is the
-                // normalized difficulty-control signal in the v0.1 control flow.
-                riskScore = difficultyControlSignal,
-                level = difficulty,
-                penaltyMinutes = 0, // Penalty is not explicitly defined in v0.1 trig logic
-                calculatedLimitMinutes = adaptiveLimit?.calculatedLimitMinutes ?: 0
-            )
+                val assessment = RiskAssessmentResult(
+                    // RiskAssessmentResult is a legacy UI contract; this value is the
+                    // normalized difficulty-control signal in the v0.1 control flow.
+                    riskScore = difficultyControlSignal,
+                    level = difficulty,
+                    penaltyMinutes = 0,
+                    calculatedLimitMinutes = adaptiveLimit?.calculatedLimitMinutes ?: 0
+                )
 
-            val remaining = getRemainingBypasses()
-            questionStartTimeMs = timeProvider.nowMillis()
-            publishState(InterventionUiState.QuestionActive(
-                question = question,
-                assessment = assessment,
-                remainingBypasses = remaining
-            ))
+                val remaining = getRemainingBypasses()
+                questionStartTimeMs = timeProvider.nowMillis()
+                publishState(InterventionUiState.QuestionActive(
+                    question = question,
+                    assessment = assessment,
+                    remainingBypasses = remaining
+                ))
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                showOperationError(FailedInterventionOperation.START, error)
+            }
         }
     }
 
     fun restoreActiveIntervention(onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val snapshot = activeInterventionSession.restore()
-            if (snapshot == null) {
-                onResult(false)
-                return@launch
+            try {
+                val snapshot = activeInterventionSession.restore()
+                if (snapshot == null) {
+                    onResult(false)
+                    return@launch
+                }
+
+                currentMonitoredUsageMinutes = snapshot.monitoredUsageMinutes
+                currentLaunchFrequency = snapshot.launchFrequency
+                currentAmbientLightLux = snapshot.ambientLightLux
+                currentDeviation = snapshot.deviation
+                currentDifficultyControlSignal = snapshot.difficultyControlSignal
+                currentDifficulty = snapshot.difficulty
+                questionStartTimeMs = snapshot.questionStartTimeMs
+                sessionCreatedAtMs = snapshot.createdAtMs
+
+                if (snapshot.uiState is InterventionUiState.Loading) {
+                    startIntervention(
+                        monitoredUsageMinutes = snapshot.monitoredUsageMinutes,
+                        launchFrequency = snapshot.launchFrequency,
+                        ambientLightLux = snapshot.ambientLightLux,
+                        deviation = snapshot.deviation,
+                        difficultyControlSignal = snapshot.difficultyControlSignal,
+                        difficulty = snapshot.difficulty
+                    )
+                } else {
+                    _uiState.value = snapshot.uiState
+                }
+                onResult(true)
+            } catch (error: Exception) {
+                showOperationError(FailedInterventionOperation.RESTORE, error)
+                onResult(true)
             }
-
-        currentMonitoredUsageMinutes = snapshot.monitoredUsageMinutes
-        currentLaunchFrequency = snapshot.launchFrequency
-        currentAmbientLightLux = snapshot.ambientLightLux
-        currentDeviation = snapshot.deviation
-        currentDifficultyControlSignal = snapshot.difficultyControlSignal
-        currentDifficulty = snapshot.difficulty
-        questionStartTimeMs = snapshot.questionStartTimeMs
-        sessionCreatedAtMs = snapshot.createdAtMs
-
-        if (snapshot.uiState is InterventionUiState.Loading) {
-            startIntervention(
-                monitoredUsageMinutes = snapshot.monitoredUsageMinutes,
-                launchFrequency = snapshot.launchFrequency,
-                ambientLightLux = snapshot.ambientLightLux,
-                deviation = snapshot.deviation,
-                difficultyControlSignal = snapshot.difficultyControlSignal,
-                difficulty = snapshot.difficulty
-            )
-        } else {
-            _uiState.value = snapshot.uiState
-        }
-            onResult(true)
         }
     }
 
@@ -149,6 +172,8 @@ class InterventionViewModel @Inject constructor(
     }
 
     fun submitAnswer() {
+        if (isAnswerProcessing) return
+
         val currentState = _uiState.value
         val input = when (currentState) {
             is InterventionUiState.QuestionActive -> currentState.answerInput
@@ -171,21 +196,10 @@ class InterventionViewModel @Inject constructor(
         val responseTime = timeProvider.nowMillis() - questionStartTimeMs
         val isSuccess = enteredAnswer == question.correctAnswer
 
+        isAnswerProcessing = true
         viewModelScope.launch {
-            runCatching {
+            try {
                 withContext(Dispatchers.IO) {
-                    interventionLogRepository.insertLog(
-                        InterventionLog(
-                            timestamp = timeProvider.nowMillis(),
-                            deviation = currentDeviation,
-                            difficultyControlSignal = currentDifficultyControlSignal,
-                            difficultyLevel = currentDifficulty,
-                            responseTimeMs = responseTime,
-                            isSuccess = isSuccess,
-                            penaltyAppliedMinutes = assessment.penaltyMinutes
-                        )
-                    )
-
                     val dateString = timeProvider.today().toString()
                     val existingLimit = adaptiveLimitRepository.getLimitForDate(dateString)
                     val updatedActualScreenTime = max(
@@ -200,8 +214,21 @@ class InterventionViewModel @Inject constructor(
                             reclaimedTimeMinutes = assessment.penaltyMinutes
                         )
                     )
+
+                    // Keep the append-only action log last. The adaptive-limit upsert is
+                    // idempotent, so retrying an earlier failure cannot duplicate an answer.
+                    interventionLogRepository.insertLog(
+                        InterventionLog(
+                            timestamp = timeProvider.nowMillis(),
+                            deviation = currentDeviation,
+                            difficultyControlSignal = currentDifficultyControlSignal,
+                            difficultyLevel = currentDifficulty,
+                            responseTimeMs = responseTime,
+                            isSuccess = isSuccess,
+                            penaltyAppliedMinutes = assessment.penaltyMinutes
+                        )
+                    )
                 }
-            }.getOrThrow()
 
             publishState(if (isSuccess) {
                 InterventionUiState.CorrectAnswer(
@@ -218,6 +245,11 @@ class InterventionViewModel @Inject constructor(
                     remainingBypasses = getRemainingBypasses()
                 )
             })
+            } catch (error: Exception) {
+                showOperationError(FailedInterventionOperation.SUBMIT_ANSWER, error)
+            } finally {
+                isAnswerProcessing = false
+            }
         }
     }
 
@@ -237,18 +269,23 @@ class InterventionViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                if (isBypassCommitted) {
+                    finishSuccessfulBypass()
+                    return@launch
+                }
+
                 val result = performEmergencyBypassUseCase(
-                    deviation = currentDeviation,
-                    difficultyControlSignal = currentDifficultyControlSignal,
-                    difficulty = currentDifficulty,
-                    penaltyMinutes = assessment.penaltyMinutes,
-                    responseTimeMs = responseTime
-                )
+                        deviation = currentDeviation,
+                        difficultyControlSignal = currentDifficultyControlSignal,
+                        difficulty = currentDifficulty,
+                        penaltyMinutes = assessment.penaltyMinutes,
+                        responseTimeMs = responseTime
+                    )
 
                 when (result) {
                     is BypassResult.Success -> {
-                        publishState(InterventionUiState.Idle) // Triggers onDismiss
-                        lockManager.releaseLock()
+                        isBypassCommitted = true
+                        finishSuccessfulBypass()
                     }
                     BypassResult.Exhausted -> {
                         publishState(when (val state = _uiState.value) {
@@ -259,6 +296,8 @@ class InterventionViewModel @Inject constructor(
                         })
                     }
                 }
+            } catch (error: Exception) {
+                showOperationError(FailedInterventionOperation.EMERGENCY_BYPASS, error)
             } finally {
                 isBypassProcessing = false
             }
@@ -274,14 +313,68 @@ class InterventionViewModel @Inject constructor(
     }
 
     fun resetToIdle() {
+        if (isCompletionProcessing) return
+        isCompletionProcessing = true
+        viewModelScope.launch {
+            try {
+                val eligibleAt = pendingCompletionEligibleAtMs ?: run {
+                    val originallyEligibleAt = userPreferencesRepository.nextEligibleInterventionAt.first()
+                    CooldownAnchor.afterCompletion(
+                        sessionCreatedAtMs = sessionCreatedAtMs,
+                        originallyEligibleAtMs = originallyEligibleAt,
+                        completedAtMs = timeProvider.nowMillis(),
+                    ).also { pendingCompletionEligibleAtMs = it }
+                }
+                eligibleAt?.let { userPreferencesRepository.setNextEligibleInterventionAt(it) }
+                activeInterventionSession.clear()
+                publishState(InterventionUiState.Idle)
+                lockManager.releaseLock()
+            } catch (error: Exception) {
+                showOperationError(FailedInterventionOperation.COMPLETE, error)
+            } finally {
+                isCompletionProcessing = false
+            }
+        }
+    }
+
+    fun retryLastOperation() {
+        val errorState = _uiState.value as? InterventionUiState.Error ?: return
+        val previousState = stateBeforeError
+        if (previousState != null) _uiState.value = previousState
+
+        when (errorState.operation) {
+            FailedInterventionOperation.START -> startIntervention(
+                currentMonitoredUsageMinutes,
+                currentLaunchFrequency,
+                currentAmbientLightLux,
+                currentDeviation,
+                currentDifficultyControlSignal,
+                currentDifficulty,
+            )
+            FailedInterventionOperation.RESTORE -> restoreActiveIntervention { }
+            FailedInterventionOperation.SUBMIT_ANSWER -> submitAnswer()
+            FailedInterventionOperation.EMERGENCY_BYPASS -> emergencyBypass()
+            FailedInterventionOperation.COMPLETE -> resetToIdle()
+        }
+    }
+
+    private suspend fun finishSuccessfulBypass() {
+        activeInterventionSession.clear()
         publishState(InterventionUiState.Idle)
         lockManager.releaseLock()
+    }
+
+    private fun showOperationError(operation: FailedInterventionOperation, error: Exception) {
+        Log.e(TAG, "Intervention operation failed: $operation", error)
+        if (_uiState.value !is InterventionUiState.Error) {
+            stateBeforeError = _uiState.value
+        }
+        _uiState.value = InterventionUiState.Error(operation)
     }
 
     private fun publishState(state: InterventionUiState) {
         _uiState.value = state
         if (state is InterventionUiState.Idle) {
-            viewModelScope.launch { activeInterventionSession.clear() }
             return
         }
 
@@ -299,6 +392,16 @@ class InterventionViewModel @Inject constructor(
                 createdAtMs = sessionCreatedAtMs,
                 expiresAtMs = sessionCreatedAtMs + ActiveInterventionSession.TTL_MS
         )
-        viewModelScope.launch { activeInterventionSession.save(snapshot) }
+        viewModelScope.launch {
+            try {
+                activeInterventionSession.save(snapshot)
+            } catch (error: Exception) {
+                Log.e(TAG, "Unable to persist active intervention snapshot", error)
+            }
+        }
+    }
+
+    private companion object {
+        const val TAG = "InterventionViewModel"
     }
 }
