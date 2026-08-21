@@ -108,7 +108,8 @@ fun MainStatsScreen(
             onProgressClick = onProgressClick,
             onSettingsClick = onSettingsClick,
             onViewAllClick = onViewAllClick,
-            onMenuClick = { scope.launch { drawerState.open() } }
+            onMenuClick = { scope.launch { drawerState.open() } },
+            onDndToggle = viewModel::toggleDnd
         )
     }
 }
@@ -127,7 +128,8 @@ private fun DashboardScaffold(
     onProgressClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onViewAllClick: () -> Unit,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onDndToggle: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -150,7 +152,8 @@ private fun DashboardScaffold(
                 onGrantBatteryExemption = onGrantBatteryExemption,
                 onViewAllClick = onViewAllClick,
                 onNavigateToAnalytics = onProgressClick,
-                onMenuClick = onMenuClick
+                onMenuClick = onMenuClick,
+                onDndToggle = onDndToggle
             )
         }
     }
@@ -168,7 +171,8 @@ private fun DashboardContent(
     onGrantBatteryExemption: () -> Unit,
     onViewAllClick: () -> Unit,
     onNavigateToAnalytics: () -> Unit,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onDndToggle: () -> Unit
 ) {
     var selectedApp by remember { mutableStateOf<UiAppUsage?>(null) }
 
@@ -177,22 +181,22 @@ private fun DashboardContent(
         contentPadding = PaddingValues(DashboardTokens.ScreenPadding),
         verticalArrangement = Arrangement.spacedBy(DashboardTokens.LargeGap)
     ) {
-        item(key = "header") { DashboardHeader(profileState, onRefresh, onBackfill, onMenuClick) }
+        item(key = "header") { 
+            DashboardHeader(
+                profileState = profileState, 
+                isDndActive = state.isDndEnabled,
+                onRefresh = onRefresh, 
+                onBackfill = onBackfill, 
+                onMenuClick = onMenuClick,
+                onDndToggle = onDndToggle
+            ) 
+        }
         if (!state.isPermissionGranted) item(key = "perm_usage") { PermissionNotice(stringResource(R.string.dashboard_usage_access_needed), stringResource(R.string.dashboard_open_permission), onGrantUsageAccess) }
         if (!state.isAccessibilityEnabled) item(key = "perm_acc") { PermissionNotice(stringResource(R.string.dashboard_accessibility_needed), stringResource(R.string.dashboard_enable), onGrantAccessibility) }
         if (!state.isBatteryOptimizationIgnored) item(key = "perm_batt") { PermissionNotice(stringResource(R.string.dashboard_battery_optimization_needed), stringResource(R.string.dashboard_allow), onGrantBatteryExemption) }
         item(key = "screentime") { ScreenTimeCard(state.todaySummary, state.todayAdaptiveLimit, state.weeklySummaries) }
         item(key = "weekly_chart") { WeeklyChart(state.weeklySummaries) }
-        item(key = "insight") {
-            val appName = remember(state.topApps, state.todaySummary) {
-                state.topApps.firstOrNull()?.appName ?: state.todaySummary?.mostUsedApp ?: "your phone"
-            }
-            InsightCard(
-                emoji = "🌿",
-                title = stringResource(R.string.dashboard_insight_title),
-                message = stringResource(R.string.dashboard_insight_message, appName)
-            )
-        }
+
         item(key = "top_apps") {
             TopAppsCard(
                 apps = state.topApps,
@@ -200,7 +204,7 @@ private fun DashboardContent(
                 onAppClick = { selectedApp = it }
             )
         }
-        item(key = "encouragement") { EncouragementCard() }
+
     }
 
     selectedApp?.let { app ->
@@ -218,11 +222,14 @@ private fun DashboardContent(
 @Composable
 private fun DashboardHeader(
     profileState: ProfileUiState,
+    isDndActive: Boolean,
     onRefresh: () -> Unit,
     onBackfill: () -> Unit,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onDndToggle: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Surface(
             modifier = Modifier.size(DashboardTokens.AppIconSize).clickable(onClick = onMenuClick),
@@ -247,7 +254,13 @@ private fun DashboardHeader(
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.dashboard_header_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
-        IconButton(onClick = {}) { Icon(Icons.Default.NotificationsNone, contentDescription = stringResource(R.string.notification_settings_title)) }
+        IconButton(onClick = onDndToggle) { 
+            Icon(
+                if (isDndActive) Icons.Default.NotificationsOff else Icons.Default.NotificationsNone, 
+                contentDescription = stringResource(R.string.notification_settings_title),
+                tint = if (isDndActive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            ) 
+        }
         Box {
             IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = null) }
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {

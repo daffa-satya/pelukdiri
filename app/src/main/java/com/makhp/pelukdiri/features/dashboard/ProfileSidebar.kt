@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
@@ -145,6 +146,20 @@ fun ProfileSidebar(
                 Icon(Icons.AutoMirrored.Filled.Launch, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.profile_test_intervention))
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Test Notification Button
+            OutlinedButton(
+                onClick = { viewModel.triggerTestNotification() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Tes Notifikasi")
             }
 
             Spacer(Modifier.weight(1f))

@@ -28,6 +28,11 @@ interface UserPreferencesRepository {
     val isWeeklyReflectionEnabled: Flow<Boolean>
     val isLimitReminderEnabled: Flow<Boolean>
     val isInterventionReminderEnabled: Flow<Boolean>
+    val isDndEnabled: Flow<Boolean>
+
+    val lastDailySummaryDate: Flow<String?>
+    val lastWeeklyReflectionDate: Flow<String?>
+    val lastLimitReminderTimestamp: Flow<Long>
 
     suspend fun setHistoryBackfilled(isBackfilled: Boolean)
     suspend fun setLastSyncedTimestamp(timestamp: Long)
@@ -51,4 +56,9 @@ interface UserPreferencesRepository {
     suspend fun setWeeklyReflectionEnabled(enabled: Boolean)
     suspend fun setLimitReminderEnabled(enabled: Boolean)
     suspend fun setInterventionReminderEnabled(enabled: Boolean)
+    suspend fun setDndEnabled(enabled: Boolean)
+
+    suspend fun setLastDailySummaryDate(date: String?)
+    suspend fun setLastWeeklyReflectionDate(date: String?)
+    suspend fun setLastLimitReminderTimestamp(timestamp: Long)
 }

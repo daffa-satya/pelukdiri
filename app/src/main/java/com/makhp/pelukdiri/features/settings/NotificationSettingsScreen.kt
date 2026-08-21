@@ -35,14 +35,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
@@ -50,8 +56,11 @@ import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
 
 @Composable
 fun NotificationSettingsScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: NotificationSettingsViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -67,7 +76,7 @@ fun NotificationSettingsScreen(
         ) {
             item {
                 Text(
-                    text = "Kelola notifikasi yang ingin kamu terima.\nKamu bisa mengaktifkan atau menonaktifkan sesuai kebutuhanmu.",
+                    text = stringResource(R.string.notification_settings_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -78,37 +87,32 @@ fun NotificationSettingsScreen(
             }
             
             item {
-                SettingsSection(title = "Pengaturan Notifikasi") {
+                SettingsSection(title = stringResource(R.string.settings_notifications_title)) {
                     NotificationToggleItem(
-                        title = "Daily Summary",
-                        description = "Dapatkan ringkasan penggunaan harianmu setiap malam.",
+                        title = stringResource(R.string.notification_settings_daily_summary),
+                        description = stringResource(R.string.notification_settings_daily_summary_desc),
                         icon = Icons.Default.CalendarMonth,
-                        checked = true,
+                        checked = uiState.isDailySummaryEnabled,
+                        onCheckedChange = viewModel::setDailySummaryEnabled,
                         time = "20.00"
                     )
                     SettingsDivider()
                     NotificationToggleItem(
-                        title = "Weekly Reflection",
-                        description = "Lihat refleksi dan progres mingguanmu setiap hari Minggu.",
+                        title = stringResource(R.string.notification_settings_weekly_reflection),
+                        description = stringResource(R.string.notification_settings_weekly_reflection_desc),
                         icon = Icons.Default.Timeline,
-                        checked = true,
+                        checked = uiState.isWeeklyReflectionEnabled,
+                        onCheckedChange = viewModel::setWeeklyReflectionEnabled,
                         time = "19.00"
                     )
                     SettingsDivider()
                     NotificationToggleItem(
-                        title = "Limit Reminder",
-                        description = "Pengingat ketika kamu mendekati atau mencapai batas waktu layar adaptif.",
+                        title = stringResource(R.string.notification_settings_limit_reminder),
+                        description = stringResource(R.string.notification_settings_limit_reminder_desc),
                         icon = Icons.Default.HourglassBottom,
-                        checked = true,
-                        time = "Saat mendekati limit"
-                    )
-                    SettingsDivider()
-                    NotificationToggleItem(
-                        title = "Intervention Reminder",
-                        description = "Pengingat untuk mengerjakan intervensi cerdas yang membantumu tetap fokus.",
-                        icon = Icons.Default.Psychology,
-                        checked = true,
-                        time = "Saat intervensi muncul"
+                        checked = uiState.isLimitReminderEnabled,
+                        onCheckedChange = viewModel::setLimitReminderEnabled,
+                        time = stringResource(R.string.notification_settings_limit_reminder_time)
                     )
                 }
             }
@@ -245,6 +249,7 @@ private fun NotificationToggleItem(
     description: String,
     icon: ImageVector,
     checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
     time: String? = null
 ) {
     Column(
@@ -280,7 +285,7 @@ private fun NotificationToggleItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            SettingsSwitch(checked = checked, onCheckedChange = {})
+            SettingsSwitch(checked = checked, onCheckedChange = onCheckedChange)
         }
         
         if (time != null) {
