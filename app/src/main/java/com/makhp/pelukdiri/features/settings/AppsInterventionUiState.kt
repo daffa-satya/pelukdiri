@@ -12,7 +12,7 @@ data class AppsInterventionUiState(
     val searchQuery: String = "",
     val apps: ImmutableList<AppUsage> = persistentListOf(),
     val selectedPackageNames: ImmutableSet<String> = persistentSetOf(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = true
 ) {
     val selectedCount: Int get() = selectedPackageNames.size
 }

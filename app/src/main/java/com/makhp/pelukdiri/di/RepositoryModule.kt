@@ -2,12 +2,14 @@ package com.makhp.pelukdiri.di
 
 import com.makhp.pelukdiri.core.data.repository.AdaptiveLimitRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.InterventionLogRepositoryImpl
+import com.makhp.pelukdiri.core.data.repository.InterventionDecisionRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.InterventionRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.UsageRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.UsageSensorRepositoryImpl
 import com.makhp.pelukdiri.core.data.repository.UserPreferencesRepositoryImpl
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
+import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageSensorRepository
@@ -51,6 +53,12 @@ abstract class RepositoryModule {
     abstract fun bindInterventionLogRepository(
         interventionLogRepositoryImpl: InterventionLogRepositoryImpl
     ): InterventionLogRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindInterventionDecisionRepository(
+        interventionDecisionRepositoryImpl: InterventionDecisionRepositoryImpl
+    ): InterventionDecisionRepository
 
     @Binds
     @Singleton

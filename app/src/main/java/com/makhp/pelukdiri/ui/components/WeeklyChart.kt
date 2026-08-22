@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,10 +39,12 @@ fun WeeklyChart(
     modifier: Modifier = Modifier
 ) {
     val maxUsage = remember(history) {
-        max(
+        val highestUsage = max(
             history.maxOfOrNull { it.totalScreenTimeMillis } ?: 0L,
             3 * 60 * 60 * 1000L // Min 3h for scale
         )
+        val hourMillis = 60 * 60 * 1000L
+        ((highestUsage + hourMillis - 1) / hourMillis) * hourMillis
     }
     
     PelukCard(modifier = modifier) {
@@ -68,13 +71,28 @@ fun WeeklyChart(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(Dimens.spaceExtraLarge * 4 + Dimens.spaceMedium),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.Top
         ) {
+            Column(
+                modifier = Modifier.height(Dimens.spaceLarge * 4 + Dimens.spaceSmall),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(formatDuration(maxUsage), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(formatDuration(maxUsage / 2), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(formatDuration(0), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(DashboardTokens.SmallGap))
             val usageByDate = remember(history) { history.associateBy { it.date } }
-            (6 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }.forEach { date ->
-                val usage = usageByDate[date]?.totalScreenTimeMillis ?: 0L
-                UsageBar(date, usage, maxUsage, date == LocalDate.now())
+            Row(
+                modifier = Modifier.fillMaxHeight().weight(1f),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                (6 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }.forEach { date ->
+                    val usage = usageByDate[date]?.totalScreenTimeMillis ?: 0L
+                    UsageBar(date, usage, maxUsage, date == LocalDate.now())
+                }
             }
         }
     }

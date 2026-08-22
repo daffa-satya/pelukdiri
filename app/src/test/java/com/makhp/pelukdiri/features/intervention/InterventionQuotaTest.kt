@@ -28,6 +28,18 @@ class FakeInterventionLogRepository : InterventionLogRepository {
     override suspend fun getBypassCountForDay(startOfDay: Long, endOfDay: Long): Int {
         return logs.count { it.isBypassed && it.timestamp >= startOfDay && it.timestamp < endOfDay }
     }
+
+    override suspend fun insertBypassIfQuotaAvailable(
+        log: InterventionLog,
+        startOfDay: Long,
+        endOfDay: Long,
+        limit: Int,
+    ): Int? {
+        val count = getBypassCountForDay(startOfDay, endOfDay)
+        if (count >= limit) return null
+        logs.add(log)
+        return limit - count - 1
+    }
 }
 
 class InterventionQuotaTest {

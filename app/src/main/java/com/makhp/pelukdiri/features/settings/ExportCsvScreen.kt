@@ -2,7 +2,6 @@ package com.makhp.pelukdiri.features.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,12 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.SpeakerNotes
@@ -37,26 +33,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
-import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
 
 @Composable
 fun ExportCsvScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onExportClick: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -73,7 +68,7 @@ fun ExportCsvScreen(
         ) {
             item {
                 Text(
-                    text = "Ekspor data penggunaan aplikasi dan intervensi kamu dalam format CSV untuk keperluan penelitian.",
+                    text = "Ekspor data penggunaan aplikasi dan intervensi kamu dalam format CSV/ZIP untuk keperluan penelitian.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -84,35 +79,18 @@ fun ExportCsvScreen(
             }
             
             item {
-                SettingsSection(title = "Rentang Tanggal") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = DashboardTokens.MediumGap),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        DateDropdown(label = "Tanggal Awal", date = "1 Mei 2025", modifier = Modifier.weight(1f))
-                        Text("—", modifier = Modifier.padding(horizontal = Dimens.spaceSmall))
-                        DateDropdown(label = "Tanggal Akhir", date = "31 Mei 2025", modifier = Modifier.weight(1f))
-                    }
-                    Text(
-                        text = "Maksimal rentang 31 hari per ekspor.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            
-            item {
                 SettingsSection(title = "Jenis Data yang Diekspor") {
-                    ExportDataItem("Screen Time", "Total waktu layar harian per aplikasi.", Icons.Default.AccessTime, true)
+                    ExportDataItem("App Usage & Screen Time", "Ringkasan waktu penggunaan harian per aplikasi.", Icons.Default.AccessTime, true)
                     SettingsDivider()
-                    ExportDataItem("Unlock Count", "Jumlah membuka kunci dan membuka aplikasi.", Icons.Default.Lock, true)
+                    ExportDataItem("Sensor Logs", "Log sensor pencahayaan ambient.", Icons.Default.Lock, true)
                     SettingsDivider()
-                    ExportDataItem("Top Apps", "Daftar aplikasi teratas setiap hari.", Icons.Default.GridView, true)
+                    ExportDataItem("Daily Summary", "Ringkasan total waktu penggunaan harian.", Icons.Default.GridView, true)
                     SettingsDivider()
-                    ExportDataItem("Intervention History", "Riwayat soal intervensi (jenis, waktu, hasil).", Icons.Default.Psychology, true)
+                    ExportDataItem("Intervention Logs", "Riwayat intervensi, tipe tantangan, deviasi, dan bypass.", Icons.Default.Psychology, true)
                     SettingsDivider()
-                    ExportDataItem("Daily Reflection", "Refleksi harian & insight (jika ada).", Icons.Default.SpeakerNotes, false)
+                    ExportDataItem("Intervention Decisions", "Audit jejak keputusan evaluasi kelayakan intervensi.", Icons.Default.SpeakerNotes, true)
+                    SettingsDivider()
+                    ExportDataItem("Adaptive Limits & Notifications", "Batas adaptif harian dan riwayat notifikasi.", Icons.Default.Lock, true)
                 }
             }
             
@@ -136,19 +114,22 @@ fun ExportCsvScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Data akan diekspor dalam format CSV (.csv) yang bisa dibuka dengan Excel atau Google Sheets.",
+                                text = "Data akan diekspor dalam format ZIP berisi 7 file CSV yang sesuai standar RFC-4180.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(Dimens.spaceExtraLarge * 2)
-                                .clip(RoundedCornerShape(Dimens.spaceSmall))
-                                .background(MaterialTheme.colorScheme.outlineVariant),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = RoundedCornerShape(DashboardTokens.SmallRadius),
+                            color = MaterialTheme.colorScheme.primaryContainer
                         ) {
-                            Text("CSV", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Semua (ZIP)",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = Dimens.spaceSmall, vertical = Dimens.spaceExtraSmall),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
                     }
                 }
@@ -156,14 +137,14 @@ fun ExportCsvScreen(
             
             item {
                 Button(
-                    onClick = {},
+                    onClick = onExportClick,
                     modifier = Modifier.fillMaxWidth().height(Dimens.minTouchTarget + Dimens.spaceSmall),
                     shape = RoundedCornerShape(DashboardTokens.MediumRadius),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Icon(Icons.Default.FileDownload, contentDescription = "Unduh file CSV")
                     Spacer(Modifier.width(DashboardTokens.SmallGap))
-                    Text("Export CSV", style = MaterialTheme.typography.titleMedium)
+                    Text("Export CSV / ZIP", style = MaterialTheme.typography.titleMedium)
                 }
             }
             
@@ -178,7 +159,7 @@ fun ExportCsvScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Folder: PELUKDIRI/Export",
+                        text = "Folder: Android/data/com.makhp.pelukdiri/files/exports",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -198,7 +179,7 @@ fun ExportCsvScreen(
                     Icon(Icons.Default.Lock, contentDescription = "Ikon keamanan", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeMedium - Dimens.spaceExtraSmall))
                     Spacer(Modifier.width(DashboardTokens.MediumGap))
                     Text(
-                        text = "Privasi Terjamin: Seluruh data diproses di perangkat kamu dan tidak dikirim ke server.",
+                        text = "Privasi Terjamin: Seluruh data diproses secara lokal di perangkat kamu dan tidak dikirim ke server eksternal.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f)
@@ -220,65 +201,33 @@ private fun ExportCsvHeader(onBackClick: () -> Unit) {
         IconButton(onClick = onBackClick) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali ke pengaturan")
         }
+        Spacer(Modifier.width(DashboardTokens.SmallGap))
         Text(
-            text = "Export CSV",
-            modifier = Modifier.weight(1f),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium
+            text = "Export CSV / ZIP",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
         )
-        Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            PelukDiriLogo(size = 28.dp)
-        }
     }
 }
 
 @Composable
 private fun ExportNoticeBanner() {
-    PelukCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(Dimens.minTouchTarget - Dimens.spaceSmall)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(Modifier.width(DashboardTokens.CardPadding))
-            Text(
-                text = "Data kamu aman dan hanya kamu yang memiliki akses. Kami tidak membagikan data ini ke pihak manapun.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun DateDropdown(label: String, date: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(Dimens.spaceExtraSmall))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(DashboardTokens.SmallRadius))
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = Dimens.spaceSmall + Dimens.spaceExtraSmall, vertical = Dimens.spaceSmall),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeSmall))
-            Spacer(Modifier.width(Dimens.spaceSmall))
-            Text(text = date, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(DashboardTokens.MediumRadius))
+            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f))
+            .padding(DashboardTokens.CardPadding),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+        Spacer(Modifier.width(DashboardTokens.MediumGap))
+        Text(
+            text = "File ekspor berisi log sensor, intervensi, batas adaptif, dan audit keputusan evaluasi lengkap dalam format CSV standar.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

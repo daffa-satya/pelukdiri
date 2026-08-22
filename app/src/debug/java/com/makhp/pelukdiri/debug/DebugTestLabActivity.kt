@@ -35,6 +35,7 @@ import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
+import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.database.dao.UsageDao
 import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
@@ -53,6 +54,7 @@ class DebugTestLabActivity : ComponentActivity() {
     @Inject lateinit var controls: DebugRuntimeControls
     @Inject lateinit var preferences: UserPreferencesRepository
     @Inject lateinit var logs: InterventionLogRepository
+    @Inject lateinit var decisions: InterventionDecisionRepository
     @Inject lateinit var deviationEngine: DeviationEngine
     @Inject lateinit var controlEngine: ControlEngine
     @Inject lateinit var activeSession: ActiveInterventionSession
@@ -111,7 +113,8 @@ class DebugTestLabActivity : ComponentActivity() {
         val difficulty = preferences.currentDifficulty.first()
         val session = preferences.activeInterventionSession.first()
         val count = logs.getAllLogsList().size
-        status = "now=${controls.nowMillis()}\ndifficulty=$difficulty\nnextEligible=$next\nbypassUntil=$bypass\nactiveSession=${session != null}\ninterventionLogs=$count"
+        val decisionCount = decisions.getAllList().size
+        status = "now=${controls.nowMillis()}\ndifficulty=$difficulty\nnextEligible=$next\nbypassUntil=$bypass\nactiveSession=${session != null}\ninterventionLogs=$count\ndecisionAudits=$decisionCount"
     }
 
     private fun setBoundary(offset: Long) = mutate {

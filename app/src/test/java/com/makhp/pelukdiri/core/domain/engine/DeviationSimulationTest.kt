@@ -49,31 +49,31 @@ class DeviationSimulationTest {
     fun simulationProfiles() {
         // PROFILE A: HIGHLY CONSISTENT USER
         runSim("A: HIGHLY CONSISTENT USER", 
-            listOf(120.0, 120.0, 120.0, 120.0, 120.0, 120.0, 120.0),
+            List(14) { 120.0 },
             listOf(60.0, 120.0, 120.1, 180.0, 360.0, 1200.0)
         )
 
         // PROFILE B: FLUCTUATING USER
         runSim("B: FLUCTUATING USER", 
-            listOf(60.0, 180.0, 120.0, 240.0, 120.0, 180.0, 60.0),
+            doubled(60.0, 180.0, 120.0, 240.0, 120.0, 180.0, 60.0),
             listOf(60.0, 120.0, 180.0, 240.0, 300.0, 480.0)
         )
 
         // PROFILE C: LOW BASELINE
         runSim("C: LOW BASELINE", 
-            listOf(25.0, 30.0, 35.0, 30.0, 25.0, 35.0, 30.0),
+            doubled(25.0, 30.0, 35.0, 30.0, 25.0, 35.0, 30.0),
             listOf(30.0, 45.0, 60.0, 90.0, 120.0)
         )
 
         // PROFILE D: HIGH BASELINE
         runSim("D: HIGH BASELINE", 
-            listOf(480.0, 480.0, 540.0, 480.0, 420.0, 480.0, 540.0),
+            doubled(480.0, 480.0, 540.0, 480.0, 420.0, 480.0, 540.0),
             listOf(480.0, 600.0, 720.0, 840.0, 1080.0)
         )
 
         // PROFILE E: EXTREME USAGE
         runSim("E: EXTREME USAGE", 
-            listOf(120.0, 120.0, 120.0, 120.0, 120.0, 120.0, 120.0),
+            List(14) { 120.0 },
             listOf(1200.0, 1380.0, 1440.0)
         )
 
@@ -93,10 +93,12 @@ class DeviationSimulationTest {
 
         // PROFILE G: BASELINE ZERO
         runSim("G: BASELINE ZERO", 
-            listOf(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            List(14) { 0.0 },
             listOf(0.0, 1.0, 60.0, 120.0)
         )
         
         // org.junit.Assert.assertTrue("Showing simulation results", false) // Removed intentional failure
     }
+
+    private fun doubled(vararg values: Double) = values.flatMap { listOf(it, it) }
 }

@@ -23,4 +23,7 @@ interface UsageSensorDao {
 
     @Query("SELECT * FROM usage_sensor_logs WHERE timestamp >= :startTime AND timestamp <= :endTime")
     suspend fun getLogsInRange(startTime: Long, endTime: Long): List<UsageSensorLogEntity>
+
+    @Query("DELETE FROM usage_sensor_logs WHERE timestamp < :cutoffEpochMillis")
+    suspend fun deleteLogsBefore(cutoffEpochMillis: Long): Int
 }

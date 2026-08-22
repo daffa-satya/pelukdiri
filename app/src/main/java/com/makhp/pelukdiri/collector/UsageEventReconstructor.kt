@@ -1,5 +1,8 @@
 package com.makhp.pelukdiri.collector
 
+import java.time.Instant
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.max
@@ -114,6 +117,42 @@ class UsageEventReconstructor @Inject constructor() {
         }
         
         return result
+    }
+
+    fun longestSessionDuration(
+        sessions: List<UsageSession>,
+        rangeStart: Long,
+        rangeEnd: Long,
+        ignoredPackages: Set<String> = emptySet(),
+    ): Long = sessions.asSequence()
+        .filter { it.packageName !in ignoredPackages }
+        .maxOfOrNull { session ->
+            (min(session.endTime, rangeEnd) - max(session.startTime, rangeStart)).coerceAtLeast(0L)
+        } ?: 0L
+
+    fun aggregateHourlyUsage(
+        sessions: List<UsageSession>,
+        rangeStart: Long,
+        rangeEnd: Long,
+        zoneId: ZoneId,
+        ignoredPackages: Set<String> = emptySet(),
+    ): List<Long> {
+        val hourlyUsage = LongArray(24)
+        sessions.asSequence()
+            .filter { it.packageName !in ignoredPackages }
+            .forEach { session ->
+                var cursor = max(session.startTime, rangeStart)
+                val sessionEnd = min(session.endTime, rangeEnd)
+                while (cursor < sessionEnd) {
+                    val currentHour = Instant.ofEpochMilli(cursor).atZone(zoneId)
+                    val nextHour = currentHour.truncatedTo(ChronoUnit.HOURS).plusHours(1)
+                        .toInstant().toEpochMilli()
+                    val segmentEnd = min(sessionEnd, nextHour)
+                    hourlyUsage[currentHour.hour] += segmentEnd - cursor
+                    cursor = segmentEnd
+                }
+            }
+        return hourlyUsage.toList()
     }
 
     data class PackageUsageStats(val duration: Long, val lastTimestamp: Long)

@@ -3,6 +3,7 @@ package com.makhp.pelukdiri.core.database.export
 import android.content.Context
 import com.makhp.pelukdiri.core.database.dao.AdaptiveLimitDao
 import com.makhp.pelukdiri.core.database.dao.InterventionDao
+import com.makhp.pelukdiri.core.database.dao.InterventionDecisionDao
 import com.makhp.pelukdiri.core.database.dao.InterventionNotificationDao
 import com.makhp.pelukdiri.core.database.dao.UsageDao
 import com.makhp.pelukdiri.core.database.dao.UsageSensorDao
@@ -28,6 +29,7 @@ class CsvExporter @Inject constructor(
     private val usageDao: UsageDao,
     private val usageSensorDao: UsageSensorDao,
     private val interventionDao: InterventionDao,
+    private val interventionDecisionDao: InterventionDecisionDao,
     private val interventionNotificationDao: InterventionNotificationDao,
     private val adaptiveLimitDao: AdaptiveLimitDao
 ) {
@@ -42,6 +44,7 @@ class CsvExporter @Inject constructor(
                 exportUsageSensorLogs(),
                 exportInterventions(),
                 exportInterventionLogs(),
+                exportInterventionDecisions(),
                 exportDailyAdaptiveLimits(),
             )
 
@@ -138,6 +141,36 @@ class CsvExporter @Inject constructor(
             writer.append("DateString,CalculatedLimitMinutes,ActualScreenTimeMinutes,ReclaimedTimeMinutes\r\n")
             data.forEach {
                 writer.append(CsvFormat.row(it.dateString, it.calculatedLimitMinutes, it.actualScreenTimeMinutes, it.reclaimedTimeMinutes))
+            }
+        }
+        return file
+    }
+
+    private suspend fun exportInterventionDecisions(): File {
+        val data = interventionDecisionDao.getAllList()
+        val file = createTempFile("intervention_decisions.csv")
+        writerFor(file).use { writer ->
+            writer.append(
+                "ID,Timestamp,Date,PackageName,MonitoredUsageMinutes,TotalUsageMinutes,AmbientLux,HistoryCount," +
+                    "BaselineMedianMinutes,MADMinutes,DeviationSignal,RelativeDeviation,RelativeMagnitude,Deviation," +
+                    "Performance,QLux,QTime,Sensitivity,DifficultyControl,DifficultyControlSignal,DifficultyTarget," +
+                    "CurrentDifficulty,NextDifficulty,ChallengeType,FrequencyControl,NormalizedFrequencyControl," +
+                    "ProposedIntervalMinutes,NextEligibleAt,ShouldTrigger,Reason,ControlMode,ErrorType\r\n"
+            )
+            data.forEach {
+                writer.append(
+                    CsvFormat.row(
+                        it.id, it.timestamp, CsvFormat.timestamp(it.timestamp), it.packageName,
+                        it.monitoredUsageMinutes, it.totalUsageMinutes, it.ambientLux, it.historyCount,
+                        it.baselineMedianMinutes, it.madMinutes, it.deviationSignal,
+                        it.relativeDeviation, it.relativeMagnitude, it.deviation, it.performance,
+                        it.qLux, it.qTime, it.sensitivity, it.difficultyControl,
+                        it.difficultyControlSignal, it.difficultyTarget, it.currentDifficulty,
+                        it.nextDifficulty, it.challengeType, it.frequencyControl,
+                        it.normalizedFrequencyControl, it.proposedIntervalMinutes,
+                        it.nextEligibleAt, it.shouldTrigger, it.reason, it.controlMode, it.errorType,
+                    )
+                )
             }
         }
         return file

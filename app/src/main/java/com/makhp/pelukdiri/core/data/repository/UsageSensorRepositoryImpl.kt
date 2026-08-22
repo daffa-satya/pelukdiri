@@ -34,4 +34,8 @@ class UsageSensorRepositoryImpl @Inject constructor(
     override suspend fun getLogsInRange(startTime: Long, endTime: Long): List<UsageSensorLog> {
         return dao.getLogsInRange(startTime, endTime).map { it.toDomainModel() }
     }
+
+    override suspend fun deleteLogsBefore(cutoffEpochMillis: Long): Int {
+        return dao.deleteLogsBefore(cutoffEpochMillis)
+    }
 }

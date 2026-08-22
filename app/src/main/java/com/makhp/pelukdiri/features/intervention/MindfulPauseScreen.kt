@@ -207,21 +207,21 @@ private fun LandscapeQuestionContent(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = "Ambil Jeda Sejenak",
+                text = stringResource(R.string.intervention_mindful_pause_title),
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
             )
             if (isMaxPenalized) {
                 Text(
-                    text = "Penalti Maksimum Diterapkan",
+                    text = stringResource(R.string.intervention_max_penalty),
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                 )
             }
             Text(
-                text = "Tingkat Kesulitan: ${state.assessment.level}",
+                text = stringResource(R.string.intervention_difficulty_level, state.assessment.level),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -249,14 +249,14 @@ private fun LandscapeQuestionContent(
                 )
             }
             Text(
-                text = "Sisa Darurat: ${state.remainingBypasses}",
+                text = stringResource(R.string.intervention_emergency_remaining, state.remainingBypasses),
                 color = if (state.remainingBypasses > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
             )
             if (state.bypassDenied) {
                 Text(
-                    text = "Kuota darurat telah habis hari ini.",
+                    text = stringResource(R.string.intervention_bypass_exhausted),
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 11.sp,
                 )
@@ -274,12 +274,12 @@ private fun LandscapeQuestionContent(
                         contentColor = MaterialTheme.colorScheme.error,
                         disabledContentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.38f),
                     ),
-                ) { Text("Darurat") }
+                ) { Text(stringResource(R.string.intervention_emergency_button_short)) }
                 Button(
                     onClick = onSubmitAnswer,
                     modifier = Modifier.weight(1f).height(48.dp),
                     enabled = state.answerInput.isNotEmpty(),
-                ) { Text("Kirim") }
+                ) { Text(stringResource(R.string.intervention_submit_button_short)) }
             }
         }
 
@@ -307,7 +307,7 @@ private fun QuestionContent(
     }
 
     Text(
-        text = "Ambil Jeda Sejenak",
+        text = stringResource(R.string.intervention_mindful_pause_title),
         color = MaterialTheme.colorScheme.onSurface,
         fontSize = 30.sp,
         fontWeight = FontWeight.Bold,
@@ -319,7 +319,7 @@ private fun QuestionContent(
 
     if (isMaxPenalized) {
         Text(
-            text = "Penalti Maksimum Diterapkan",
+            text = stringResource(R.string.intervention_max_penalty),
             color = MaterialTheme.colorScheme.error,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -328,7 +328,7 @@ private fun QuestionContent(
     }
 
     Text(
-        text = "Tingkat Kesulitan: ${state.assessment.level}",
+        text = stringResource(R.string.intervention_difficulty_level, state.assessment.level),
         color = MaterialTheme.colorScheme.primary,
         fontSize = 17.sp,
         fontWeight = FontWeight.SemiBold,
@@ -376,7 +376,7 @@ private fun QuestionContent(
 
     Spacer(Modifier.height(16.dp))
     Text(
-        text = "Sisa Darurat: ${state.remainingBypasses}",
+        text = stringResource(R.string.intervention_emergency_remaining, state.remainingBypasses),
         color = if (state.remainingBypasses > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
         fontSize = 18.sp,
         fontWeight = FontWeight.SemiBold,
@@ -384,7 +384,7 @@ private fun QuestionContent(
 
     if (state.bypassDenied) {
         Text(
-            text = "Kuota darurat telah habis hari ini.",
+            text = stringResource(R.string.intervention_bypass_exhausted),
             color = MaterialTheme.colorScheme.error,
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp)
@@ -407,7 +407,7 @@ private fun QuestionContent(
                 disabledContentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.38f)
             ),
         ) {
-            Text("Darurat", fontSize = 18.sp)
+            Text(stringResource(R.string.intervention_emergency_button_short), fontSize = 18.sp)
         }
 
         Button(
@@ -417,7 +417,7 @@ private fun QuestionContent(
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         ) {
-            Text("Kirim", fontSize = 18.sp)
+            Text(stringResource(R.string.intervention_submit_button_short), fontSize = 18.sp)
         }
     }
 }
@@ -707,7 +707,7 @@ private fun ResultContent(
     state: InterventionUiState,
     onReset: () -> Unit
 ) {
-    val title = if (isSuccess) "Berhasil!" else "Belum Tepat"
+    val title = if (isSuccess) stringResource(R.string.intervention_result_success) else stringResource(R.string.intervention_result_failed)
     val color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
     
     Text(
@@ -722,21 +722,21 @@ private fun ResultContent(
     when (state) {
         is InterventionUiState.CorrectAnswer -> {
             Text(
-                text = "Waktu Respon: ${state.responseTimeMs}ms",
+                text = stringResource(R.string.intervention_response_time, state.responseTimeMs),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Level: ${state.assessment.level}",
+                text = stringResource(R.string.intervention_difficulty_level, state.assessment.level),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
         is InterventionUiState.IncorrectAnswer -> {
             Text(
-                text = "Jawaban Anda: ${state.enteredAnswer}",
+                text = stringResource(R.string.intervention_result_user_answer, state.enteredAnswer),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Jawaban Benar: ${state.question.correctAnswer}",
+                text = stringResource(R.string.intervention_result_correct_answer, state.question.correctAnswer),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -769,7 +769,10 @@ private fun ResultContent(
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color)
     ) {
-        Text(if (isSuccess) "Selesai" else "Tutup", fontSize = 18.sp)
+        Text(
+            if (isSuccess) stringResource(R.string.intervention_result_finish) else stringResource(R.string.intervention_result_close),
+            fontSize = 18.sp
+        )
     }
 }
 

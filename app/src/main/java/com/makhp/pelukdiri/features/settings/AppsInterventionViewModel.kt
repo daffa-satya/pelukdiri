@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,12 +28,14 @@ class AppsInterventionViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     private val _installedApps = MutableStateFlow<List<AppUsage>>(emptyList())
+    private val _isLoading = MutableStateFlow(true)
     
     val uiState: StateFlow<AppsInterventionUiState> = combine(
         userPreferencesRepository.monitoredPackages,
         _searchQuery,
-        _installedApps
-    ) { monitored, query, allApps ->
+        _installedApps,
+        _isLoading
+    ) { monitored, query, allApps, isLoading ->
         val filtered = if (query.isBlank()) {
             allApps
         } else {
@@ -42,7 +45,8 @@ class AppsInterventionViewModel @Inject constructor(
         AppsInterventionUiState(
             searchQuery = query,
             apps = filtered.toImmutableList(),
-            selectedPackageNames = monitored.toImmutableSet()
+            selectedPackageNames = monitored.toImmutableSet(),
+            isLoading = isLoading
         )
     }.stateIn(
         scope = viewModelScope,
@@ -56,21 +60,27 @@ class AppsInterventionViewModel @Inject constructor(
 
     private fun loadApps() {
         viewModelScope.launch {
-            val apps = getInstalledApps()
-            // Get today's usage to enrich the list
-            val todayUsage = usageRepository.getDailyUsage(LocalDate.now()).first()
-                .associateBy { it.packageName }
-            
-            val enriched = apps.map { app ->
-                val usage = todayUsage[app.packageName]
-                if (usage != null) {
-                    app.copy(usageDurationMillis = usage.usageDurationMillis)
-                } else {
-                    app
+            try {
+                val apps = getInstalledApps()
+                _installedApps.value = apps
+
+                try {
+                    val todayUsage = usageRepository.getDailyUsage(LocalDate.now()).first()
+                        .associateBy { it.packageName }
+
+                    _installedApps.value = apps.map { app ->
+                        todayUsage[app.packageName]?.let { usage ->
+                            app.copy(usageDurationMillis = usage.usageDurationMillis)
+                        } ?: app
+                    }.sortedByDescending { it.usageDurationMillis }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    // Usage duration is optional; keep the installed-app list available.
                 }
-            }.sortedByDescending { it.usageDurationMillis }
-            
-            _installedApps.value = enriched
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 

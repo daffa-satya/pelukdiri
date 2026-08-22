@@ -5,9 +5,12 @@ import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.makhp.pelukdiri.features.analytics.AnalyticsScreen
+import com.makhp.pelukdiri.features.analytics.AnalyticsPeriod
 import com.makhp.pelukdiri.features.dashboard.AllAppsScreen
 import com.makhp.pelukdiri.features.dashboard.MainStatsScreen
 import com.makhp.pelukdiri.features.onboarding.OnboardingScreen
@@ -25,7 +28,10 @@ sealed class Screen(val route: String) {
     object About : Screen("about")
     object InformedConsent : Screen("informed_consent")
     object Terms : Screen("terms")
-    object AllApps : Screen("all_apps")
+    object AllApps : Screen("all_apps/{date}/{period}") {
+        fun route(date: java.time.LocalDate, period: AnalyticsPeriod) =
+            "all_apps/$date/${period.name}"
+    }
     object Onboarding : Screen("onboarding")
 }
 
@@ -42,7 +48,9 @@ fun NavGraph(
             MainStatsScreen(
                 onProgressClick = { navController.navigate(Screen.Analytics.route) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                onViewAllClick = { navController.navigate(Screen.AllApps.route) },
+                onViewAllClick = {
+                    navController.navigate(Screen.AllApps.route(java.time.LocalDate.now(), AnalyticsPeriod.DAILY))
+                },
                 onOnboardingClick = { navController.navigate(Screen.Onboarding.route) }
             )
         }
@@ -51,8 +59,18 @@ fun NavGraph(
                 onComplete = { navController.popBackStack() }
             )
         }
-        composable(Screen.AllApps.route) {
+        composable(
+            route = Screen.AllApps.route,
+            arguments = listOf(
+                navArgument("date") { type = NavType.StringType },
+                navArgument("period") { type = NavType.StringType },
+            ),
+        ) { entry ->
+            val date = java.time.LocalDate.parse(requireNotNull(entry.arguments?.getString("date")))
+            val period = AnalyticsPeriod.valueOf(requireNotNull(entry.arguments?.getString("period")))
             AllAppsScreen(
+                selectedDate = date,
+                selectedPeriod = period,
                 onBackClick = { navController.popBackStack() },
                 onNavigateToAnalytics = { navController.navigate(Screen.Analytics.route) }
             )
@@ -61,7 +79,9 @@ fun NavGraph(
             AnalyticsScreen(
                 onHomeClick = { navController.navigate(Screen.Home.route) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                onViewAllClick = { navController.navigate(Screen.AllApps.route) }
+                onViewAllClick = { date, period ->
+                    navController.navigate(Screen.AllApps.route(date, period))
+                }
             )
         }
         composable(Screen.Settings.route) {
@@ -69,11 +89,8 @@ fun NavGraph(
                 onHomeClick = { navController.navigate(Screen.Home.route) },
                 onProgressClick = { navController.navigate(Screen.Analytics.route) },
                 onNavigateToAdaptiveMode = { navController.navigate(Screen.AdaptiveMode.route) },
-                onNavigateToNotifications = { navController.navigate(Screen.NotificationSettings.route) },
                 onNavigateToApps = { navController.navigate(Screen.AppsIntervention.route) },
                 onNavigateToInformedConsent = { navController.navigate(Screen.InformedConsent.route) },
-                onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
-                onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
                 onNavigateToAbout = { navController.navigate(Screen.About.route) },
                 onExitApp = onExitApp
             )

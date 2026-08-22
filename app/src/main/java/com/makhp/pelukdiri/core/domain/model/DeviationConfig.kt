@@ -12,5 +12,5 @@ data class DeviationConfig(
     val alpha: Double = 0.1,
     val k: Double = 0.75,
     val s0: Double = 2.0,
-    val minimumHistory: Int = 7
+    val minimumHistory: Int = HistoricalConfig.MINIMUM_HISTORY_DAYS
 )

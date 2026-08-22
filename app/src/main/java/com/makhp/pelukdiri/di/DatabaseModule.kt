@@ -7,6 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.makhp.pelukdiri.core.database.PelukDiriDatabase
 import com.makhp.pelukdiri.core.database.dao.AdaptiveLimitDao
 import com.makhp.pelukdiri.core.database.dao.InterventionDao
+import com.makhp.pelukdiri.core.database.dao.InterventionDecisionDao
 import com.makhp.pelukdiri.core.database.dao.InterventionNotificationDao
 import com.makhp.pelukdiri.core.database.dao.UsageDao
 import com.makhp.pelukdiri.core.database.dao.UsageSensorDao
@@ -82,9 +83,10 @@ object DatabaseModule {
                 migration1To2,
                 migration2To3,
                 PelukDiriDatabase.MIGRATION_3_4,
+                PelukDiriDatabase.MIGRATION_4_5,
                 PelukDiriDatabase.MIGRATION_5_6,
+                PelukDiriDatabase.MIGRATION_6_7,
             )
-            .fallbackToDestructiveMigration()
             .build()
     }
 
@@ -95,6 +97,11 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideInterventionDao(db: PelukDiriDatabase): InterventionDao = db.interventionDao()
+
+    @Provides
+    @Singleton
+    fun provideInterventionDecisionDao(db: PelukDiriDatabase): InterventionDecisionDao =
+        db.interventionDecisionDao()
 
     @Provides
     @Singleton

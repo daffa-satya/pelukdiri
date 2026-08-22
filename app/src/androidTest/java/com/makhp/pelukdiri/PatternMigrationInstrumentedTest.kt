@@ -67,4 +67,45 @@ class PatternMigrationInstrumentedTest {
             context.deleteDatabase(databaseName)
         }
     }
+
+    @Test fun versionSixAddsDecisionAuditWithoutTouchingExistingTables() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val databaseName = "decision-audit-migration-test.db"
+        context.deleteDatabase(databaseName)
+        val helper = FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(databaseName)
+                .callback(object : SupportSQLiteOpenHelper.Callback(6) {
+                    override fun onCreate(db: SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE sentinel (id INTEGER PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
+                        db.execSQL("INSERT INTO sentinel VALUES (1, 'preserved')")
+                    }
+
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+                })
+                .build()
+        )
+
+        try {
+            val db = helper.writableDatabase
+            PelukDiriDatabase.MIGRATION_6_7.migrate(db)
+            db.query("SELECT value FROM sentinel WHERE id=1").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("preserved", cursor.getString(0))
+            }
+            db.query("PRAGMA table_info(intervention_decisions)").use { cursor ->
+                val nameIndex = cursor.getColumnIndexOrThrow("name")
+                val names = buildSet {
+                    while (cursor.moveToNext()) add(cursor.getString(nameIndex))
+                }
+                assertTrue("decision reason missing", "reason" in names)
+                assertTrue("baseline median missing", "baselineMedianMinutes" in names)
+                assertTrue("MAD missing", "madMinutes" in names)
+                assertTrue("challenge type missing", "challengeType" in names)
+            }
+        } finally {
+            helper.close()
+            context.deleteDatabase(databaseName)
+        }
+    }
 }

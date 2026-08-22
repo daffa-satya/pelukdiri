@@ -2,6 +2,7 @@ package com.makhp.pelukdiri.core.domain.engine
 
 import com.makhp.pelukdiri.core.domain.model.DeviationConfig
 import com.makhp.pelukdiri.core.domain.model.DeviationStatus
+import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -24,7 +25,7 @@ class DeviationEngineTest {
     @Test
     fun `exactly 7 observations produces valid result`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = List(7) { 60.0 }
+        val history = List(HistoricalConfig.MINIMUM_HISTORY_DAYS) { 60.0 }
         val result = engine.calculate(90.0, history)
         assertEquals(DeviationStatus.Success, result.status)
         assertTrue(result.deviation != null)
@@ -34,7 +35,7 @@ class DeviationEngineTest {
     @Test
     fun `fewer than 7 observations returns insufficient history`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = List(6) { 60.0 }
+        val history = List(HistoricalConfig.MINIMUM_HISTORY_DAYS - 1) { 60.0 }
         val result = engine.calculate(90.0, history)
         assertEquals(DeviationStatus.InsufficientHistory, result.status)
         assertNull(result.deviation)
@@ -47,7 +48,7 @@ class DeviationEngineTest {
     @Test
     fun `usage equal to baseline results in exactly zero deviation`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = List(7) { 60.0 }
+        val history = List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 60.0 }
         val result = engine.calculate(60.0, history)
         assertEquals(0.0, result.signal!!, 0.0)
         assertEquals(0.0, result.deviation!!, 0.0)
@@ -57,7 +58,7 @@ class DeviationEngineTest {
     @Test
     fun `usage below baseline results in exactly zero deviation`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = List(7) { 60.0 }
+        val history = List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 60.0 }
         val result = engine.calculate(30.0, history)
         assertEquals(0.0, result.signal!!, 0.0)
         assertEquals(0.0, result.deviation!!, 0.0)
@@ -67,7 +68,7 @@ class DeviationEngineTest {
     @Test
     fun `usage above baseline results in positive deviation`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = listOf(50.0, 55.0, 60.0, 60.0, 60.0, 65.0, 70.0) // B=60, M=5
+        val history = variedHistory() // B=60, M=5
         val result = engine.calculate(61.0, history)
         assertTrue(result.deviation!! > 0.0)
     }
@@ -86,7 +87,7 @@ class DeviationEngineTest {
         // B = median = 60
         // absolute deviations: [10, 5, 0, 0, 0, 5, 10]
         // sorted abs dev: [0, 0, 0, 5, 5, 10, 10] -> M = 5
-        val history = listOf(50.0, 55.0, 60.0, 60.0, 60.0, 65.0, 70.0)
+        val history = variedHistory()
         
         // x = 90
         // Δ+ = 90 - 60 = 30
@@ -106,7 +107,7 @@ class DeviationEngineTest {
     @Test
     fun `MAD is zero and no excess results in zero deviation`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = List(7) { 60.0 }
+        val history = List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 60.0 }
         val result = engine.calculate(60.0, history)
         assertEquals(0.0, result.mad!!, 0.0)
         assertEquals(0.0, result.signal!!, 0.0)
@@ -117,7 +118,7 @@ class DeviationEngineTest {
     @Test
     fun `MAD is zero and positive excess results in saturation`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = List(7) { 60.0 }
+        val history = List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 60.0 }
         val result = engine.calculate(60.1, history)
         assertEquals(Double.POSITIVE_INFINITY, result.signal!!, 0.0)
         assertEquals(1.0, result.deviation!!, 0.0)
@@ -127,7 +128,7 @@ class DeviationEngineTest {
     @Test
     fun `baseline is zero and positive excess results in saturation`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = List(7) { 0.0 }
+        val history = List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 0.0 }
         val result = engine.calculate(0.1, history)
         assertEquals(Double.POSITIVE_INFINITY, result.signal!!, 0.0)
         assertEquals(1.0, result.deviation!!, 0.0)
@@ -137,7 +138,7 @@ class DeviationEngineTest {
     @Test
     fun `output is always within inclusive range 0 to 1`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = listOf(10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0)
+        val history = variedHistory()
         for (usage in 0..2000 step 5) {
             val result = engine.calculate(usage.toDouble(), history)
             assertTrue("Value $usage produced D=${result.deviation}", result.deviation!! in 0.0..1.0)
@@ -150,7 +151,7 @@ class DeviationEngineTest {
         val config = DeviationConfig()
         val engine1 = DeviationEngine(config)
         val engine2 = DeviationEngine(config)
-        val history = listOf(50.0, 55.0, 60.0, 60.0, 60.0, 65.0, 70.0)
+        val history = variedHistory()
         val usage = 120.0
         val res1 = engine1.calculate(usage, history)
         val res2 = engine2.calculate(usage, history)
@@ -162,7 +163,7 @@ class DeviationEngineTest {
     @Test
     fun `monotonicity test`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = listOf(50.0, 55.0, 60.0, 60.0, 60.0, 65.0, 70.0)
+        val history = variedHistory()
         var lastD = -1.0
         for (usage in 0..1000) {
             val currentD = engine.calculate(usage.toDouble(), history).deviation!!
@@ -175,7 +176,7 @@ class DeviationEngineTest {
     @Test
     fun `saturation test for large signal`() {
         val engine = DeviationEngine(DeviationConfig())
-        val history = listOf(50.0, 55.0, 60.0, 60.0, 60.0, 65.0, 70.0)
+        val history = variedHistory()
         val result = engine.calculate(10000.0, history)
         assertEquals(1.0, result.deviation!!, 0.000001)
     }
@@ -183,7 +184,7 @@ class DeviationEngineTest {
     // 20. Configuration can be supplied explicitly for calibration/testing without mutating shared engine state
     @Test
     fun `configuration can be supplied explicitly`() {
-        val history = listOf(50.0, 55.0, 60.0, 60.0, 60.0, 65.0, 70.0)
+        val history = variedHistory()
         val usage = 120.0
         
         val engine1 = DeviationEngine(DeviationConfig(k = 0.5))
@@ -194,4 +195,7 @@ class DeviationEngineTest {
         
         assertTrue(res1.deviation != res2.deviation)
     }
+
+    private fun variedHistory(): List<Double> =
+        listOf(50.0, 55.0, 60.0, 60.0, 60.0, 65.0, 70.0).flatMap { listOf(it, it) }
 }

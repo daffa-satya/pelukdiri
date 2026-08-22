@@ -13,14 +13,19 @@ import com.makhp.pelukdiri.core.domain.model.ControlResult
 import com.makhp.pelukdiri.core.domain.model.DeviationResult
 import com.makhp.pelukdiri.core.domain.model.DeviationStatus
 import com.makhp.pelukdiri.core.domain.model.InterventionDecision
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionAudit
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
+import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
+import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.verify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
@@ -40,6 +45,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
     private val deviationEngine: DeviationEngine = mockk()
     private val controlEngine: ControlEngine = mockk()
     private val interventionLogRepository: InterventionLogRepository = mockk()
+    private val interventionDecisionRepository: InterventionDecisionRepository = mockk()
     private val challengeSelector: InterventionChallengeSelector = mockk()
     private val appUsageCollector: AppUsageCollector = mockk()
     private val lockManager = InterventionLockManager()
@@ -47,6 +53,8 @@ class EvaluateInterventionEligibilityUseCaseTest {
     @Before
     fun setup() {
         coEvery { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
+        every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
+        coEvery { interventionDecisionRepository.insert(any()) } returns Unit
         every { challengeSelector.select() } returns InterventionChallengeType.MATH
         useCase = EvaluateInterventionEligibilityUseCase(
             usageEventCollector,
@@ -55,6 +63,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
             deviationEngine,
             controlEngine,
             interventionLogRepository,
+            interventionDecisionRepository,
             challengeSelector,
             appUsageCollector,
             lockManager
@@ -72,6 +81,11 @@ class EvaluateInterventionEligibilityUseCaseTest {
 
         // THEN: shouldTrigger is false
         assertFalse(result.shouldTrigger)
+        coVerify {
+            interventionDecisionRepository.insert(match {
+                it.reason == InterventionDecisionReason.ACTIVE_LOCK && !it.shouldTrigger
+            })
+        }
     }
 
     @Test
@@ -88,7 +102,62 @@ class EvaluateInterventionEligibilityUseCaseTest {
         assertEquals(10.0, result.monitoredUsageMinutes, 0.0001)
         assertEquals(15.0, result.totalUsageMinutes, 0.0001)
         assertTrue(result.shouldTrigger)
-        verify { deviationEngine.calculate(10.0, List(7) { 10.0 }) }
+        verify { deviationEngine.calculate(10.0, List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 10.0 }) }
+    }
+
+    @Test
+    fun `triggered decision persists complete explainability telemetry`() = runBlocking {
+        val captured = slot<InterventionDecisionAudit>()
+        coEvery { interventionDecisionRepository.insert(capture(captured)) } returns Unit
+        stubEligibleEvaluation()
+
+        useCase(targetPackage)
+
+        val audit = captured.captured
+        assertEquals(InterventionDecisionReason.TRIGGERED, audit.reason)
+        assertEquals(10.0, audit.baselineMedianMinutes!!, 0.0001)
+        assertEquals(1.0, audit.madMinutes!!, 0.0001)
+        assertEquals(0.2, audit.deviation!!, 0.0001)
+        assertEquals(0.5, audit.performance!!, 0.0001)
+        assertEquals(0.1, audit.difficultyControlSignal!!, 0.0001)
+        assertEquals(24.6, audit.proposedIntervalMinutes!!, 0.0001)
+        assertEquals(InterventionChallengeType.MATH, audit.challengeType)
+        assertTrue(audit.shouldTrigger)
+    }
+
+    @Test
+    fun `cooldown decision is audited without running engines`() = runBlocking {
+        every { usageEventCollector.getUsageForDay(any()) } returns
+            listOf(AppUsage(targetPackage, "Target", 60_000L, 0L))
+        every { userPreferencesRepository.monitoredPackages } returns flowOf(setOf(targetPackage))
+        every { userPreferencesRepository.nextEligibleInterventionAt } returns flowOf(Long.MAX_VALUE)
+        every { userPreferencesRepository.emergencyBypassUntil } returns flowOf(0L)
+
+        val result = useCase(targetPackage)
+
+        assertFalse(result.shouldTrigger)
+        verify(exactly = 0) { deviationEngine.calculate(any(), any()) }
+        coVerify {
+            interventionDecisionRepository.insert(match {
+                it.reason == InterventionDecisionReason.COOLDOWN_ACTIVE &&
+                    it.nextEligibleAt == Long.MAX_VALUE && it.deviation == null
+            })
+        }
+    }
+
+    @Test
+    fun `evaluation failure is audited and remains visible to caller`() = runBlocking {
+        every { usageEventCollector.getUsageForDay(any()) } throws IllegalStateException("collector failed")
+
+        val thrown = runCatching { useCase(targetPackage) }.exceptionOrNull()
+
+        assertTrue(thrown is IllegalStateException)
+        coVerify {
+            interventionDecisionRepository.insert(match {
+                it.reason == InterventionDecisionReason.EVALUATION_ERROR &&
+                    it.errorType == "IllegalStateException" && !it.shouldTrigger
+            })
+        }
     }
 
     @Test
@@ -180,7 +249,8 @@ class EvaluateInterventionEligibilityUseCaseTest {
         every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
         every { userPreferencesRepository.bedtime } returns flowOf(null)
         every { userPreferencesRepository.wakeTime } returns flowOf(null)
-        coEvery { getAdaptiveHistoryUseCase() } returns List(7) { 10.0 }
+        coEvery { getAdaptiveHistoryUseCase() } returns
+            List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 10.0 }
         every { deviationEngine.calculate(any(), any()) } returns DeviationResult(
             deviation = 0.2,
             baseline = 10.0,

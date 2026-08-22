@@ -9,4 +9,5 @@ interface UsageSensorRepository {
     fun getAllLogs(): Flow<List<UsageSensorLog>>
     suspend fun getAllLogsList(): List<UsageSensorLog>
     suspend fun getLogsInRange(startTime: Long, endTime: Long): List<UsageSensorLog>
+    suspend fun deleteLogsBefore(cutoffEpochMillis: Long): Int
 }

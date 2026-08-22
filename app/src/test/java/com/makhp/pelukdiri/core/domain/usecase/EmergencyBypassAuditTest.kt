@@ -7,6 +7,11 @@ import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -77,6 +82,19 @@ class EmergencyBypassAuditTest {
     }
 
     @Test
+    fun `concurrent bypass attempts atomically consume only five slots`() = runBlocking {
+        val results = coroutineScope {
+            List(20) {
+                async { useCase.invoke(0.5, 0.6, 2, 0, 1_000L) }
+            }.awaitAll()
+        }
+
+        assertEquals(5, results.count { it is BypassResult.Success })
+        assertEquals(15, results.count { it is BypassResult.Exhausted })
+        assertEquals(5, fakeInterventionLogRepository.logs.size)
+    }
+
+    @Test
     fun `rejected bypass does not alter timestamps`() = runBlocking {
         // Exhaust quota
         repeat(5) { useCase.invoke(0.5, 0.6, 2, 0, 1000L) }
@@ -97,6 +115,7 @@ class EmergencyBypassAuditTest {
     // Fakes
     private class FakeInterventionLogRepository : InterventionLogRepository {
         val logs = mutableListOf<InterventionLog>()
+        private val mutex = Mutex()
         override suspend fun insertLog(log: InterventionLog) { logs.add(log) }
         override fun getAllLogs(): Flow<List<InterventionLog>> = flowOf(logs)
         override suspend fun getAllLogsList(): List<InterventionLog> = logs
@@ -107,6 +126,19 @@ class EmergencyBypassAuditTest {
         override suspend fun getLatestValidPerformanceLogByDifficulty(difficulty: Int): InterventionLog? = null
         override suspend fun getBypassCountForDay(startOfDay: Long, endOfDay: Long): Int {
             return logs.count { it.isBypassed && it.timestamp >= startOfDay && it.timestamp < endOfDay }
+        }
+        override suspend fun insertBypassIfQuotaAvailable(
+            log: InterventionLog,
+            startOfDay: Long,
+            endOfDay: Long,
+            limit: Int,
+        ): Int? = mutex.withLock {
+            val count = logs.count {
+                it.isBypassed && it.timestamp >= startOfDay && it.timestamp < endOfDay
+            }
+            if (count >= limit) return@withLock null
+            logs.add(log)
+            limit - count - 1
         }
     }
 
@@ -140,6 +172,10 @@ class EmergencyBypassAuditTest {
         override val isWeeklyReflectionEnabled = flowOf(true)
         override val isLimitReminderEnabled = flowOf(true)
         override val isInterventionReminderEnabled = flowOf(true)
+        override val isDndEnabled = flowOf(false)
+        override val lastDailySummaryDate = flowOf<String?>(null)
+        override val lastWeeklyReflectionDate = flowOf<String?>(null)
+        override val lastLimitReminderTimestamp = flowOf(0L)
 
         override suspend fun setHistoryBackfilled(isBackfilled: Boolean) {}
         override suspend fun setLastSyncedTimestamp(timestamp: Long) {}
@@ -158,5 +194,9 @@ class EmergencyBypassAuditTest {
         override suspend fun setWeeklyReflectionEnabled(enabled: Boolean) {}
         override suspend fun setLimitReminderEnabled(enabled: Boolean) {}
         override suspend fun setInterventionReminderEnabled(enabled: Boolean) {}
+        override suspend fun setDndEnabled(enabled: Boolean) {}
+        override suspend fun setLastDailySummaryDate(date: String?) {}
+        override suspend fun setLastWeeklyReflectionDate(date: String?) {}
+        override suspend fun setLastLimitReminderTimestamp(timestamp: Long) {}
     }
 }

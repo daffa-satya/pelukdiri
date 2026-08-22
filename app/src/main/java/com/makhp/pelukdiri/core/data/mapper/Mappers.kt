@@ -5,12 +5,16 @@ import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import com.makhp.pelukdiri.core.database.entity.InterventionNotificationEntity
 import com.makhp.pelukdiri.core.database.entity.DailyAdaptiveLimitEntity
 import com.makhp.pelukdiri.core.database.entity.InterventionLogEntity
+import com.makhp.pelukdiri.core.database.entity.InterventionDecisionEntity
 import com.makhp.pelukdiri.core.database.entity.UsageSensorLogEntity
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.core.domain.model.Intervention
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionAudit
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
+import com.makhp.pelukdiri.core.domain.model.ControlMode
 import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.InterventionType
 import com.makhp.pelukdiri.core.domain.model.UsageSensorLog
@@ -119,6 +123,76 @@ fun InterventionLog.toEntity(): InterventionLogEntity {
         challengeType = challengeType.name,
     )
 }
+
+fun InterventionDecisionEntity.toDomainModel(): InterventionDecisionAudit =
+    InterventionDecisionAudit(
+        id = id,
+        timestamp = timestamp,
+        packageName = packageName,
+        monitoredUsageMinutes = monitoredUsageMinutes,
+        totalUsageMinutes = totalUsageMinutes,
+        ambientLux = ambientLux,
+        historyCount = historyCount,
+        baselineMedianMinutes = baselineMedianMinutes,
+        madMinutes = madMinutes,
+        deviationSignal = deviationSignal,
+        relativeDeviation = relativeDeviation,
+        relativeMagnitude = relativeMagnitude,
+        deviation = deviation,
+        performance = performance,
+        qLux = qLux,
+        qTime = qTime,
+        sensitivity = sensitivity,
+        difficultyControl = difficultyControl,
+        difficultyControlSignal = difficultyControlSignal,
+        difficultyTarget = difficultyTarget,
+        currentDifficulty = currentDifficulty,
+        nextDifficulty = nextDifficulty,
+        challengeType = challengeType?.let { runCatching { InterventionChallengeType.valueOf(it) }.getOrNull() },
+        frequencyControl = frequencyControl,
+        normalizedFrequencyControl = normalizedFrequencyControl,
+        proposedIntervalMinutes = proposedIntervalMinutes,
+        nextEligibleAt = nextEligibleAt,
+        shouldTrigger = shouldTrigger,
+        reason = InterventionDecisionReason.valueOf(reason),
+        controlMode = controlMode?.let(ControlMode::valueOf),
+        errorType = errorType,
+    )
+
+fun InterventionDecisionAudit.toEntity(): InterventionDecisionEntity =
+    InterventionDecisionEntity(
+        id = id,
+        timestamp = timestamp,
+        packageName = packageName,
+        monitoredUsageMinutes = monitoredUsageMinutes,
+        totalUsageMinutes = totalUsageMinutes,
+        ambientLux = ambientLux,
+        historyCount = historyCount,
+        baselineMedianMinutes = baselineMedianMinutes,
+        madMinutes = madMinutes,
+        deviationSignal = deviationSignal,
+        relativeDeviation = relativeDeviation,
+        relativeMagnitude = relativeMagnitude,
+        deviation = deviation,
+        performance = performance,
+        qLux = qLux,
+        qTime = qTime,
+        sensitivity = sensitivity,
+        difficultyControl = difficultyControl,
+        difficultyControlSignal = difficultyControlSignal,
+        difficultyTarget = difficultyTarget,
+        currentDifficulty = currentDifficulty,
+        nextDifficulty = nextDifficulty,
+        challengeType = challengeType?.name,
+        frequencyControl = frequencyControl,
+        normalizedFrequencyControl = normalizedFrequencyControl,
+        proposedIntervalMinutes = proposedIntervalMinutes,
+        nextEligibleAt = nextEligibleAt,
+        shouldTrigger = shouldTrigger,
+        reason = reason.name,
+        controlMode = controlMode?.name,
+        errorType = errorType,
+    )
 
 fun UsageSensorLogEntity.toDomainModel(): UsageSensorLog {
     return UsageSensorLog(

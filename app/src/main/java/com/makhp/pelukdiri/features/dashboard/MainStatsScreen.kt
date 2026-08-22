@@ -72,6 +72,25 @@ fun MainStatsScreen(
                     if (profileViewModel.tryAcquireInterventionLock()) {
                         scope.launch { drawerState.close() }
                         val intent = Intent(context, InterventionActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                            putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
+                            putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
+                            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, 20.0)
+                            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 100f)
+                            putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
+                            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
+                            putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
+                        }
+                        context.startActivity(intent)
+                    }
+                },
+                onPatternInterventionClick = {
+                    if (profileViewModel.tryAcquireInterventionLock()) {
+                        scope.launch { drawerState.close() }
+                        val intent = Intent(context, InterventionActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                                     Intent.FLAG_ACTIVITY_SINGLE_TOP or 
                                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -83,6 +102,7 @@ fun MainStatsScreen(
                             putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
+                            putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType.PATTERN.name)
                         }
                         context.startActivity(intent)
                     }
@@ -96,6 +116,7 @@ fun MainStatsScreen(
             snackbarHostState = snackbarHostState,
             onRefresh = viewModel::forceRefresh,
             onBackfill = viewModel::backfillHistory,
+            onRecalculateAdaptiveLimit = viewModel::recalculateAdaptiveLimit,
             onGrantUsageAccess = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
             onGrantAccessibility = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
             onGrantBatteryExemption = {
@@ -121,6 +142,7 @@ private fun DashboardScaffold(
     snackbarHostState: SnackbarHostState,
     onRefresh: () -> Unit,
     onBackfill: () -> Unit,
+    onRecalculateAdaptiveLimit: () -> Unit,
     onGrantUsageAccess: () -> Unit,
     onGrantAccessibility: () -> Unit,
     onGrantBatteryExemption: () -> Unit,
@@ -146,6 +168,7 @@ private fun DashboardScaffold(
                 modifier = Modifier.padding(paddingValues),
                 onRefresh = onRefresh,
                 onBackfill = onBackfill,
+                onRecalculateAdaptiveLimit = onRecalculateAdaptiveLimit,
                 onGrantUsageAccess = onGrantUsageAccess,
                 onGrantAccessibility = onGrantAccessibility,
                 onGrantBatteryExemption = onGrantBatteryExemption,
@@ -164,6 +187,7 @@ private fun DashboardContent(
     modifier: Modifier,
     onRefresh: () -> Unit,
     onBackfill: () -> Unit,
+    onRecalculateAdaptiveLimit: () -> Unit,
     onGrantUsageAccess: () -> Unit,
     onGrantAccessibility: () -> Unit,
     onGrantBatteryExemption: () -> Unit,
@@ -180,16 +204,31 @@ private fun DashboardContent(
     ) {
         item(key = "header") { 
             DashboardHeader(
-                profileState = profileState, 
-                onRefresh = onRefresh, 
-                onBackfill = onBackfill, 
+                profileState = profileState,
                 onMenuClick = onMenuClick
             ) 
         }
         if (!state.isPermissionGranted) item(key = "perm_usage") { PermissionNotice(stringResource(R.string.dashboard_usage_access_needed), stringResource(R.string.dashboard_open_permission), onGrantUsageAccess) }
         if (!state.isAccessibilityEnabled) item(key = "perm_acc") { PermissionNotice(stringResource(R.string.dashboard_accessibility_needed), stringResource(R.string.dashboard_enable), onGrantAccessibility) }
         if (!state.isBatteryOptimizationIgnored) item(key = "perm_batt") { PermissionNotice(stringResource(R.string.dashboard_battery_optimization_needed), stringResource(R.string.dashboard_allow), onGrantBatteryExemption) }
-        item(key = "screentime") { ScreenTimeCard(state.socialMediaUsageMillis, state.yesterdaySocialMediaUsageMillis, state.todayAdaptiveLimit) }
+        item(key = "screentime") {
+            ScreenTimeCard(
+                usageMillis = state.socialMediaUsageMillis,
+                yesterdayMillis = state.yesterdaySocialMediaUsageMillis,
+                adaptiveLimitMinutes = state.todayAdaptiveLimit,
+                isRecalculatingLimit = state.isRecalculatingAdaptiveLimit,
+                adaptiveLimitError = state.adaptiveLimitError,
+                onRecalculateLimit = onRecalculateAdaptiveLimit
+            )
+        }
+        item(key = "data_actions") {
+            DashboardDataActions(
+                isRefreshing = state.isRefreshing,
+                isBackfilling = state.isBackfilling,
+                onRefresh = onRefresh,
+                onBackfill = onBackfill
+            )
+        }
         item(key = "weekly_chart") { WeeklyChart(state.weeklySummaries) }
 
         item(key = "top_apps") {
@@ -217,12 +256,8 @@ private fun DashboardContent(
 @Composable
 private fun DashboardHeader(
     profileState: ProfileUiState,
-    onRefresh: () -> Unit,
-    onBackfill: () -> Unit,
     onMenuClick: () -> Unit
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
-
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Surface(
             modifier = Modifier.size(DashboardTokens.AppIconSize).clickable(onClick = onMenuClick),
@@ -247,18 +282,59 @@ private fun DashboardHeader(
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.dashboard_header_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
-        Box {
-            IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = null) }
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.dashboard_sync_now)) }, onClick = { menuExpanded = false; onRefresh() })
-                DropdownMenuItem(text = { Text(stringResource(R.string.dashboard_backfill_7_days)) }, onClick = { menuExpanded = false; onBackfill() })
+        Spacer(Modifier.size(Dimens.minTouchTarget))
+    }
+}
+
+@Composable
+private fun DashboardDataActions(
+    isRefreshing: Boolean,
+    isBackfilling: Boolean,
+    onRefresh: () -> Unit,
+    onBackfill: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(DashboardTokens.MediumGap)
+    ) {
+        OutlinedButton(
+            onClick = onRefresh,
+            enabled = !isRefreshing && !isBackfilling,
+            modifier = Modifier.weight(1f)
+        ) {
+            if (isRefreshing) {
+                CircularProgressIndicator(Modifier.size(DashboardTokens.MediumGap), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Sync, contentDescription = null)
             }
+            Spacer(Modifier.width(DashboardTokens.SmallGap))
+            Text(stringResource(R.string.dashboard_sync_now), maxLines = 2, textAlign = TextAlign.Center)
+        }
+        OutlinedButton(
+            onClick = onBackfill,
+            enabled = !isRefreshing && !isBackfilling,
+            modifier = Modifier.weight(1f)
+        ) {
+            if (isBackfilling) {
+                CircularProgressIndicator(Modifier.size(DashboardTokens.MediumGap), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.History, contentDescription = null)
+            }
+            Spacer(Modifier.width(DashboardTokens.SmallGap))
+            Text(stringResource(R.string.dashboard_backfill_14_days), maxLines = 2, textAlign = TextAlign.Center)
         }
     }
 }
 
 @Composable
-private fun ScreenTimeCard(usageMillis: Long, yesterdayMillis: Long, adaptiveLimitMinutes: Int?) {
+private fun ScreenTimeCard(
+    usageMillis: Long,
+    yesterdayMillis: Long,
+    adaptiveLimitMinutes: Int?,
+    isRecalculatingLimit: Boolean,
+    adaptiveLimitError: String?,
+    onRecalculateLimit: () -> Unit
+) {
     val usage = usageMillis
     val adaptiveLimitMillis = adaptiveLimitMinutes?.let { it * 60_000L } ?: 0L
     val progress = remember(usage, adaptiveLimitMillis) {
@@ -305,6 +381,20 @@ private fun ScreenTimeCard(usageMillis: Long, yesterdayMillis: Long, adaptiveLim
                 Spacer(Modifier.height(16.dp))
                 Text(stringResource(R.string.dashboard_adaptive_limit), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(limitFormatted, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                TextButton(
+                    onClick = onRecalculateLimit,
+                    enabled = !isRecalculatingLimit,
+                    contentPadding = PaddingValues(horizontal = 0.dp)
+                ) {
+                    if (isRecalculatingLimit) {
+                        CircularProgressIndicator(Modifier.size(DashboardTokens.MediumGap), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(DashboardTokens.SmallGap))
+                    }
+                    Text(stringResource(R.string.dashboard_recalculate_limit))
+                }
+                adaptiveLimitError?.let { error ->
+                    Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
             }
             
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {

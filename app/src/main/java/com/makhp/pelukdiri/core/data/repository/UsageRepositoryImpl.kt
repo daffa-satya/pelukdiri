@@ -106,4 +106,16 @@ class UsageRepositoryImpl @Inject constructor(
         // Bulk insert with transaction
         dao.saveUsageDataWithSummary(entities, newSummary)
     }
+    override suspend fun updateAppScreenTime(packageName: String, date: LocalDate, newScreenTimeMillis: Long) {
+        require(!date.isAfter(LocalDate.now())) { "Future usage cannot be edited" }
+        require(newScreenTimeMillis in 0L..24L * 60L * 60L * 1000L) {
+            "Usage must be between 0 and 24 hours"
+        }
+        dao.updateAppUsageAndSummary(
+            date = date.toString(),
+            packageName = packageName,
+            newDuration = newScreenTimeMillis,
+            monitoredPackages = userPreferencesRepository.monitoredPackages.first(),
+        )
+    }
 }

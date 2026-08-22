@@ -4,18 +4,22 @@ import android.content.Context
 import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.collector.AppBlockerAccessibilityService
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.database.export.CsvExporter
+import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.usecase.InitializeDailyAdaptiveLimitUseCase
 import com.makhp.pelukdiri.core.util.AccessibilityUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +37,7 @@ class DashboardViewModel @Inject constructor(
     private val appUsageCollector: AppUsageCollector,
     private val csvExporter: CsvExporter,
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val initializeDailyAdaptiveLimitUseCase: InitializeDailyAdaptiveLimitUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -211,7 +216,7 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // strictly manual, on-demand operation
-                usageRepository.executeFullBackfill(daysHistory = 7, force = false)
+                usageRepository.executeFullBackfill(daysHistory = HistoricalConfig.BACKFILL_DAYS, force = false)
                 val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
 
                 _uiState.update { state ->
@@ -223,6 +228,42 @@ class DashboardViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 _uiState.value = DashboardUiState.Error(e.message ?: "Failed to backfill history")
+            }
+        }
+    }
+
+    fun recalculateAdaptiveLimit() {
+        val currentState = _uiState.value as? DashboardUiState.Success ?: return
+        _uiState.value = currentState.copy(
+            isRecalculatingAdaptiveLimit = true,
+            adaptiveLimitError = null
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                initializeDailyAdaptiveLimitUseCase(force = true)
+                val recalculated = adaptiveLimitRepository
+                    .getLimitForDate(LocalDate.now().toString())
+                    ?.calculatedLimitMinutes
+                _uiState.update { state ->
+                    if (state is DashboardUiState.Success) {
+                        state.copy(
+                            todayAdaptiveLimit = recalculated,
+                            isRecalculatingAdaptiveLimit = false
+                        )
+                    } else state
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                _uiState.update { state ->
+                    if (state is DashboardUiState.Success) {
+                        state.copy(
+                            isRecalculatingAdaptiveLimit = false,
+                            adaptiveLimitError = context.getString(R.string.dashboard_recalculate_limit_failed)
+                        )
+                    } else state
+                }
             }
         }
     }
