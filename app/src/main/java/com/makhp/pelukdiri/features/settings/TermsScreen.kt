@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
@@ -48,12 +50,12 @@ fun TermsScreen(
         ) {
             item {
                 Text(
-                    text = "Syarat & Ketentuan Penggunaan",
+                    text = stringResource(R.string.terms_title_full),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Terakhir diperbarui: 7 Agustus 2026",
+                    text = stringResource(R.string.terms_last_updated),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -61,36 +63,36 @@ fun TermsScreen(
             
             item {
                 TermsSection(
-                    title = "1. Penerimaan Ketentuan",
-                    content = "Dengan mengunduh atau menggunakan aplikasi PELUKDIRI, Anda setuju untuk terikat oleh syarat dan ketentuan ini. Jika Anda tidak setuju, harap jangan gunakan aplikasi ini."
+                    title = stringResource(R.string.onboarding_terms_1_title),
+                    content = stringResource(R.string.onboarding_terms_1_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = "2. Penggunaan Aplikasi",
-                    content = "PELUKDIRI dirancang untuk membantu Anda mengelola waktu layar. Anda bertanggung jawab penuh atas penggunaan aplikasi ini dan segala keputusan yang Anda buat berdasarkan informasi yang disediakan."
+                    title = stringResource(R.string.onboarding_terms_2_title),
+                    content = stringResource(R.string.onboarding_terms_2_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = "3. Privasi Data",
-                    content = "Privasi Anda sangat penting bagi kami. Semua data penggunaan aplikasi diproses secara lokal di perangkat Anda dan tidak dikirim ke server kami, kecuali jika Anda secara eksplisit melakukan ekspor data."
+                    title = stringResource(R.string.onboarding_terms_3_title),
+                    content = stringResource(R.string.onboarding_terms_3_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = "4. Hak Kekayaan Intelektual",
-                    content = "Semua konten, logo, dan teknologi di dalam PELUKDIRI adalah milik MAKHP Studio dan dilindungi oleh undang-undang hak cipta yang berlaku."
+                    title = stringResource(R.string.onboarding_terms_4_title),
+                    content = stringResource(R.string.onboarding_terms_4_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = "5. Perubahan Ketentuan",
-                    content = "Kami dapat memperbarui syarat dan ketentuan ini dari waktu ke waktu. Kami akan memberi tahu Anda tentang perubahan apa pun dengan memperbarui tanggal di bagian atas halaman ini."
+                    title = stringResource(R.string.onboarding_terms_6_title), // No step 5 in main Res? Oh wait.
+                    content = stringResource(R.string.onboarding_terms_6_desc)
                 )
             }
             
@@ -126,10 +128,10 @@ private fun TermsHeader(onBackClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClick) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Text(
-            text = "Terms",
+            text = stringResource(R.string.terms_header),
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium

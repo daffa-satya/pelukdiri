@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.theme.Dimens
 
@@ -68,7 +70,7 @@ fun FreedomRing(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "of limit",
+                text = stringResource(R.string.dashboard_of_limit),
                 style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.onSurfaceVariant,
                 fontSize = 10.sp

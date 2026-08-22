@@ -810,13 +810,13 @@ private fun NumericKeypad(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             KeypadButton(Modifier.weight(1f), onClearClick) {
-                Text("C", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.keypad_clear), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
             KeypadButton(Modifier.weight(1f), { onNumberClick(0) }) {
-                Text("0", fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.keypad_zero), fontSize = 24.sp, fontWeight = FontWeight.Medium)
             }
             KeypadButton(Modifier.weight(1f), onBackspaceClick) {
-                Text("⌫", fontSize = 28.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.keypad_backspace), fontSize = 28.sp, fontWeight = FontWeight.Medium)
             }
         }
     }

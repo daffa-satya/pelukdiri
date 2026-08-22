@@ -6,7 +6,7 @@
     <string name="dashboard_header_title">PELUKDIRI</string>
     <string name="dashboard_screen_time_today">WAKTU LAYAR SOSMED</string>
     <string name="dashboard_adaptive_limit">Batas Adaptif</string>
-    <string name="dashboard_recalculate_limit">Hitung ulang batas adaptif</string>
+    <string name="dashboard_recalculate_limit">Hitung ulang</string>
     <string name="dashboard_recalculate_limit_failed">Batas adaptif tidak dapat dihitung ulang.</string>
     <string name="dashboard_from_yesterday">%1$d%% dari kemarin</string>
     <string name="dashboard_more_than_yesterday">%1$d%% lebih lama dari kemarin</string>
@@ -149,7 +149,7 @@
     <string name="informed_consent_p9">Proses penggunaan aplikasi dapat menimbulkan ketidaknyamanan ringan, seperti merasa terganggu ketika intervensi muncul atau merasa kurang nyaman karena harus berhenti sejenak dari penggunaan aplikasi hiburan. Responden juga mungkin mengalami kesulitan ketika mengerjakan tantangan matematika mental atau pola. Intervensi dirancang dalam bentuk tantangan singkat dengan batas tingkat kesulitan yang telah ditentukan.</string>
     <string name="informed_consent_p10">Data yang diperoleh akan dijaga kerahasiaannya dan hanya dapat diakses oleh peneliti. Data penelitian akan disimpan secara lokal pada laptop peneliti. Identitas responden akan menggunakan kode dalam proses pengolahan data dan tidak akan dicantumkan dalam penyajian hasil penelitian. Hasil penelitian akan disajikan dalam bentuk data kelompok, tabel, grafik, atau analisis statistik sehingga identitas responden tidak dapat diketahui.</string>
     <string name="informed_consent_p11">Partisipasi dalam penelitian ini dilakukan sesuai prosedur penelitian dan persetujuan responden serta orang tua atau wali. Responden akan mendapatkan kompensasi sebesar Rp50.000,00 sebagai penghargaan atas waktu dan partisipasinya dalam penelitian. Kompensasi tersebut bukan merupakan paksaan untuk mengikuti penelitian.</string>
-    <string name="informed_consent_p12">Apabila terdapat pertanyaan, kendala dalam penggunaan aplikasi, atau hal yang ingin disampaikan berkaitan dengan penelitian ini, Anda dapat menghubungi: 0821-1479-9930 (Joshua Leonardo Hilman Hutajulu) dan 0881-0118-64140 (Daffa Satya Alif Siregar).</string>
+    <string name="informed_consent_p12">Apabila terdapat pertanyaan, kendala dalam penggunaan aplikasi, atau hal yang ingin disampaikan berkaitan dengan penelitian ini, Anda dapat menghubungi: researcher1@gmail.com (Joshua Leonardo Hilman Hutajulu) dan researcher2@gmail.com (Daffa Satya Alif Siregar).</string>
     <string name="settings_logout_title">Keluar</string>
     <string name="settings_logout_desc">Keluar dari aplikasi PELUKDIRI di perangkat ini.</string>
     <string name="settings_banner_title">Kamu memegang kendali</string>
@@ -247,6 +247,8 @@
     <string name="privacy_item_local_badge">Lokal</string>
     <string name="privacy_questions_title">Punya pertanyaan tentang privasi?</string>
     <string name="privacy_questions_desc">Hubungi kami di pelukdiri.support@gmail.com</string>
+    <string name="privacy_delete_data_title">Hapus Data Saya</string>
+    <string name="privacy_delete_data_desc">Hapus semua data yang dikumpulkan oleh PELUKDIRI dari perangkat ini.</string>
     <string name="privacy_detail_screen_time_msg">Kami mencatat berapa lama setiap aplikasi digunakan untuk menghitung total waktu layar harian dan mingguan Anda.</string>
     <string name="privacy_detail_apps_opened_msg">Kami memantau frekuensi pembukaan aplikasi tertentu untuk mengidentifikasi pola penggunaan yang berlebihan.</string>
     <string name="privacy_detail_intervention_msg">Kami menyimpan riwayat tantangan kognitif yang Anda selesaikan untuk menyesuaikan tingkat kesulitan algoritma adaptif.</string>
@@ -255,6 +257,9 @@
 
     <!-- About Screen -->
     <string name="about_title">Tentang</string>
+    <string name="about_tagline">Think. Control. Freedom.</string>
+    <string name="about_version_value">1.0.0 (Build 20260807)</string>
+    <string name="about_website_value">www.pelukdiri.com</string>
     <string name="about_version">Versi</string>
     <string name="about_dev_team">Tim Pengembang</string>
     <string name="about_dev_team_name">Mama, AKu Kecanduan HP OPSI</string>
@@ -489,4 +494,55 @@
     <string name="notification_intervention_title_3">Ready for a short challenge?</string>
     <string name="notification_intervention_title_4">A quick challenge is waiting for you.</string>
     <string name="notification_intervention_content">A quick exercise to help you stay focused.</string>
+    <string name="onboarding_grant_usage_access">Berikan Akses Penggunaan</string>
+
+    <!-- Export -->
+    <string name="export_download_icon_desc">Unduh file CSV</string>
+    <string name="export_button_text">Ekspor CSV / ZIP</string>
+    <string name="export_storage_location_note">File akan tersimpan di perangkat kamu</string>
+
+    <!-- Worker -->
+    <string name="notification_sync_channel_name">Layanan Sinkronisasi Penggunaan</string>
+    <string name="notification_sync_channel_description">Mengumpulkan data penelitian di latar belakang</string>
+    <string name="notification_sync_active_title">PELUKDIRI sedang aktif</string>
+    <string name="notification_sync_collecting">Mengumpulkan data penggunaan…</string>
+
+    <!-- Errors -->
+    <string name="error_future_usage">Penggunaan di masa depan tidak dapat diubah</string>
+    <string name="error_invalid_usage_range">Penggunaan harus di antara 0 dan 24 jam</string>
+
+    <!-- Keypad -->
+    <string name="keypad_clear">C</string>
+    <string name="keypad_zero">0</string>
+    <string name="keypad_backspace">⌫</string>
+    <string name="analytics_weekly_progress_title">PROGRES MINGGUAN</string>
+    <string name="analytics_vs_last_week">vs minggu lalu</string>
+    <string name="analytics_weekly_progress_icon_desc">Ikon progres mingguan</string>
+    <string name="dashboard_of_limit">dari batas</string>
+    <!-- Export Screen -->
+    <string name="export_intro_text">Ekspor data penggunaan aplikasi dan intervensi kamu dalam format CSV/ZIP untuk keperluan penelitian dan audit mandiri.</string>
+    <string name="export_format_label">Format File</string>
+    <string name="export_format_desc">Data akan diekspor dalam format ZIP berisi 7 file CSV yang sesuai standar RFC-4180.</string>
+    <string name="export_format_all_zip">Semua (ZIP)</string>
+    <string name="export_folder_label">Folder: Android/data/com.makhp.pelukdiri/files/exports</string>
+    <string name="export_privacy_note">Privasi Terjamin: Seluruh data diproses secara lokal di perangkat kamu dan tidak dikirim ke server peneliti secara otomatis.</string>
+    <string name="export_contents_desc">File ekspor berisi log sensor, intervensi, batas adaptif, dan audit keputusan evaluasi lengkap.</string>
+
+    <!-- Terms Screen -->
+    <string name="terms_title_full">Syarat &amp; Ketentuan Penggunaan</string>
+    <string name="terms_last_updated">Terakhir diperbarui: 7 Agustus 2026</string>
+    <string name="terms_header">Syarat &amp; Ketentuan</string>
+    <!-- Export Items -->
+    <string name="export_item_usage_title">App Usage &amp; Screen Time</string>
+    <string name="export_item_usage_desc">Ringkasan waktu penggunaan harian per aplikasi.</string>
+    <string name="export_item_sensor_title">Sensor Logs</string>
+    <string name="export_item_sensor_desc">Log sensor pencahayaan ambient.</string>
+    <string name="export_item_summary_title">Daily Summary</string>
+    <string name="export_item_summary_desc">Ringkasan total waktu penggunaan harian.</string>
+    <string name="export_item_intervention_title">Intervention Logs</string>
+    <string name="export_item_intervention_desc">Riwayat intervensi, tipe tantangan, deviasi, dan bypass.</string>
+    <string name="export_item_decisions_title">Intervention Decisions</string>
+    <string name="export_item_decisions_desc">Audit jejak keputusan evaluasi kelayakan intervensi.</string>
+    <string name="export_item_limits_title">Adaptive Limits &amp; Notifications</string>
+    <string name="export_item_limits_desc">Batas adaptif harian dan riwayat notifikasi.</string>
 </resources>

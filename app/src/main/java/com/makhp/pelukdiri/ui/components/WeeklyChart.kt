@@ -25,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.ui.theme.Dimens
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
@@ -51,17 +53,17 @@ fun WeeklyChart(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.Analytics,
-                contentDescription = "Weekly progress icon",
+                contentDescription = stringResource(R.string.analytics_weekly_progress_icon_desc),
                 tint = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.width(DashboardTokens.SmallGap))
             Text(
-                text = "WEEKLY PROGRESS",
+                text = stringResource(R.string.analytics_weekly_progress_title),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = "vs last week",
+                text = stringResource(R.string.analytics_vs_last_week),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

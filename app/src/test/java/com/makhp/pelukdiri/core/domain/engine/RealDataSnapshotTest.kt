@@ -7,9 +7,9 @@ class RealDataSnapshotTest {
 
     @Test
     fun inspectRealData() {
-        val file = File("/home/daffa-satya/StudioProjects/PELUKDIRI/usagestats_history.txt")
+        val file = File("../usagestats_history.txt") // Expected at project root
         if (!file.exists()) {
-            println("File not found")
+            println("Snapshot file not found at ${file.absolutePath}")
             return
         }
 

@@ -163,8 +163,8 @@ class UsageSyncWorker @AssistedInject constructor(
         val notificationId = 1
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Usage Sync Service"
-            val descriptionText = "Collecting research data in background"
+            val name = applicationContext.getString(R.string.notification_sync_channel_name)
+            val descriptionText = applicationContext.getString(R.string.notification_sync_channel_description)
             val importance = NotificationManager.IMPORTANCE_LOW
             val channel = NotificationChannel(channelId, name, importance).apply {
                 description = descriptionText
@@ -174,8 +174,8 @@ class UsageSyncWorker @AssistedInject constructor(
         }
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setContentTitle("PELUKDIRI is active")
-            .setContentText("Collecting usage data...")
+            .setContentTitle(applicationContext.getString(R.string.notification_sync_active_title))
+            .setContentText(applicationContext.getString(R.string.notification_sync_collecting))
             .setSmallIcon(R.mipmap.ic_launcher) // Use default icon
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)

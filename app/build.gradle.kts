@@ -21,10 +21,19 @@ android {
 
     buildTypes {
         debug {
+            optimization{
+                enable = true
+            }
         }
         release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "src/main/keepRules/rules.keep"
+            )
             optimization {
-                enable = false
+                enable = true
             }
         }
     }
