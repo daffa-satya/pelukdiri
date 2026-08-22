@@ -36,7 +36,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
     }
 
     @Test
-    fun `6 valid observations within 14 days - returns InsufficientHistory and no persistence`() = runBlocking {
+    fun `6 valid observations within 21 days returns insufficient history`() = runBlocking {
         usageRepository.history = List(6) { i ->
             DailySummary(LocalDate.now().minusDays(i + 1L), 60_000L * 60, 60_000L * 60, 60_000L * 60, 10, null)
         }
@@ -47,12 +47,8 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
     }
 
     @Test
-    fun `7 valid observations within 14 days - persists personalized limit equal to B plus MAD`() = runBlocking {
-        // History: [10, 20, 30, 40, 50, 60, 70]
-        // Median B = 40
-        // Deviations from 40: [30, 20, 10, 0, 10, 20, 30]
-        // Median Deviation MAD = 20
-        // Limit L = B + MAD = 40 + 20 = 60
+    fun `7 valid observations within 21 days persists personalized limit`() = runBlocking {
+        // History: [10, 20, ..., 70], B = 40, MAD = 20, limit = 60.
         usageRepository.history = (1..7).map { i ->
             DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
@@ -65,9 +61,8 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
     }
 
     @Test
-    fun `10 valid observations within 14 days - only 7 most recent used for B plus MAD`() = runBlocking {
-        // Most recent 7: [10, 20, 30, 40, 50, 60, 70] -> B = 40, MAD = 20 -> L = 60
-        // Older 3: [80, 90, 100] -> Should be ignored
+    fun `10 valid observations uses all 10 rather than truncating to minimum`() = runBlocking {
+        // History: [10, 20, ..., 100], B = 55, MAD = 25, limit = 80.
         usageRepository.history = (1..10).map { i ->
             DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
@@ -75,15 +70,25 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         useCase.invoke()
 
         val persisted = adaptiveLimitRepository.getLimitForDate(LocalDate.now().toString())
-        assertEquals(60, persisted!!.calculatedLimitMinutes)
+        assertEquals(80, persisted!!.calculatedLimitMinutes)
     }
 
     @Test
-    fun `gaps in history - selects 7 most recent valid observations`() = runBlocking {
-        // Days 1, 2, 3, 5, 6, 8, 10 are valid (7 total)
-        // Days 4, 7, 9 are invalid (0 screen time)
-        val validDays = listOf(1, 2, 3, 5, 6, 8, 10)
-        val invalidDays = listOf(4, 7, 9)
+    fun `17 valid observations within 21 days uses only 14 most recent`() = runBlocking {
+        usageRepository.history = (1..17).map { i ->
+            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
+        }
+
+        useCase.invoke()
+
+        val persisted = adaptiveLimitRepository.getLimitForDate(LocalDate.now().toString())
+        assertEquals(110, persisted!!.calculatedLimitMinutes)
+    }
+
+    @Test
+    fun `gaps in 21-day lookback select 14 most recent valid observations`() = runBlocking {
+        val invalidDays = setOf(4, 7, 9, 15, 18, 20, 21)
+        val validDays = (1..21).filterNot { it in invalidDays }
         
         val history = mutableListOf<DailySummary>()
         validDays.forEach { i -> history.add(DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * 100, 0, 60_000L * 100, 0, null)) }
@@ -104,7 +109,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         adaptiveLimitRepository.limits[today] = DailyAdaptiveLimit(today, 120, 0, 0)
         
         // Setup sufficient history that would generate a different limit (40)
-        usageRepository.history = (1..7).map { i ->
+        usageRepository.history = (1..14).map { i ->
             DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
 
@@ -115,10 +120,24 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
     }
 
     @Test
+    fun `forced recalculation replaces limit and preserves accumulated values`() = runBlocking {
+        val today = LocalDate.now().toString()
+        adaptiveLimitRepository.limits[today] = DailyAdaptiveLimit(today, 120, 45, 12)
+        usageRepository.history = (1..14).map { i ->
+            DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
+        }
+
+        useCase.invoke(force = true)
+
+        val persisted = adaptiveLimitRepository.getLimitForDate(today)!!
+        assertEquals(110, persisted.calculatedLimitMinutes)
+        assertEquals(45, persisted.actualScreenTimeMinutes)
+        assertEquals(12, persisted.reclaimedTimeMinutes)
+    }
+
+    @Test
     fun `today incomplete usage is NOT included in historical baseline`() = runBlocking {
-        // If today was included, median of [10, 20, 30, 40, 50, 60, 500] would be 40
-        // If today is NOT included, we need 7 PREVIOUS days.
-        // Let's provide 6 previous days and today.
+        // Today must not make six valid previous days appear sufficient.
         val previousDays = (1..6).map { i ->
             DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
@@ -128,7 +147,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
 
         useCase.invoke()
 
-        // Should be insufficient because only 6 previous days are valid
+        // Insufficient because only 6 previous days are valid.
         assertNull(adaptiveLimitRepository.getLimitForDate(LocalDate.now().toString()))
     }
 
@@ -140,8 +159,8 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         // Yesterday's row exists
         adaptiveLimitRepository.limits[yesterday] = DailyAdaptiveLimit(yesterday, 120, 0, 0)
         
-        // Setup sufficient history for today (B = 40, MAD = 20 -> L = 60)
-        usageRepository.history = (1..7).map { i ->
+        // Setup sufficient history for today (B = 75, MAD = 35 -> L = 110)
+        usageRepository.history = (1..14).map { i ->
             DailySummary(LocalDate.now().minusDays(i.toLong()), 60_000L * (i * 10), 0, 60_000L * (i * 10), 0, null)
         }
 
@@ -151,7 +170,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         val todayRow = adaptiveLimitRepository.getLimitForDate(today)
         
         assertEquals(120, yesterdayRow!!.calculatedLimitMinutes)
-        assertEquals(60, todayRow!!.calculatedLimitMinutes)
+        assertEquals(110, todayRow!!.calculatedLimitMinutes)
         assertNotEquals(yesterdayRow.dateString, todayRow.dateString)
     }
 
@@ -166,6 +185,11 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         override suspend fun refreshUsageData() {}
         override suspend fun syncRecentEventsOnly() {}
         override suspend fun executeFullBackfill(daysHistory: Int, force: Boolean) {}
+        override suspend fun updateAppScreenTime(
+            packageName: String,
+            date: LocalDate,
+            newScreenTimeMillis: Long,
+        ) {}
     }
 
     private class FakeAdaptiveLimitRepository : AdaptiveLimitRepository {
@@ -175,6 +199,9 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
             if (!limits.containsKey(limit.dateString)) {
                 limits[limit.dateString] = limit
             }
+        }
+        override suspend fun updateCalculatedLimit(date: String, limitMinutes: Int) {
+            limits[date] = limits.getValue(date).copy(calculatedLimitMinutes = limitMinutes)
         }
         override suspend fun getLimitForDate(date: String) = limits[date]
         override fun getAllLimits() = flowOf(limits.values.toList())

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -76,12 +81,17 @@ fun AppsInterventionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(DashboardTokens.ScreenPadding),
+            contentPadding = PaddingValues(
+                start = DashboardTokens.ScreenPadding,
+                end = DashboardTokens.ScreenPadding,
+                top = Dimens.spaceExtraLarge,
+                bottom = Dimens.spaceExtraLarge * 2
+            ),
             verticalArrangement = Arrangement.spacedBy(DashboardTokens.MediumGap)
         ) {
             item {
                 Text(
-                    text = "Pilih aplikasi yang ingin kamu batasi dan diintervensi.\nIntervensi akan muncul saat kamu membuka aplikasi ini.",
+                    text = stringResource(R.string.apps_intervention_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -114,15 +124,31 @@ fun AppsInterventionScreen(
                 }
             }
             
-            items(state.apps, key = { it.packageName }) { app ->
-                AppSelectionItem(
-                    app = app,
-                    isSelected = state.selectedPackageNames.contains(app.packageName),
-                    onToggle = { onToggleApp(app.packageName) }
-                )
+            if (state.isLoading) {
+                item {
+                    val loadingDescription = stringResource(R.string.apps_intervention_loading)
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(Dimens.spaceLarge),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(Dimens.minTouchTarget)
+                                .semantics {
+                                    contentDescription = loadingDescription
+                                }
+                        )
+                    }
+                }
+            } else {
+                items(state.apps, key = { it.packageName }) { app ->
+                    AppSelectionItem(
+                        app = app,
+                        isSelected = state.selectedPackageNames.contains(app.packageName),
+                        onToggle = { onToggleApp(app.packageName) }
+                    )
+                }
             }
-            
-            item { Spacer(Modifier.height(DashboardTokens.LargeGap)) }
         }
     }
 }
@@ -132,6 +158,7 @@ private fun AppsInterventionHeader(onBackClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = Dimens.spaceExtraSmall, vertical = Dimens.spaceSmall),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -253,6 +280,7 @@ private fun AppsInterventionBottomBar(onSaveClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
+            .navigationBarsPadding()
             .padding(DashboardTokens.ScreenPadding)
     ) {
         Button(

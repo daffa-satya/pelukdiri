@@ -6,10 +6,12 @@
     <string name="dashboard_header_title">PELUKDIRI</string>
     <string name="dashboard_screen_time_today">WAKTU LAYAR SOSMED</string>
     <string name="dashboard_adaptive_limit">Batas Adaptif</string>
+    <string name="dashboard_recalculate_limit">Hitung ulang batas adaptif</string>
+    <string name="dashboard_recalculate_limit_failed">Batas adaptif tidak dapat dihitung ulang.</string>
     <string name="dashboard_from_yesterday">%1$d%% dari kemarin</string>
     <string name="dashboard_more_than_yesterday">%1$d%% lebih lama dari kemarin</string>
     <string name="dashboard_sync_now">Sinkronkan sekarang</string>
-    <string name="dashboard_backfill_7_days">Tarik data 7 hari</string>
+    <string name="dashboard_backfill_14_days">Tarik data 14 hari</string>
     <string name="dashboard_export_data">Ekspor data</string>
     <string name="dashboard_usage_access_needed">Akses penggunaan diperlukan agar waktu layar bisa dihitung.</string>
     <string name="dashboard_open_permission">Buka izin</string>
@@ -30,6 +32,14 @@
     <string name="dashboard_encouragement">Jeda singkat, kebebasan besar.\nKamu sedang membangun diri yang lebih baik.</string>
 
     <!-- Analytics / Progress -->
+    <string name="analytics_edit_usage">Ubah waktu penggunaan</string>
+    <string name="analytics_edit_usage_title">Ubah penggunaan %1$s</string>
+    <string name="analytics_edit_usage_hours">Jam</string>
+    <string name="analytics_edit_usage_minutes">Menit</string>
+    <string name="analytics_edit_usage_save">Simpan</string>
+    <string name="analytics_edit_usage_cancel">Batal</string>
+    <string name="analytics_edit_usage_notice">Perubahan memperbarui ringkasan hari terpilih dan dapat memengaruhi perhitungan historis. Sinkronisasi ulang dapat mengganti data hari ini.</string>
+    <string name="analytics_edit_usage_failed">Waktu penggunaan tidak dapat diubah. Ketuk untuk memuat ulang.</string>
     <string name="analytics_title">Analitik</string>
     <string name="analytics_period_daily">Harian</string>
     <string name="analytics_period_weekly">Mingguan</string>
@@ -41,6 +51,16 @@
     <string name="analytics_metric_longest_session">Sesi Terlama</string>
     <string name="analytics_metric_interventions">Intervensi</string>
     <string name="analytics_vs_yesterday">%1$s vs kemarin</string>
+    <string name="analytics_vs_period">%1$s vs %2$s</string>
+    <string name="analytics_comparison_yesterday">kemarin</string>
+    <string name="analytics_comparison_previous_week">minggu sebelumnya</string>
+    <string name="analytics_comparison_previous_month">bulan sebelumnya</string>
+    <string name="analytics_comparison_new">baru</string>
+    <string name="analytics_minutes_short">%1$d m</string>
+    <string name="analytics_x_axis_explanation">Sumbu X menunjukkan jam dalam sehari (00.00–24.00).</string>
+    <string name="analytics_graph_calculate">Hitung grafik</string>
+    <string name="analytics_graph_calculating">Menghitung grafik…</string>
+    <string name="analytics_graph_failed">Grafik tidak dapat dihitung. Coba lagi.</string>
     <string name="analytics_screen_time_over_time">WAKTU LAYAR DARI WAKTU KE WAKTU</string>
     <string name="analytics_top_apps">APLIKASI TERATAS</string>
     <string name="analytics_by_category">BERDASARKAN KATEGORI</string>
@@ -79,14 +99,9 @@
     <string name="settings_monitored_apps_title">Aplikasi Terpantau</string>
     <string name="settings_monitored_apps_desc">Kelola aplikasi yang diawasi oleh algoritma.</string>
     <string name="settings_notifications_title">Notifikasi</string>
-    <string name="settings_notifications_desc">Kelola notifikasi, ringkasan harian, dan pengingat batas waktu adaptif.</string>
     <string name="settings_export_csv_title">Ekspor CSV</string>
     <string name="settings_export_csv_desc">Ekspor data penggunaan aplikasi dan intervensi kamu.</string>
     <string name="settings_info_section">Informasi &amp; Dukungan</string>
-    <string name="settings_privacy_title">Privasi</string>
-    <string name="settings_privacy_desc">Lihat kebijakan privasi dan cara kami melindungi datamu.</string>
-    <string name="settings_terms_title">Ketentuan</string>
-    <string name="settings_terms_desc">Baca syarat dan ketentuan penggunaan PELUKDIRI.</string>
     <string name="settings_about_title">Tentang</string>
     <string name="settings_informed_consent_title">Informed Consent</string>
     <string name="settings_informed_consent_desc">Persetujuan partisipasi penelitian.</string>
@@ -109,6 +124,7 @@
     <string name="settings_notifications_banner_desc">PELUKDIRI memastikan kamu tetap terhubung dengan progres digitalmu.</string>
 
     <string name="profile_test_notification">Tes Notifikasi</string>
+    <string name="profile_test_lab">PelukDiri Test Lab</string>
     <string name="common_logo_desc">PelukDiri Logo</string>
     <string name="common_back">Kembali</string>
     <string name="common_save">Simpan</string>
@@ -139,7 +155,7 @@
     <string name="settings_banner_title">Kamu memegang kendali</string>
     <string name="settings_banner_desc">Atur PELUKDIRI sesuai kebutuhanmu.\nKamu bisa mengubahnya kapan saja.</string>
     <string name="settings_export_confirm_title">Ekspor Data</string>
-    <string name="settings_export_confirm_msg">Data 7 hari terakhir akan dikemas dalam format CSV. Lanjutkan ekspor?</string>
+    <string name="settings_export_confirm_msg">Semua data yang tersedia akan dikemas dalam ZIP berisi file CSV. Lanjutkan ekspor?</string>
     <string name="settings_export_button">Ekspor</string>
     <string name="settings_export_progress_title">Mengekspor data</string>
     <string name="settings_export_progress_msg">Sedang menyiapkan file ZIP…</string>
@@ -173,7 +189,7 @@
     <string name="adaptive_mode_monitored_apps">Aplikasi Dipantau</string>
     <string name="adaptive_mode_monitored_apps_desc_format">Dari %1$d aplikasi</string>
     <string name="adaptive_mode_prediction_detail_title">Detail Prediksi</string>
-    <string name="adaptive_mode_prediction_detail_msg">Algoritma memprediksi perilaku penggunaanmu berdasarkan data 7 hari terakhir untuk menentukan batas yang paling efektif namun tetap nyaman.</string>
+    <string name="adaptive_mode_prediction_detail_msg">Algoritma memprediksi perilaku penggunaanmu berdasarkan data 14 hari terakhir untuk menentukan batas yang paling efektif namun tetap nyaman.</string>
     <string name="adaptive_mode_understand">Mengerti</string>
 
     <!-- Apps Intervention -->
@@ -181,6 +197,7 @@
     <string name="apps_intervention_desc">Pilih aplikasi yang ingin kamu batasi dan diintervensi.\nIntervensi akan muncul saat kamu membuka aplikasi ini.</string>
     <string name="apps_intervention_focus_title">Fokus pada yang penting</string>
     <string name="apps_intervention_focus_desc">Pilih aplikasi yang paling sering membuatmu terdistraksi agar intervensi lebih efektif dan tidak mengganggu.</string>
+    <string name="apps_intervention_loading">Memuat aplikasi</string>
     <string name="apps_intervention_search_hint">Cari aplikasi...</string>
 
     <string name="apps_intervention_selected_count">%1$d dipilih</string>
@@ -265,6 +282,7 @@
     <string name="profile_delete_photo">Hapus Foto Profil</string>
     <string name="profile_test_onboarding">Tes Onboarding</string>
     <string name="profile_test_intervention">Tes Intervensi</string>
+    <string name="profile_test_intervention_pattern">Tes Intervensi Pola</string>
 
     <!-- All Apps -->
     <string name="all_apps_title">Semua Aplikasi Hari Ini</string>
@@ -331,6 +349,18 @@
     <string name="intervention_completed_title">Intervensi Selesai!</string>
     <string name="intervention_completed_msg">Bagus! Kamu sudah mengambil kendali kembali. Gunakan aplikasimu dengan bijak.</string>
     <string name="intervention_continue_to_app">Lanjutkan ke Aplikasi</string>
+    <string name="intervention_mindful_pause_title">Ambil Jeda Sejenak</string>
+    <string name="intervention_difficulty_level">Tingkat Kesulitan: %1$d</string>
+    <string name="intervention_max_penalty">Penalti Maksimum Diterapkan</string>
+    <string name="intervention_emergency_remaining">Sisa Darurat: %1$d</string>
+    <string name="intervention_emergency_button_short">Darurat</string>
+    <string name="intervention_submit_button_short">Kirim</string>
+    <string name="intervention_result_success">Berhasil!</string>
+    <string name="intervention_result_failed">Belum Tepat</string>
+    <string name="intervention_result_finish">Selesai</string>
+    <string name="intervention_result_close">Tutup</string>
+    <string name="intervention_result_user_answer">Jawaban Anda: %1$s</string>
+    <string name="intervention_result_correct_answer">Jawaban Benar: %1$s</string>
 
     <!-- Onboarding -->
     <string name="onboarding_skip">Lewati</string>

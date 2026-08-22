@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -22,6 +21,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
@@ -34,11 +36,8 @@ fun SettingsScreen(
     onHomeClick: () -> Unit,
     onProgressClick: () -> Unit,
     onNavigateToAdaptiveMode: () -> Unit,
-    onNavigateToNotifications: () -> Unit,
     onNavigateToApps: () -> Unit,
     onNavigateToInformedConsent: () -> Unit,
-    onNavigateToPrivacy: () -> Unit,
-    onNavigateToTerms: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onExitApp: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
@@ -52,14 +51,11 @@ fun SettingsScreen(
         onHomeClick = onHomeClick,
         onProgressClick = onProgressClick,
         onNavigateToAdaptiveMode = onNavigateToAdaptiveMode,
-        onNavigateToNotifications = onNavigateToNotifications,
         onNavigateToApps = onNavigateToApps,
         onNavigateToInformedConsent = onNavigateToInformedConsent,
         onSleepTimeClick = { showTimePickerDialog = "sleep" },
         onWakeTimeClick = { showTimePickerDialog = "wake" },
         onExportClick = { showExportDialog = true },
-        onNavigateToPrivacy = onNavigateToPrivacy,
-        onNavigateToTerms = onNavigateToTerms,
         onNavigateToAbout = onNavigateToAbout,
         onLogout = onExitApp
     )
@@ -70,7 +66,7 @@ fun SettingsScreen(
         val timePickerState = rememberTimePickerState(
             initialHour = parts.getOrNull(0)?.toIntOrNull() ?: 22,
             initialMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0,
-            is24Hour = true
+            is24Hour = false
         )
 
         AlertDialog(
@@ -183,14 +179,11 @@ private fun SettingsLayout(
     onHomeClick: () -> Unit,
     onProgressClick: () -> Unit,
     onNavigateToAdaptiveMode: () -> Unit,
-    onNavigateToNotifications: () -> Unit,
     onNavigateToApps: () -> Unit,
     onNavigateToInformedConsent: () -> Unit,
     onSleepTimeClick: () -> Unit,
     onWakeTimeClick: () -> Unit,
     onExportClick: () -> Unit,
-    onNavigateToPrivacy: () -> Unit,
-    onNavigateToTerms: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -219,7 +212,7 @@ private fun SettingsLayout(
                         onClick = onSleepTimeClick,
                         trailing = {
                             Text(
-                                text = state.sleepTime,
+                                text = formatTo12Hour(state.sleepTime),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -233,7 +226,7 @@ private fun SettingsLayout(
                         onClick = onWakeTimeClick,
                         trailing = {
                             Text(
-                                text = state.wakeTime,
+                                text = formatTo12Hour(state.wakeTime),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -259,20 +252,6 @@ private fun SettingsLayout(
             item(key = "info") {
                 SettingsSection(title = stringResource(R.string.settings_info_section)) {
                     SettingsItem(
-                        title = stringResource(R.string.settings_privacy_title),
-                        description = stringResource(R.string.settings_privacy_desc),
-                        icon = Icons.Default.Shield,
-                        onClick = onNavigateToPrivacy
-                    )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = stringResource(R.string.settings_terms_title),
-                        description = stringResource(R.string.settings_terms_desc),
-                        icon = Icons.Default.Description,
-                        onClick = onNavigateToTerms
-                    )
-                    SettingsDivider()
-                    SettingsItem(
                         title = stringResource(R.string.settings_informed_consent_title),
                         description = stringResource(R.string.settings_informed_consent_desc),
                         icon = Icons.Default.Assignment,
@@ -284,20 +263,6 @@ private fun SettingsLayout(
                         description = stringResource(R.string.settings_about_desc),
                         icon = Icons.Default.Info,
                         onClick = onNavigateToAbout
-                    )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = stringResource(R.string.settings_notifications_title),
-                        description = stringResource(R.string.settings_notifications_desc),
-                        icon = Icons.Default.Notifications,
-                        onClick = onNavigateToNotifications,
-                        trailing = {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     )
                 }
             }
@@ -391,3 +356,13 @@ private fun SettingsNavigation(
         )
     }
 }
+
+private fun formatTo12Hour(timeStr: String): String {
+    return try {
+        val localTime = LocalTime.parse(timeStr)
+        localTime.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US))
+    } catch (_: Exception) {
+        timeStr
+    }
+}
+

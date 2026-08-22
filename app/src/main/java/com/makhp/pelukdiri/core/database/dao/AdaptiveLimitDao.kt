@@ -15,6 +15,9 @@ interface AdaptiveLimitDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertInitialLimit(limit: DailyAdaptiveLimitEntity)
 
+    @Query("UPDATE daily_adaptive_limits SET calculatedLimitMinutes = :limitMinutes WHERE dateString = :date")
+    suspend fun updateCalculatedLimit(date: String, limitMinutes: Int)
+
     @Query("SELECT * FROM daily_adaptive_limits WHERE dateString = :date")
     suspend fun getLimitForDate(date: String): DailyAdaptiveLimitEntity?
 

@@ -20,19 +20,28 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.R
-import com.makhp.pelukdiri.core.domain.model.AppUsage
+import com.makhp.pelukdiri.features.analytics.AnalyticsPeriod
+import com.makhp.pelukdiri.features.analytics.AnalyticsUiState
+import com.makhp.pelukdiri.features.analytics.AnalyticsViewModel
 import com.makhp.pelukdiri.ui.components.AppIcon
 import com.makhp.pelukdiri.ui.components.formatDuration
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllAppsScreen(
+    selectedDate: LocalDate,
+    selectedPeriod: AnalyticsPeriod,
     onBackClick: () -> Unit,
     onNavigateToAnalytics: () -> Unit,
-    viewModel: DashboardViewModel = hiltViewModel()
+    viewModel: AnalyticsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedApp by remember { mutableStateOf<UiAppUsage?>(null) }
+
+    LaunchedEffect(selectedDate, selectedPeriod) {
+        viewModel.load(selectedDate, selectedPeriod)
+    }
 
     Scaffold(
         topBar = {
@@ -47,7 +56,9 @@ fun AllAppsScreen(
         }
     ) { paddingValues ->
         when (val state = uiState) {
-            is DashboardUiState.Success -> {
+            is AnalyticsUiState.Success -> if (
+                state.selectedDate == selectedDate && state.selectedPeriod == selectedPeriod
+            ) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -58,7 +69,7 @@ fun AllAppsScreen(
                     items(state.topApps) { app ->
                         AllAppUsageRow(
                             app = app,
-                            maxUsage = state.topApps.maxOfOrNull { it.usageDurationMillis } ?: 1L,
+                            totalScreenTimeMillis = state.summary?.totalScreenTimeMillis ?: 0L,
                             onClick = { selectedApp = app }
                         )
                     }
@@ -74,13 +85,21 @@ fun AllAppsScreen(
                         }
                     )
                 }
-            }
-            is DashboardUiState.Loading -> {
+            } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
-            else -> {}
+            is AnalyticsUiState.Loading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            is AnalyticsUiState.Error -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(state.message)
+                }
+            }
         }
     }
 }
@@ -88,10 +107,10 @@ fun AllAppsScreen(
 @Composable
 private fun AllAppUsageRow(
     app: UiAppUsage,
-    maxUsage: Long,
+    totalScreenTimeMillis: Long,
     onClick: () -> Unit
 ) {
-    val progress = if (maxUsage == 0L) 0f else app.usageDurationMillis.toFloat() / maxUsage
+    val progress = appUsageShare(app.usageDurationMillis, totalScreenTimeMillis)
     
     Surface(
         modifier = Modifier
@@ -124,3 +143,7 @@ private fun AllAppUsageRow(
         }
     }
 }
+
+internal fun appUsageShare(appUsageMillis: Long, totalScreenTimeMillis: Long): Float =
+    if (totalScreenTimeMillis <= 0L) 0f
+    else (appUsageMillis.toFloat() / totalScreenTimeMillis).coerceIn(0f, 1f)

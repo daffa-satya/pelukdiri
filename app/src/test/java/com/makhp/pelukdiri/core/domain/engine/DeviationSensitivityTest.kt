@@ -10,24 +10,26 @@ class DeviationSensitivityTest {
         val profiles = mutableListOf<Profile>()
         
         // 1. Highly Consistent (M=0)
-        profiles.add(Profile("Consistent 2h", List(7) { 120.0 }, listOf(120.0, 121.0, 150.0, 180.0, 240.0)))
+        profiles.add(Profile("Consistent 2h", List(14) { 120.0 }, listOf(120.0, 121.0, 150.0, 180.0, 240.0)))
         
         // 2. Typical Moderate Fluctuation (M=15)
-        profiles.add(Profile("Moderate 2h (M=15)", listOf(100.0, 105.0, 120.0, 120.0, 120.0, 135.0, 140.0), listOf(120.0, 135.0, 180.0, 240.0, 360.0)))
+        profiles.add(Profile("Moderate 2h (M=15)", doubled(100.0, 105.0, 120.0, 120.0, 120.0, 135.0, 140.0), listOf(120.0, 135.0, 180.0, 240.0, 360.0)))
         
         // 3. High Fluctuation (M=60)
-        profiles.add(Profile("High 3h (M=60)", listOf(60.0, 120.0, 180.0, 180.0, 240.0, 300.0, 180.0), listOf(180.0, 240.0, 300.0, 360.0, 480.0, 600.0)))
+        profiles.add(Profile("High 3h (M=60)", doubled(60.0, 120.0, 180.0, 180.0, 240.0, 300.0, 180.0), listOf(180.0, 240.0, 300.0, 360.0, 480.0, 600.0)))
         
         // 4. Low Baseline (B=30, M=5)
-        profiles.add(Profile("Low 30m (M=5)", listOf(25.0, 30.0, 35.0, 30.0, 25.0, 35.0, 30.0), listOf(30.0, 45.0, 60.0, 90.0, 120.0)))
+        profiles.add(Profile("Low 30m (M=5)", doubled(25.0, 30.0, 35.0, 30.0, 25.0, 35.0, 30.0), listOf(30.0, 45.0, 60.0, 90.0, 120.0)))
 
         // 5. High Baseline (B=480, M=30)
-        profiles.add(Profile("High 8h (M=30)", listOf(450.0, 480.0, 510.0, 480.0, 450.0, 510.0, 480.0), listOf(480.0, 540.0, 600.0, 720.0, 960.0)))
+        profiles.add(Profile("High 8h (M=30)", doubled(450.0, 480.0, 510.0, 480.0, 450.0, 510.0, 480.0), listOf(480.0, 540.0, 600.0, 720.0, 960.0)))
 
         return profiles
     }
 
     data class Profile(val name: String, val history: List<Double>, val testUsages: List<Double>)
+
+    private fun doubled(vararg values: Double) = values.flatMap { listOf(it, it) }
 
     @Test
     fun runAllSensitivityAnalysis() {

@@ -11,6 +11,7 @@ import android.hardware.SensorManager
 import android.os.Process
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.model.DailyUsageSummary
+import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
 import java.text.SimpleDateFormat
@@ -76,7 +77,7 @@ class AppUsageCollector @Inject constructor(
     /**
      * Heavy I/O function that queries UsageStatsManager for past usage events.
      */
-    fun executeFullBackfill(daysHistory: Int = 7): Map<String, List<AppUsage>> {
+    fun executeFullBackfill(daysHistory: Int = HistoricalConfig.BACKFILL_DAYS): Map<String, List<AppUsage>> {
         val backfillData = mutableMapOf<String, List<AppUsage>>()
         val today = LocalDate.now()
 
@@ -200,12 +201,12 @@ class AppUsageCollector @Inject constructor(
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    fun getPast7DaysScreenTimeHistory(): List<DailyUsageSummary> {
+    fun getPast14DaysScreenTimeHistory(): List<DailyUsageSummary> {
         if (!isPermissionGranted()) return emptyList()
 
         val calendar = Calendar.getInstance()
         val endTime = calendar.timeInMillis
-        calendar.add(Calendar.DAY_OF_YEAR, -7)
+        calendar.add(Calendar.DAY_OF_YEAR, -HistoricalConfig.BACKFILL_DAYS)
         val startTime = calendar.timeInMillis
 
         val stats = usageStatsManager.queryUsageStats(

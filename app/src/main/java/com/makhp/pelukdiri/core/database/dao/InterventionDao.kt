@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.makhp.pelukdiri.core.database.entity.InterventionLogEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -35,4 +36,17 @@ interface InterventionDao {
 
     @Query("SELECT COUNT(*) FROM intervention_logs WHERE isBypassed = 1 AND timestamp >= :start AND timestamp < :end")
     suspend fun getBypassCountInInterval(start: Long, end: Long): Int
+
+    @Transaction
+    suspend fun insertBypassIfQuotaAvailable(
+        log: InterventionLogEntity,
+        start: Long,
+        end: Long,
+        limit: Int,
+    ): Int? {
+        val currentCount = getBypassCountInInterval(start, end)
+        if (currentCount >= limit) return null
+        insertLog(log)
+        return limit - currentCount - 1
+    }
 }

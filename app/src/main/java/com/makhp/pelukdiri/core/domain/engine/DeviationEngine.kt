@@ -26,7 +26,7 @@ class DeviationEngine @Inject constructor(
      * Calculates the deviation signal based on current usage and historical context.
      *
      * @param currentUsage Current usage value in minutes.
-     * @param history List of recent historical observations in minutes (e.g., last 7 valid days).
+     * @param history List of recent historical observations in minutes.
      * @return [DeviationResult] containing the signal D and intermediate statistics.
      */
     fun calculate(

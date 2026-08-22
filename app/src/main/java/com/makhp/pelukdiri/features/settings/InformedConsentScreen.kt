@@ -33,6 +33,7 @@ fun InformedConsentScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .statusBarsPadding()
                     .padding(horizontal = Dimens.spaceExtraSmall, vertical = Dimens.spaceSmall),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -55,7 +56,7 @@ fun InformedConsentScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = Dimens.spaceExtraLarge),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -270,10 +271,6 @@ fun InformedConsentScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
                 )
-            }
-            
-            item {
-                Spacer(Modifier.height(32.dp))
             }
         }
     }

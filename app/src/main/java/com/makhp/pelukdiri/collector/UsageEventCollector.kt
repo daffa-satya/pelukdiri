@@ -19,12 +19,52 @@ class UsageEventCollector @Inject constructor(
     private val screenReconstructor: ScreenInteractiveReconstructor
 ) {
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+    private val ignoredPackages = setOf(
+        "com.miui.home", "com.android.launcher", "com.google.android.apps.nexuslauncher",
+        "com.android.settings", "com.android.systemui", "app.olauncher", "com.makhp.pelukdiri"
+    )
 
     /**
      * Reconstructs usage for a specific local date.
      * Uses a context window before the day start to ensure session continuity.
      */
     fun getUsageForDay(date: LocalDate): List<AppUsage> {
+        val day = reconstructDay(date)
+        val usageMap = reconstructor.aggregateUsage(day.sessions, day.startMillis, day.endMillis)
+
+        return usageMap.filter { it.key !in ignoredPackages && it.value.duration > 0 }
+            .map { (pkg, stats) ->
+                AppUsage(
+                    packageName = pkg,
+                    appName = appUsageCollector.getAppName(pkg),
+                    usageDurationMillis = stats.duration,
+                    lastUsedTimestamp = stats.lastTimestamp
+                )
+            }
+    }
+
+    fun getLongestSessionForDay(date: LocalDate): Long {
+        val day = reconstructDay(date)
+        return reconstructor.longestSessionDuration(
+            day.sessions,
+            day.startMillis,
+            day.endMillis,
+            ignoredPackages,
+        )
+    }
+
+    fun getHourlyUsageForDay(date: LocalDate): List<Long> {
+        val day = reconstructDay(date)
+        return reconstructor.aggregateHourlyUsage(
+            sessions = day.sessions,
+            rangeStart = day.startMillis,
+            rangeEnd = day.endMillis,
+            zoneId = ZoneId.systemDefault(),
+            ignoredPackages = ignoredPackages,
+        )
+    }
+
+    private fun reconstructDay(date: LocalDate): ReconstructedDay {
         val zoneId = ZoneId.systemDefault()
         val dayStart = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val dayEnd = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
@@ -46,25 +86,14 @@ class UsageEventCollector @Inject constructor(
             initialPackage = initialState?.packageName,
             initialStartTime = initialState?.timestamp ?: dayStart
         )
-        
-        val usageMap = reconstructor.aggregateUsage(sessions, dayStart, dayEnd)
-        
-        // 4. Map to Domain Model
-        val ignoredPackages = listOf(
-            "com.miui.home", "com.android.launcher", "com.google.android.apps.nexuslauncher",
-            "com.android.settings", "com.android.systemui", "app.olauncher", "com.makhp.pelukdiri"
-        )
-
-        return usageMap.filter { it.key !in ignoredPackages && it.value.duration > 0 }
-            .map { (pkg, stats) ->
-                AppUsage(
-                    packageName = pkg,
-                    appName = appUsageCollector.getAppName(pkg),
-                    usageDurationMillis = stats.duration,
-                    lastUsedTimestamp = stats.lastTimestamp
-                )
-            }
+        return ReconstructedDay(sessions, dayStart, queryEnd)
     }
+
+    private data class ReconstructedDay(
+        val sessions: List<UsageSession>,
+        val startMillis: Long,
+        val endMillis: Long,
+    )
 
     fun getScreenOnMillisForDay(date: LocalDate): Long {
         val zoneId = ZoneId.systemDefault()

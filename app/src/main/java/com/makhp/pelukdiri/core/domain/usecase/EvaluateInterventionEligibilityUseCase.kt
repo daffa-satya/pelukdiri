@@ -5,15 +5,19 @@ import com.makhp.pelukdiri.collector.UsageEventCollector
 import com.makhp.pelukdiri.core.domain.engine.ControlEngine
 import com.makhp.pelukdiri.core.domain.engine.DeviationEngine
 import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeSelector
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.InterventionDecision
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionAudit
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
+import com.makhp.pelukdiri.core.domain.model.DeviationResult
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
+import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.flow.first
 import android.util.Log
-import java.time.LocalDate
 import java.time.LocalTime
 import javax.inject.Inject
 
@@ -24,6 +28,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
     private val deviationEngine: DeviationEngine,
     private val controlEngine: ControlEngine,
     private val interventionLogRepository: InterventionLogRepository,
+    private val interventionDecisionRepository: InterventionDecisionRepository,
     private val challengeSelector: InterventionChallengeSelector,
     private val appUsageCollector: AppUsageCollector,
     private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
@@ -31,16 +36,50 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(packageName: String): InterventionDecision {
         val currentTimeMs = timeProvider.nowMillis()
+        return try {
+            evaluate(packageName, currentTimeMs)
+        } catch (error: Exception) {
+            val currentDifficulty = try {
+                userPreferencesRepository.currentDifficulty.first()
+            } catch (_: Exception) {
+                -1
+            }
+            val lux = try {
+                appUsageCollector.getCurrentAmbientLightLux()
+            } catch (_: Exception) {
+                Float.NaN
+            }
+            audit(
+                decision = InterventionDecision(false, null, 0.0, 0.0, lux),
+                timestamp = currentTimeMs,
+                packageName = packageName,
+                currentDifficulty = currentDifficulty,
+                reason = InterventionDecisionReason.EVALUATION_ERROR,
+                errorType = error.javaClass.simpleName,
+            )
+            throw error
+        }
+    }
+
+    private suspend fun evaluate(packageName: String, currentTimeMs: Long): InterventionDecision {
         val today = timeProvider.today()
+        val currentDifficulty = userPreferencesRepository.currentDifficulty.first()
 
         // 0. Quick check for active intervention lock
         if (lockManager.isLocked.value) {
-            return InterventionDecision(
+            val lux = appUsageCollector.getCurrentAmbientLightLux()
+            return audit(
+                decision = InterventionDecision(
                 shouldTrigger = false,
                 controlResult = null,
                 monitoredUsageMinutes = 0.0,
                 totalUsageMinutes = 0.0,
-                ambientLux = appUsageCollector.getCurrentAmbientLightLux()
+                ambientLux = lux,
+                ),
+                timestamp = currentTimeMs,
+                packageName = packageName,
+                currentDifficulty = currentDifficulty,
+                reason = InterventionDecisionReason.ACTIVE_LOCK,
             )
         }
         
@@ -59,12 +98,18 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         val currentTotalUsageMinutes = totalUsageMillis / 1000.0 / 60.0
 
         if (packageName !in monitoredPackages) {
-            return InterventionDecision(
+            return audit(
+                decision = InterventionDecision(
                 shouldTrigger = false,
                 controlResult = null,
                 monitoredUsageMinutes = currentMonitoredUsageMinutes,
                 totalUsageMinutes = currentTotalUsageMinutes,
-                ambientLux = appUsageCollector.getCurrentAmbientLightLux()
+                ambientLux = appUsageCollector.getCurrentAmbientLightLux(),
+                ),
+                timestamp = currentTimeMs,
+                packageName = packageName,
+                currentDifficulty = currentDifficulty,
+                reason = InterventionDecisionReason.PACKAGE_NOT_MONITORED,
             )
         }
         
@@ -74,13 +119,25 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         val bypassUntil = userPreferencesRepository.emergencyBypassUntil.first()
         
         if (currentTimeMs < nextEligible || currentTimeMs < bypassUntil) {
-             return InterventionDecision(
-                 shouldTrigger = false, 
-                 controlResult = null, 
-                 monitoredUsageMinutes = currentMonitoredUsageMinutes, 
-                 totalUsageMinutes = currentTotalUsageMinutes, 
-                 ambientLux = appUsageCollector.getCurrentAmbientLightLux()
-             )
+            val bypassActive = currentTimeMs < bypassUntil
+            return audit(
+                decision = InterventionDecision(
+                    shouldTrigger = false,
+                    controlResult = null,
+                    monitoredUsageMinutes = currentMonitoredUsageMinutes,
+                    totalUsageMinutes = currentTotalUsageMinutes,
+                    ambientLux = appUsageCollector.getCurrentAmbientLightLux(),
+                ),
+                timestamp = currentTimeMs,
+                packageName = packageName,
+                currentDifficulty = currentDifficulty,
+                reason = if (bypassActive) {
+                    InterventionDecisionReason.BYPASS_ACTIVE
+                } else {
+                    InterventionDecisionReason.COOLDOWN_ACTIVE
+                },
+                nextEligibleAt = if (bypassActive) bypassUntil else nextEligible,
+            )
         }
         
         // 3. Deviation
@@ -90,11 +147,10 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         
         // 4. Performance & Sensitivity
         Log.d("EligibilityUseCase", "Stage: reading performance context")
-        val currentDiff = userPreferencesRepository.currentDifficulty.first()
         val recentLogs = interventionLogRepository.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
         val challengeType = challengeSelector.select()
         val currentDifficultyRun = recentLogs
-            .takeWhile { it.difficultyLevel == currentDiff }
+            .takeWhile { it.difficultyLevel == currentDifficulty }
             .filter { it.challengeType == challengeType }
             .filter { !it.isBypassed && it.responseTimeMs > 0L }
         val latestLog = currentDifficultyRun.firstOrNull()
@@ -128,14 +184,14 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             lux = lux,
             bedtime = bedtime,
             wakeTime = wakeTime,
-            currentLevel = currentDiff,
+            currentLevel = currentDifficulty,
             timestampMs = currentTimeMs
         )
         
         val shouldTrigger = devResult.deviation != null && devResult.deviation > 0.05
         Log.d("EligibilityUseCase", "Stage: complete trigger=$shouldTrigger")
         
-        return InterventionDecision(
+        val decision = InterventionDecision(
             shouldTrigger = shouldTrigger,
             controlResult = controlResult,
             monitoredUsageMinutes = currentMonitoredUsageMinutes,
@@ -143,6 +199,74 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             ambientLux = lux,
             challengeType = challengeType,
         )
+        return audit(
+            decision = decision,
+            timestamp = currentTimeMs,
+            packageName = packageName,
+            currentDifficulty = currentDifficulty,
+            reason = when {
+                devResult.deviation == null -> InterventionDecisionReason.INSUFFICIENT_HISTORY
+                shouldTrigger -> InterventionDecisionReason.TRIGGERED
+                else -> InterventionDecisionReason.BELOW_DEVIATION_THRESHOLD
+            },
+            historyCount = history.size,
+            deviationResult = devResult,
+            challengeType = challengeType,
+        )
+    }
+
+    private suspend fun audit(
+        decision: InterventionDecision,
+        timestamp: Long,
+        packageName: String,
+        currentDifficulty: Int,
+        reason: InterventionDecisionReason,
+        historyCount: Int = 0,
+        deviationResult: DeviationResult? = null,
+        challengeType: InterventionChallengeType? = null,
+        nextEligibleAt: Long? = decision.controlResult?.nextEligibleInterventionAt,
+        errorType: String? = null,
+    ): InterventionDecision {
+        val control = decision.controlResult
+        try {
+            interventionDecisionRepository.insert(
+                InterventionDecisionAudit(
+                    timestamp = timestamp,
+                    packageName = packageName,
+                    monitoredUsageMinutes = decision.monitoredUsageMinutes,
+                    totalUsageMinutes = decision.totalUsageMinutes,
+                    ambientLux = decision.ambientLux,
+                    historyCount = historyCount,
+                    baselineMedianMinutes = deviationResult?.baseline,
+                    madMinutes = deviationResult?.mad,
+                    deviationSignal = deviationResult?.signal,
+                    relativeDeviation = deviationResult?.relativeDeviation,
+                    relativeMagnitude = deviationResult?.relativeMagnitude,
+                    deviation = deviationResult?.deviation,
+                    performance = control?.performance,
+                    qLux = control?.qLux,
+                    qTime = control?.qTime,
+                    sensitivity = control?.sensitivity,
+                    difficultyControl = control?.difficultyControl,
+                    difficultyControlSignal = control?.normalizedDifficultyControl,
+                    difficultyTarget = control?.difficultyTarget,
+                    currentDifficulty = currentDifficulty,
+                    nextDifficulty = control?.nextDifficulty,
+                    challengeType = challengeType,
+                    frequencyControl = control?.frequencyControl,
+                    normalizedFrequencyControl = control?.normalizedFrequencyControl,
+                    proposedIntervalMinutes = control?.intervalMinutes,
+                    nextEligibleAt = nextEligibleAt,
+                    shouldTrigger = decision.shouldTrigger,
+                    reason = reason,
+                    controlMode = control?.mode,
+                    errorType = errorType,
+                )
+            )
+        } catch (error: Exception) {
+            Log.e("EligibilityUseCase", "Unable to persist intervention decision audit", error)
+        }
+        return decision
     }
 
     private companion object {

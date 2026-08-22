@@ -29,6 +29,7 @@ class PelukdiriApp : Application(), Configuration.Provider {
         super.onCreate()
         android.util.Log.d("PelukdiriApp", "Application Created")
         setupBackgroundSync()
+        setupDataRetentionWorker()
         triggerImmediateSync()
     }
 
@@ -46,6 +47,17 @@ class PelukdiriApp : Application(), Configuration.Provider {
             "UsageSyncWorker",
             ExistingPeriodicWorkPolicy.UPDATE,
             syncRequest
+        )
+    }
+
+    private fun setupDataRetentionWorker() {
+        val retentionRequest = PeriodicWorkRequestBuilder<com.makhp.pelukdiri.worker.DataRetentionWorker>(1, TimeUnit.DAYS)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            com.makhp.pelukdiri.worker.DataRetentionWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            retentionRequest
         )
     }
 

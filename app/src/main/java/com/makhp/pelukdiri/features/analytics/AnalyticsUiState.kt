@@ -21,10 +21,26 @@ sealed interface AnalyticsUiState {
         val comparisonSummary: DailySummary? = null,
         val topApps: ImmutableList<UiAppUsage>,
         val hourlyUsage: ImmutableList<Long>,
+        val isGraphCalculated: Boolean = false,
+        val isCalculatingGraph: Boolean = false,
+        val graphError: String? = null,
         val interventionCount: Int,
+        val comparisonInterventionCount: Int = 0,
         val socialMediaUsageMillis: Long = 0L,
+        val comparisonSocialMediaUsageMillis: Long = 0L,
+        val longestSessionMillis: Long = 0L,
+        val comparisonLongestSessionMillis: Long = 0L,
         val adaptiveLimitMinutes: Int? = null,
         val funFact: String = ""
     ) : AnalyticsUiState
     data class Error(val message: String) : AnalyticsUiState
 }
+
+internal fun percentageChange(current: Long, previous: Long): Int? =
+    if (previous == 0L) null else (((current - previous) * 100) / previous).toInt()
+
+internal fun shouldCalculateGraphAutomatically(
+    period: AnalyticsPeriod,
+    selectedDate: LocalDate,
+    today: LocalDate,
+): Boolean = period == AnalyticsPeriod.DAILY && selectedDate == today

@@ -30,20 +30,11 @@ class PerformEmergencyBypassUseCase @Inject constructor(
         val startOfDay = today.atStartOfDay(timeProvider.zoneId()).toInstant().toEpochMilli()
         val endOfDay = today.plusDays(1).atStartOfDay(timeProvider.zoneId()).toInstant().toEpochMilli()
 
-        // 1. Backend Enforcement (Check daily limit)
-        val currentCount = interventionLogRepository.getBypassCountForDay(startOfDay, endOfDay)
-
-        if (currentCount >= 5) {
-            return BypassResult.Exhausted
-        }
-
         val currentTimeMs = timeProvider.nowMillis()
         val bypassUntil = currentTimeMs + 180_000L // Exactly 3 minutes
 
-        // 2. Persistent State Updates
-
-        // Log as bypassed
-        interventionLogRepository.insertLog(
+        // Quota enforcement and the append-only audit row share one Room transaction.
+        val remaining = interventionLogRepository.insertBypassIfQuotaAvailable(
             InterventionLog(
                 timestamp = currentTimeMs,
                 deviation = deviation,
@@ -54,8 +45,11 @@ class PerformEmergencyBypassUseCase @Inject constructor(
                 isBypassed = true,
                 penaltyAppliedMinutes = penaltyMinutes,
                 challengeType = challengeType,
-            )
-        )
+            ),
+            startOfDay = startOfDay,
+            endOfDay = endOfDay,
+            limit = DAILY_BYPASS_LIMIT,
+        ) ?: return BypassResult.Exhausted
 
         // Set bypass window
         userPreferencesRepository.setEmergencyBypassUntil(bypassUntil)
@@ -63,6 +57,10 @@ class PerformEmergencyBypassUseCase @Inject constructor(
         // Restore eligibility immediately after bypass expires
         userPreferencesRepository.setNextEligibleInterventionAt(bypassUntil)
 
-        return BypassResult.Success(remaining = 5 - (currentCount + 1))
+        return BypassResult.Success(remaining = remaining)
+    }
+
+    private companion object {
+        const val DAILY_BYPASS_LIMIT = 5
     }
 }

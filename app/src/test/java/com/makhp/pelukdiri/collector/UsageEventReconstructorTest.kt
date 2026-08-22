@@ -3,6 +3,7 @@ package com.makhp.pelukdiri.collector
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.ZoneId
 
 class UsageEventReconstructorTest {
 
@@ -120,5 +121,39 @@ class UsageEventReconstructorTest {
         
         assertEquals(1, sessions.size)
         assertEquals(2000L, sessions[0].endTime)
+    }
+
+    @Test
+    fun `longest session clips range and ignores system packages`() {
+        val sessions = listOf(
+            UsageSession(pkgA, 50L, 250L),
+            UsageSession(pkgB, 110L, 190L),
+            UsageSession("com.android.systemui", 100L, 300L),
+        )
+
+        val longest = reconstructor.longestSessionDuration(
+            sessions = sessions,
+            rangeStart = 100L,
+            rangeEnd = 300L,
+            ignoredPackages = setOf("com.android.systemui"),
+        )
+
+        assertEquals(150L, longest)
+    }
+
+    @Test
+    fun `hourly usage splits a session across hour boundaries`() {
+        val hour = 60 * 60 * 1000L
+        val sessions = listOf(UsageSession(pkgA, 30 * 60_000L, hour + 15 * 60_000L))
+
+        val usage = reconstructor.aggregateHourlyUsage(
+            sessions = sessions,
+            rangeStart = 0L,
+            rangeEnd = 2 * hour,
+            zoneId = ZoneId.of("UTC"),
+        )
+
+        assertEquals(30 * 60_000L, usage[0])
+        assertEquals(15 * 60_000L, usage[1])
     }
 }

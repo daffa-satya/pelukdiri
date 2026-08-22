@@ -24,6 +24,6 @@ data class DeviationResult(
 sealed interface DeviationStatus {
     /** Calculation completed successfully. */
     data object Success : DeviationStatus
-    /** History size is below the required threshold (e.g., 7 days). */
+    /** History size is below the configured required threshold. */
     data object InsufficientHistory : DeviationStatus
 }

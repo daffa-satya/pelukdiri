@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -57,12 +58,11 @@ fun AboutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(DashboardTokens.ScreenPadding),
+            contentPadding = PaddingValues(horizontal = DashboardTokens.ScreenPadding, vertical = Dimens.spaceExtraLarge),
             verticalArrangement = Arrangement.spacedBy(DashboardTokens.LargeGap),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item {
-                Spacer(Modifier.height(DashboardTokens.LargeGap))
                 Box(
                     modifier = Modifier
                         .size(Dimens.spaceExtraLarge * 4 - Dimens.spaceSmall) // 120.dp
@@ -137,6 +137,7 @@ private fun AboutHeader(onBackClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = Dimens.spaceExtraSmall, vertical = Dimens.spaceSmall),
         verticalAlignment = Alignment.CenterVertically
     ) {
