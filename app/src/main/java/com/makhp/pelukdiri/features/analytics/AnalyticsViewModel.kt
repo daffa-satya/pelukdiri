@@ -70,7 +70,7 @@ class AnalyticsViewModel @Inject constructor(
         val totalTime = state.summary?.totalScreenTimeMillis ?: 0L
         val activeTime = if (socialTime > 0) socialTime else totalTime
         
-        if (activeTime == 0L) return "Mulai kelola waktu layarmu untuk melihat fakta menarik di sini!"
+        if (activeTime == 0L) return context.getString(R.string.analytics_fun_fact_empty)
 
         val formattedTime = com.makhp.pelukdiri.ui.components.formatDuration(activeTime)
         val minutes = activeTime / 60_000L

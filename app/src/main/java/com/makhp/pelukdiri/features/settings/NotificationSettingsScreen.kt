@@ -64,7 +64,7 @@ fun NotificationSettingsScreen(
         ) {
             item {
                 Text(
-                    text = "Aplikasi akan mengirimkan notifikasi secara otomatis untuk membantumu tetap sadar akan penggunaan layar.",
+                    text = stringResource(R.string.settings_notifications_auto_info),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -75,7 +75,7 @@ fun NotificationSettingsScreen(
             }
             
             item {
-                SettingsSection(title = "Daftar Notifikasi") {
+                SettingsSection(title = stringResource(R.string.settings_notifications_section_title)) {
                     NotificationInfoItem(
                         title = stringResource(R.string.notification_settings_daily_summary),
                         description = stringResource(R.string.notification_settings_daily_summary_desc),
@@ -111,12 +111,12 @@ fun NotificationSettingsScreen(
                     PelukDiriLogo(size = 32.dp)
                     Spacer(Modifier.width(DashboardTokens.MediumGap))
                     Text(
-                        text = "Kamu akan tetap menerima notifikasi penting ini secara rutin.",
+                        text = stringResource(R.string.settings_notifications_mandatory_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f)
                     )
-                    Icon(Icons.Default.Info, contentDescription = "Info notifikasi", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeMedium - Dimens.spaceExtraSmall))
+                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeMedium - Dimens.spaceExtraSmall))
                 }
             }
         }
@@ -132,10 +132,10 @@ private fun NotificationSettingsHeader(onBackClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClick) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Text(
-            text = "Notifikasi",
+            text = stringResource(R.string.settings_notifications_title),
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium
@@ -166,12 +166,12 @@ private fun NotificationNoticeBanner() {
             Spacer(Modifier.width(DashboardTokens.CardPadding))
             Column {
                 Text(
-                    text = "Notifikasi Otomatis",
+                    text = stringResource(R.string.settings_notifications_auto_banner_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "PELUKDIRI memastikan kamu tetap terhubung dengan progres digitalmu.",
+                    text = stringResource(R.string.settings_notifications_auto_banner_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

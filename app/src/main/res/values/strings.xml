@@ -4,7 +4,7 @@
 
     <!-- Dashboard -->
     <string name="dashboard_header_title">PELUKDIRI</string>
-    <string name="dashboard_screen_time_today">WAKTU LAYAR HARI INI</string>
+    <string name="dashboard_screen_time_today">WAKTU LAYAR SOSMED</string>
     <string name="dashboard_adaptive_limit">Batas Adaptif</string>
     <string name="dashboard_from_yesterday">%1$d%% dari kemarin</string>
     <string name="dashboard_more_than_yesterday">%1$d%% lebih lama dari kemarin</string>
@@ -47,6 +47,7 @@
     <string name="analytics_vs_limit">VS BATAS</string>
     <string name="analytics_most_used">Paling sering: %1$s</string>
     <string name="analytics_used_duration">Terpakai %1$s</string>
+    <string name="analytics_fun_fact_empty">Mulai kelola waktu layarmu untuk melihat fakta menarik di sini!</string>
     <string name="analytics_insight_message">Waktu layar kamu %1$s hari ini. Terus bangun kebiasaan sehat.</string>
     <string name="analytics_no_usage_data">Belum ada data penggunaan.</string>
     <string name="analytics_insufficient_data">Data tidak mencukupi</string>
@@ -87,7 +88,52 @@
     <string name="settings_terms_title">Ketentuan</string>
     <string name="settings_terms_desc">Baca syarat dan ketentuan penggunaan PELUKDIRI.</string>
     <string name="settings_about_title">Tentang</string>
+    <string name="settings_informed_consent_title">Informed Consent</string>
+    <string name="settings_informed_consent_desc">Persetujuan partisipasi penelitian.</string>
     <string name="settings_about_desc">Informasi tentang PELUKDIRI, versi aplikasi, dan tim pengembang.</string>
+    <string name="settings_notifications_section_title">Daftar Notifikasi</string>
+    <string name="settings_notifications_auto_info">Aplikasi akan mengirimkan notifikasi secara otomatis untuk membantumu tetap sadar akan penggunaan layar.</string>
+    <string name="settings_notifications_mandatory_note">Kamu akan tetap menerima notifikasi penting ini secara rutin.</string>
+    <string name="settings_notifications_auto_banner_title">Notifikasi Otomatis</string>
+    <string name="settings_notifications_auto_banner_desc">PELUKDIRI memastikan kamu tetap terhubung dengan progres digitalmu.</string>
+    <string name="settings_about_info_section">Informasi Aplikasi</string>
+    <string name="settings_about_version_label">Versi</string>
+    <string name="settings_about_website_label">Website</string>
+    <string name="settings_about_dev_team_label">Tim Pengembang</string>
+    <string name="settings_about_dev_team_value">MAKHP Studio</string>
+    <string name="settings_about_app_description">PELUKDIRI adalah aplikasi kesejahteraan digital adaptif yang membantu Anda mengelola waktu layar secara mindful. Dengan teknologi intervensi cerdas, kami membantu Anda kembali memegang kendali atas perangkat Anda.</string>
+    <string name="settings_about_copyright">© 2026 MAKHP. All Rights Reserved.</string>
+    <string name="settings_about_header">About</string>
+    <string name="settings_notifications_header">Notifikasi</string>
+    <string name="settings_notifications_banner_title">Notifikasi Otomatis</string>
+    <string name="settings_notifications_banner_desc">PELUKDIRI memastikan kamu tetap terhubung dengan progres digitalmu.</string>
+
+    <string name="profile_test_notification">Tes Notifikasi</string>
+    <string name="common_logo_desc">PelukDiri Logo</string>
+    <string name="common_back">Kembali</string>
+    <string name="common_save">Simpan</string>
+    <string name="common_close">Tutup</string>
+    <string name="common_cancel">Batal</string>
+    <string name="common_search_hint">Cari aplikasi...</string>
+
+    <string name="apps_intervention_installed_title">Aplikasi Terpasang</string>
+    <string name="apps_intervention_selected_count_label">%1$d dipilih</string>
+    <string name="apps_intervention_save_button">Simpan Pilihan</string>
+
+    <string name="informed_consent_header">Informed Consent</string>
+    <string name="informed_consent_title">INFORMED CONSENT</string>
+    <string name="informed_consent_p1">Perkenalkan kami dari Tim “Mama, Aku Kecanduan HP” SMAN 70 Jakarta. Saat ini kami sedang melaksanakan penelitian dengan judul “PELUKDIRI (Perangkat Lunak Untuk Kesejahteraan Digital Remaja Indonesia): Sistem Pengaturan Waktu Layar Berbasis Teori Kontrol untuk Kesehatan Digital”.</string>
+    <string name="informed_consent_p2">Penelitian ini bertujuan untuk mengetahui apakah penggunaan aplikasi PELUKDIRI dengan intervensi tantangan kognitif adaptif dapat membantu mengurangi durasi penggunaan layar, khususnya pada aplikasi hiburan, tanpa meningkatkan tingkat stres pengguna secara signifikan. PELUKDIRI dirancang sebagai perangkat lunak kesejahteraan digital yang memberikan tantangan kognitif singkat berupa matematika mental dan pola ketika responden membuka aplikasi hiburan yang telah ditentukan.</string>
+    <string name="informed_consent_p3">Manfaat penelitian ini adalah memberikan pengalaman kepada responden dalam menggunakan teknologi yang dirancang untuk membantu meningkatkan kesadaran terhadap penggunaan waktu layar. Selain itu, hasil penelitian diharapkan dapat menjadi dasar pengembangan perangkat lunak kesejahteraan digital yang lebih adaptif dan sesuai dengan kebutuhan remaja.</string>
+    <string name="informed_consent_p4">Metode penelitian yang digunakan adalah penelitian kuantitatif eksperimental dengan desain repeated measures. Pengumpulan data dilakukan melalui aplikasi PELUKDIRI dan kuesioner. Responden akan menggunakan aplikasi selama periode penelitian, kemudian data penggunaan layar dan aktivitas intervensi akan dianalisis untuk melihat perubahan screen time selama periode pengukuran.</string>
+    <string name="informed_consent_p5">Penelitian ini dilakukan secara daring melalui smartphone masing-masing responden. Responden akan menggunakan aplikasi PELUKDIRI selama periode penelitian yang telah ditentukan. Selama penelitian berlangsung, responden diminta menggunakan smartphone seperti biasa dan tidak perlu sengaja mengubah kebiasaan penggunaan perangkatnya.</string>
+    <string name="informed_consent_p6">Pada saat responden membuka aplikasi hiburan yang telah dipilih untuk diberikan intervensi, PELUKDIRI akan menampilkan tantangan kognitif singkat sebelum aplikasi dapat digunakan. Tingkat intervensi dapat disesuaikan berdasarkan performa responden dalam menyelesaikan tantangan dengan batas tingkat kesulitan yang telah ditentukan.</string>
+    <string name="informed_consent_p7">Selama penelitian, aplikasi akan mengumpulkan data yang diperlukan untuk penelitian, seperti durasi screen time, durasi penggunaan aplikasi hiburan, jumlah pembukaan aplikasi, serta aktivitas dan performa intervensi. Responden juga akan diminta mengisi kuesioner untuk memberikan feedback mengenai pengalaman menggunakan aplikasi.</string>
+    <string name="informed_consent_p8">PELUKDIRI tidak digunakan untuk membaca isi pesan, foto, video, kontak, kata sandi, maupun isi percakapan pribadi responden. Data yang dikumpulkan hanya digunakan untuk keperluan penelitian.</string>
+    <string name="informed_consent_p9">Proses penggunaan aplikasi dapat menimbulkan ketidaknyamanan ringan, seperti merasa terganggu ketika intervensi muncul atau merasa kurang nyaman karena harus berhenti sejenak dari penggunaan aplikasi hiburan. Responden juga mungkin mengalami kesulitan ketika mengerjakan tantangan matematika mental atau pola. Intervensi dirancang dalam bentuk tantangan singkat dengan batas tingkat kesulitan yang telah ditentukan.</string>
+    <string name="informed_consent_p10">Data yang diperoleh akan dijaga kerahasiaannya dan hanya dapat diakses oleh peneliti. Data penelitian akan disimpan secara lokal pada laptop peneliti. Identitas responden akan menggunakan kode dalam proses pengolahan data dan tidak akan dicantumkan dalam penyajian hasil penelitian. Hasil penelitian akan disajikan dalam bentuk data kelompok, tabel, grafik, atau analisis statistik sehingga identitas responden tidak dapat diketahui.</string>
+    <string name="informed_consent_p11">Partisipasi dalam penelitian ini dilakukan sesuai prosedur penelitian dan persetujuan responden serta orang tua atau wali. Responden akan mendapatkan kompensasi sebesar Rp50.000,00 sebagai penghargaan atas waktu dan partisipasinya dalam penelitian. Kompensasi tersebut bukan merupakan paksaan untuk mengikuti penelitian.</string>
+    <string name="informed_consent_p12">Apabila terdapat pertanyaan, kendala dalam penggunaan aplikasi, atau hal yang ingin disampaikan berkaitan dengan penelitian ini, Anda dapat menghubungi: 0821-1479-9930 (Joshua Leonardo Hilman Hutajulu) dan 0881-0118-64140 (Daffa Satya Alif Siregar).</string>
     <string name="settings_logout_title">Keluar</string>
     <string name="settings_logout_desc">Keluar dari aplikasi PELUKDIRI di perangkat ini.</string>
     <string name="settings_banner_title">Kamu memegang kendali</string>
@@ -136,10 +182,10 @@
     <string name="apps_intervention_focus_title">Fokus pada yang penting</string>
     <string name="apps_intervention_focus_desc">Pilih aplikasi yang paling sering membuatmu terdistraksi agar intervensi lebih efektif dan tidak mengganggu.</string>
     <string name="apps_intervention_search_hint">Cari aplikasi...</string>
-    <string name="apps_intervention_installed_title">Aplikasi Terpasang</string>
+
     <string name="apps_intervention_selected_count">%1$d dipilih</string>
     <string name="apps_intervention_total_count">Dari %1$d aplikasi</string>
-    <string name="apps_intervention_per_day">per hari</string>
+    <string name="apps_intervention_per_day_format">%1$s per hari</string>
     <string name="apps_intervention_save">Simpan Pilihan</string>
 
     <!-- Notification Settings -->
@@ -389,4 +435,28 @@
     <string name="notification_usage_label">Kamu sudah menggunakan %1$s hari ini</string>
     <string name="notification_limit_label">Batas adaptifmu: %1$s</string>
     <string name="notification_insufficient_data">Data tidak mencukupi</string>
+
+    <!-- Notification Templates -->
+    <string name="notification_daily_summary_title_1">Your day at a glance 🌱</string>
+    <string name="notification_daily_summary_title_2">Here\'s your screen-time summary.</string>
+    <string name="notification_daily_summary_title_3">Take a moment to check today\'s screen time.</string>
+    <string name="notification_daily_summary_title_4">See how your day went.</string>
+
+    <string name="notification_weekly_reflection_title_1">Time for your weekly reflection.</string>
+    <string name="notification_weekly_reflection_title_2">See how your screen-time habits changed this week.</string>
+    <string name="notification_weekly_reflection_title_3">Your weekly progress is ready to review.</string>
+    <string name="notification_weekly_reflection_title_4">Take a look at your progress this week.</string>
+    <string name="notification_weekly_reflection_content">Tap to review your weekly digital wellbeing progress.</string>
+
+    <string name="notification_limit_reminder_title_1">You\'re getting close to your screen-time limit.</string>
+    <string name="notification_limit_reminder_title_2">You\'re approaching today\'s adaptive limit.</string>
+    <string name="notification_limit_reminder_title_3">Your screen-time limit is getting closer.</string>
+    <string name="notification_limit_reminder_title_4">Take a short pause and check your screen time.</string>
+    <string name="notification_limit_reminder_content">Mindful usage is key. Take a break if needed.</string>
+
+    <string name="notification_intervention_title_1">Your next cognitive challenge is ready.</string>
+    <string name="notification_intervention_title_2">Take a moment for a quick mental challenge.</string>
+    <string name="notification_intervention_title_3">Ready for a short challenge?</string>
+    <string name="notification_intervention_title_4">A quick challenge is waiting for you.</string>
+    <string name="notification_intervention_content">A quick exercise to help you stay focused.</string>
 </resources>

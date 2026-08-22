@@ -159,7 +159,7 @@ fun ProfileSidebar(
             ) {
                 Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Tes Notifikasi")
+                Text(stringResource(R.string.profile_test_notification))
             }
 
             Spacer(Modifier.weight(1f))

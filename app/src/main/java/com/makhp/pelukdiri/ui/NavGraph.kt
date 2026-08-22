@@ -23,6 +23,7 @@ sealed class Screen(val route: String) {
     object Privacy : Screen("privacy")
     object ExportCsv : Screen("export_csv")
     object About : Screen("about")
+    object InformedConsent : Screen("informed_consent")
     object Terms : Screen("terms")
     object AllApps : Screen("all_apps")
     object Onboarding : Screen("onboarding")
@@ -70,6 +71,7 @@ fun NavGraph(
                 onNavigateToAdaptiveMode = { navController.navigate(Screen.AdaptiveMode.route) },
                 onNavigateToNotifications = { navController.navigate(Screen.NotificationSettings.route) },
                 onNavigateToApps = { navController.navigate(Screen.AppsIntervention.route) },
+                onNavigateToInformedConsent = { navController.navigate(Screen.InformedConsent.route) },
                 onNavigateToPrivacy = { navController.navigate(Screen.Privacy.route) },
                 onNavigateToTerms = { navController.navigate(Screen.Terms.route) },
                 onNavigateToAbout = { navController.navigate(Screen.About.route) },
@@ -107,6 +109,9 @@ fun NavGraph(
         }
         composable(Screen.About.route) {
             AboutScreen(onBackClick = { navController.popBackStack() })
+        }
+        composable(Screen.InformedConsent.route) {
+            InformedConsentScreen(onBackClick = { navController.popBackStack() })
         }
         composable(Screen.Terms.route) {
             TermsScreen(onBackClick = { navController.popBackStack() })
