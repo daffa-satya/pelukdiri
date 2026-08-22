@@ -38,10 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.makhp.pelukdiri.R
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 import com.makhp.pelukdiri.core.domain.model.AppUsage
@@ -100,12 +102,12 @@ fun AppsInterventionScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Aplikasi Terpasang",
+                        text = stringResource(R.string.apps_intervention_installed_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${state.selectedCount} dipilih",
+                        text = stringResource(R.string.apps_intervention_selected_count_label, state.selectedCount),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -134,10 +136,10 @@ private fun AppsInterventionHeader(onBackClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClick) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Text(
-            text = "Aplikasi yang Diintervensi",
+            text = stringResource(R.string.apps_intervention_title),
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium
@@ -161,19 +163,19 @@ private fun RecommendationBanner() {
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Rekomendasi",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(Modifier.width(DashboardTokens.CardPadding))
             Column {
                 Text(
-                    text = "Fokus pada yang penting",
+                    text = stringResource(R.string.apps_intervention_focus_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Pilih aplikasi yang paling sering membuatmu terdistraksi agar intervensi lebih efektif dan tidak mengganggu.",
+                    text = stringResource(R.string.apps_intervention_focus_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -188,7 +190,7 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         value = query,
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Cari aplikasi...") },
+        placeholder = { Text(stringResource(R.string.common_search_hint)) },
         leadingIcon = { Icon(Icons.Default.Search, null) },
         shape = RoundedCornerShape(DashboardTokens.LargeRadius),
         colors = OutlinedTextFieldDefaults.colors(
@@ -227,7 +229,7 @@ private fun AppSelectionItem(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "${formatDuration(app.usageDurationMillis)} per hari",
+                    text = stringResource(R.string.apps_intervention_per_day_format, formatDuration(app.usageDurationMillis)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -261,9 +263,9 @@ private fun AppsInterventionBottomBar(onSaveClick: () -> Unit) {
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Icon(Icons.Default.Check, contentDescription = "Simpan perubahan")
+            Icon(Icons.Default.Check, contentDescription = null)
             Spacer(Modifier.width(DashboardTokens.SmallGap))
-            Text("Simpan Pilihan", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.apps_intervention_save_button), style = MaterialTheme.typography.titleMedium)
         }
     }
 }

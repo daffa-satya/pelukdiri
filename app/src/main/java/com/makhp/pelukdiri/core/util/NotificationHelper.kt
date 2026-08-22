@@ -72,12 +72,12 @@ class NotificationHelper @Inject constructor(
     fun showDailySummaryNotification(totalUsageMillis: Long) {
         val usageStr = formatDuration(totalUsageMillis)
         val templates = listOf(
-            "Your day at a glance 🌱",
-            "Here's your screen-time summary.",
-            "Take a moment to check today's screen time.",
-            "See how your day went."
+            R.string.notification_daily_summary_title_1,
+            R.string.notification_daily_summary_title_2,
+            R.string.notification_daily_summary_title_3,
+            R.string.notification_daily_summary_title_4
         )
-        val title = templates.random()
+        val title = context.getString(templates.random())
         val contentText = context.getString(R.string.notification_usage_label, usageStr)
 
         val notification = createNotificationBuilder(CHANNEL_ID)
@@ -92,13 +92,13 @@ class NotificationHelper @Inject constructor(
 
     fun showWeeklyReflectionNotification() {
         val templates = listOf(
-            "Time for your weekly reflection.",
-            "See how your screen-time habits changed this week.",
-            "Your weekly progress is ready to review.",
-            "Take a look at your progress this week."
+            R.string.notification_weekly_reflection_title_1,
+            R.string.notification_weekly_reflection_title_2,
+            R.string.notification_weekly_reflection_title_3,
+            R.string.notification_weekly_reflection_title_4
         )
-        val title = templates.random()
-        val contentText = "Tap to review your weekly digital wellbeing progress."
+        val title = context.getString(templates.random())
+        val contentText = context.getString(R.string.notification_weekly_reflection_content)
 
         val notification = createNotificationBuilder(CHANNEL_ID)
             .setContentTitle(title)
@@ -112,17 +112,19 @@ class NotificationHelper @Inject constructor(
 
     fun showLimitReminderNotification() {
         val templates = listOf(
-            "You're getting close to your screen-time limit.",
-            "You're approaching today's adaptive limit.",
-            "Your screen-time limit is getting closer.",
-            "Take a short pause and check your screen time."
+            R.string.notification_limit_reminder_title_1,
+            R.string.notification_limit_reminder_title_2,
+            R.string.notification_limit_reminder_title_3,
+            R.string.notification_limit_reminder_title_4
         )
-        val title = templates.random()
+        val title = context.getString(templates.random())
+        val contentText = context.getString(R.string.notification_limit_reminder_content)
 
         val notification = createNotificationBuilder(CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText("Mindful usage is key. Take a break if needed.")
+            .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .build()
 
         notify(Random.nextInt(), notification)
@@ -130,17 +132,19 @@ class NotificationHelper @Inject constructor(
 
     fun showInterventionReminderNotification() {
         val templates = listOf(
-            "Your next cognitive challenge is ready.",
-            "Take a moment for a quick mental challenge.",
-            "Ready for a short challenge?",
-            "A quick challenge is waiting for you."
+            R.string.notification_intervention_title_1,
+            R.string.notification_intervention_title_2,
+            R.string.notification_intervention_title_3,
+            R.string.notification_intervention_title_4
         )
-        val title = templates.random()
+        val title = context.getString(templates.random())
+        val contentText = context.getString(R.string.notification_intervention_content)
 
         val notification = createNotificationBuilder(CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText("A quick exercise to help you stay focused.")
+            .setContentText(contentText)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
             .build()
 
         notify(Random.nextInt(), notification)

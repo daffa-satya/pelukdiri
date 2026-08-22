@@ -189,7 +189,7 @@ private fun DashboardContent(
         if (!state.isPermissionGranted) item(key = "perm_usage") { PermissionNotice(stringResource(R.string.dashboard_usage_access_needed), stringResource(R.string.dashboard_open_permission), onGrantUsageAccess) }
         if (!state.isAccessibilityEnabled) item(key = "perm_acc") { PermissionNotice(stringResource(R.string.dashboard_accessibility_needed), stringResource(R.string.dashboard_enable), onGrantAccessibility) }
         if (!state.isBatteryOptimizationIgnored) item(key = "perm_batt") { PermissionNotice(stringResource(R.string.dashboard_battery_optimization_needed), stringResource(R.string.dashboard_allow), onGrantBatteryExemption) }
-        item(key = "screentime") { ScreenTimeCard(state.todaySummary, state.todayAdaptiveLimit, state.weeklySummaries) }
+        item(key = "screentime") { ScreenTimeCard(state.socialMediaUsageMillis, state.yesterdaySocialMediaUsageMillis, state.todayAdaptiveLimit) }
         item(key = "weekly_chart") { WeeklyChart(state.weeklySummaries) }
 
         item(key = "top_apps") {
@@ -258,15 +258,13 @@ private fun DashboardHeader(
 }
 
 @Composable
-private fun ScreenTimeCard(today: DailySummary?, adaptiveLimitMinutes: Int?, history: List<DailySummary>) {
-    val usage = today?.monitoredUsageMillis ?: 0L
+private fun ScreenTimeCard(usageMillis: Long, yesterdayMillis: Long, adaptiveLimitMinutes: Int?) {
+    val usage = usageMillis
     val adaptiveLimitMillis = adaptiveLimitMinutes?.let { it * 60_000L } ?: 0L
     val progress = remember(usage, adaptiveLimitMillis) {
         if (adaptiveLimitMillis == 0L) 0f else (usage.toFloat() / adaptiveLimitMillis).coerceIn(0f, 1f)
     }
-    val previous = remember(history) {
-        history.firstOrNull { it.date == LocalDate.now().minusDays(1) }?.monitoredUsageMillis ?: usage
-    }
+    val previous = yesterdayMillis
     val change = remember(usage, previous) {
         if (previous == 0L) 0 else (((usage - previous) * 100) / previous).toInt()
     }
