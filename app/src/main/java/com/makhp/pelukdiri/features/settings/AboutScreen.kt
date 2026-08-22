@@ -31,10 +31,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.PelukCard
@@ -84,24 +86,24 @@ fun AboutScreen(
             }
             
             item {
-                SettingsSection(title = "Informasi Aplikasi") {
+                SettingsSection(title = stringResource(R.string.settings_about_info_section)) {
                     SettingsItem(
-                        title = "Versi",
+                        title = stringResource(R.string.settings_about_version_label),
                         description = "1.0.0 (Build 20260807)",
                         icon = Icons.Default.Update,
                         onClick = {}
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Website",
+                        title = stringResource(R.string.settings_about_website_label),
                         description = "www.pelukdiri.com",
                         icon = Icons.Default.Language,
                         onClick = {}
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Tim Pengembang",
-                        description = "MAKHP Studio",
+                        title = stringResource(R.string.settings_about_dev_team_label),
+                        description = stringResource(R.string.settings_about_dev_team_value),
                         icon = Icons.Default.Code,
                         onClick = {}
                     )
@@ -111,7 +113,7 @@ fun AboutScreen(
             item {
                 PelukCard {
                     Text(
-                        text = "PELUKDIRI adalah aplikasi kesejahteraan digital adaptif yang membantu Anda mengelola waktu layar secara mindful. Dengan teknologi intervensi cerdas, kami membantu Anda kembali memegang kendali atas perangkat Anda.",
+                        text = stringResource(R.string.settings_about_app_description),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -121,7 +123,7 @@ fun AboutScreen(
             
             item {
                 Text(
-                    text = "© 2026 MAKHP. All Rights Reserved.",
+                    text = stringResource(R.string.settings_about_copyright),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -139,10 +141,10 @@ private fun AboutHeader(onBackClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClick) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Text(
-            text = "About",
+            text = stringResource(R.string.settings_about_header),
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium

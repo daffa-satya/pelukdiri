@@ -8,8 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -19,7 +18,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.makhp.pelukdiri.features.dashboard.DashboardTokens
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.theme.Dimens
 
@@ -38,10 +37,10 @@ fun InformedConsentScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                 }
                 Text(
-                    text = "Informed Consent",
+                    text = stringResource(R.string.informed_consent_header),
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.headlineMedium
@@ -61,7 +60,7 @@ fun InformedConsentScreen(
         ) {
             item {
                 Text(
-                    text = "INFORMED CONSENT",
+                    text = stringResource(R.string.informed_consent_title),
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -72,13 +71,36 @@ fun InformedConsentScreen(
             }
 
             item {
+                val p1 = stringResource(R.string.informed_consent_p1)
                 Text(
                     text = buildAnnotatedString {
-                        append("        Perkenalkan kami dari Tim “Mama, Aku Kecanduan HP” SMAN 70 Jakarta. Saat ini kami sedang melaksanakan penelitian dengan judul ")
+                        append("        ")
+                        val parts = p1.split("“PELUKDIRI (Perangkat Lunak Untuk Kesejahteraan Digital Remaja Indonesia): Sistem Pengaturan Waktu Layar Berbasis Teori Kontrol untuk Kesehatan Digital”")
+                        append(parts[0])
                         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, textDecoration = TextDecoration.Underline)) {
                             append("“PELUKDIRI (Perangkat Lunak Untuk Kesejahteraan Digital Remaja Indonesia): Sistem Pengaturan Waktu Layar Berbasis Teori Kontrol untuk Kesehatan Digital”")
                         }
-                        append(".")
+                        if (parts.size > 1) append(parts[1])
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Justify
+                )
+            }
+
+            item {
+                val p2 = stringResource(R.string.informed_consent_p2)
+                Text(
+                    text = buildAnnotatedString {
+                        append("        ")
+                        val segments = p2.split("PELUKDIRI")
+                        segments.forEachIndexed { index, segment ->
+                            append(segment)
+                            if (index < segments.size - 1) {
+                                withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
+                                    append("PELUKDIRI")
+                                }
+                            }
+                        }
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
@@ -87,46 +109,35 @@ fun InformedConsentScreen(
 
             item {
                 Text(
-                    text = buildAnnotatedString {
-                        append("        Penelitian ini bertujuan untuk mengetahui apakah penggunaan aplikasi ")
-                        withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
-                            append("PELUKDIRI")
-                        }
-                        append(" dengan intervensi tantangan kognitif adaptif dapat membantu mengurangi durasi penggunaan layar, khususnya pada aplikasi hiburan, tanpa meningkatkan tingkat stres pengguna secara signifikan. ")
-                        withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
-                            append("PELUKDIRI")
-                        }
-                        append(" dirancang sebagai perangkat lunak kesejahteraan digital yang memberikan tantangan kognitif singkat berupa matematika mental dan pola ketika responden membuka aplikasi hiburan yang telah ditentukan.")
-                    },
+                    text = "        " + stringResource(R.string.informed_consent_p3),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
                 )
             }
 
             item {
-                Text(
-                    text = "        Manfaat penelitian ini adalah memberikan pengalaman kepada responden dalam menggunakan teknologi yang dirancang untuk membantu meningkatkan kesadaran terhadap penggunaan waktu layar. Selain itu, hasil penelitian diharapkan dapat menjadi dasar pengembangan perangkat lunak kesejahteraan digital yang lebih adaptif dan sesuai dengan kebutuhan remaja.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Justify
-                )
-            }
-
-            item {
+                val p4 = stringResource(R.string.informed_consent_p4)
                 Text(
                     text = buildAnnotatedString {
-                        append("        Metode penelitian yang digunakan adalah penelitian kuantitatif eksperimental dengan desain ")
+                        append("        ")
+                        val parts1 = p4.split("repeated measures")
+                        append(parts1[0])
                         withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
                             append("repeated measures")
                         }
-                        append(". Pengumpulan data dilakukan melalui aplikasi ")
+                        val remaining1 = parts1.getOrElse(1) { "" }
+                        val parts2 = remaining1.split("PELUKDIRI")
+                        append(parts2[0])
                         withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
                             append("PELUKDIRI")
                         }
-                        append(" dan kuesioner. Responden akan menggunakan aplikasi selama periode penelitian, kemudian data penggunaan layar dan aktivitas intervensi akan dianalisis untuk melihat perubahan ")
+                        val remaining2 = parts2.getOrElse(1) { "" }
+                        val parts3 = remaining2.split("screen time")
+                        append(parts3[0])
                         withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
                             append("screen time")
                         }
-                        append(" selama periode pengukuran.")
+                        if (parts3.size > 1) append(parts3[1])
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
@@ -134,21 +145,41 @@ fun InformedConsentScreen(
             }
 
             item {
+                val p5 = stringResource(R.string.informed_consent_p5)
                 Text(
                     text = buildAnnotatedString {
-                        append("        Penelitian ini dilakukan secara daring melalui ")
-                        withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                            append("smartphone")
+                        append("        ")
+                        // Simplified replacement for multiple occurrences and different tags
+                        var current = p5
+                        fun appendStyled(target: String, style: SpanStyle) {
+                            val index = current.indexOf(target)
+                            if (index != -1) {
+                                append(current.substring(0, index))
+                                withStyle(style = style) { append(target) }
+                                current = current.substring(index + target.length)
+                            }
                         }
-                        append(" masing-masing responden. Responden akan menggunakan aplikasi ")
+                        appendStyled("smartphone", SpanStyle(fontStyle = FontStyle.Italic))
+                        appendStyled("PELUKDIRI", SpanStyle(textDecoration = TextDecoration.Underline))
+                        appendStyled("smartphone", SpanStyle(fontStyle = FontStyle.Italic))
+                        append(current)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Justify
+                )
+            }
+
+            item {
+                val p6 = stringResource(R.string.informed_consent_p6)
+                Text(
+                    text = buildAnnotatedString {
+                        append("        ")
+                        val parts = p6.split("PELUKDIRI")
+                        append(parts[0])
                         withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
                             append("PELUKDIRI")
                         }
-                        append(" selama periode penelitian yang telah ditentukan. Selama penelitian berlangsung, responden diminta menggunakan ")
-                        withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                            append("smartphone")
-                        }
-                        append(" seperti biasa dan tidak perlu sengaja mengubah kebiasaan penggunaan perangkatnya.")
+                        if (parts.size > 1) append(parts[1])
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
@@ -156,13 +187,38 @@ fun InformedConsentScreen(
             }
 
             item {
+                val p7 = stringResource(R.string.informed_consent_p7)
                 Text(
                     text = buildAnnotatedString {
-                        append("        Pada saat responden membuka aplikasi hiburan yang telah dipilih untuk diberikan intervensi, ")
+                        append("        ")
+                        var current = p7
+                        fun appendStyled(target: String, style: SpanStyle) {
+                            val index = current.indexOf(target)
+                            if (index != -1) {
+                                append(current.substring(0, index))
+                                withStyle(style = style) { append(target) }
+                                current = current.substring(index + target.length)
+                            }
+                        }
+                        appendStyled("screen time", SpanStyle(fontStyle = FontStyle.Italic))
+                        appendStyled("feedback", SpanStyle(fontStyle = FontStyle.Italic))
+                        append(current)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Justify
+                )
+            }
+
+            item {
+                val p8 = stringResource(R.string.informed_consent_p8)
+                Text(
+                    text = buildAnnotatedString {
+                        append("        ")
+                        val parts = p8.split("PELUKDIRI")
                         withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
                             append("PELUKDIRI")
                         }
-                        append(" akan menampilkan tantangan kognitif singkat sebelum aplikasi dapat digunakan. Tingkat intervensi dapat disesuaikan berdasarkan performa responden dalam menyelesaikan tantangan dengan batas tingkat kesulitan yang telah ditentukan.")
+                        if (parts.size > 1) append(parts[1])
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
@@ -171,71 +227,45 @@ fun InformedConsentScreen(
 
             item {
                 Text(
-                    text = buildAnnotatedString {
-                        append("        Selama penelitian, aplikasi akan mengumpulkan data yang diperlukan untuk penelitian, seperti durasi ")
-                        withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                            append("screen time")
-                        }
-                        append(", durasi penggunaan aplikasi hiburan, jumlah pembukaan aplikasi, serta aktivitas dan performa intervensi. Responden juga akan diminta mengisi kuesioner untuk memberikan ")
-                        withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                            append("feedback")
-                        }
-                        append(" mengenai pengalaman menggunakan aplikasi.")
-                    },
+                    text = "        " + stringResource(R.string.informed_consent_p9),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify
                 )
             }
 
             item {
+                Text(
+                    text = "        " + stringResource(R.string.informed_consent_p10),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Justify
+                )
+            }
+
+            item {
+                Text(
+                    text = "        " + stringResource(R.string.informed_consent_p11),
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Justify
+                )
+            }
+
+            item {
+                val p12 = stringResource(R.string.informed_consent_p12)
                 Text(
                     text = buildAnnotatedString {
-                        withStyle(style = SpanStyle(textDecoration = TextDecoration.Underline)) {
-                            append("PELUKDIRI")
+                        append("        ")
+                        var current = p12
+                        fun appendStyled(target: String, style: SpanStyle) {
+                            val index = current.indexOf(target)
+                            if (index != -1) {
+                                append(current.substring(0, index))
+                                withStyle(style = style) { append(target) }
+                                current = current.substring(index + target.length)
+                            }
                         }
-                        append(" tidak digunakan untuk membaca isi pesan, foto, video, kontak, kata sandi, maupun isi percakapan pribadi responden. Data yang dikumpulkan hanya digunakan untuk keperluan penelitian.")
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Justify
-                )
-            }
-
-            item {
-                Text(
-                    text = "        Proses penggunaan aplikasi dapat menimbulkan ketidaknyamanan ringan, seperti merasa terganggu ketika intervensi muncul atau merasa kurang nyaman karena harus berhenti sejenak dari penggunaan aplikasi hiburan. Responden juga mungkin mengalami kesulitan ketika mengerjakan tantangan matematika mental atau pola. Intervensi dirancang dalam bentuk tantangan singkat dengan batas tingkat kesulitan yang telah ditentukan.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Justify
-                )
-            }
-
-            item {
-                Text(
-                    text = "        Data yang diperoleh akan dijaga kerahasiaannya dan hanya dapat diakses oleh peneliti. Data penelitian akan disimpan secara lokal pada laptop peneliti. Identitas responden akan menggunakan kode dalam proses pengolahan data dan tidak akan dicantumkan dalam penyajian hasil penelitian. Hasil penelitian akan disajikan dalam bentuk data kelompok, tabel, grafik, atau analisis statistik sehingga identitas responden tidak dapat diketahui.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Justify
-                )
-            }
-
-            item {
-                Text(
-                    text = "        Partisipasi dalam penelitian ini dilakukan sesuai prosedur penelitian dan persetujuan responden serta orang tua atau wali. Responden akan mendapatkan kompensasi sebesar Rp50.000,00 sebagai penghargaan atas waktu dan partisipasinya dalam penelitian. Kompensasi tersebut bukan merupakan paksaan untuk mengikuti penelitian.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Justify
-                )
-            }
-
-            item {
-                Text(
-                    text = buildAnnotatedString {
-                        append("        Apabila terdapat pertanyaan, kendala dalam penggunaan aplikasi, atau hal yang ingin disampaikan berkaitan dengan penelitian ini, Anda dapat menghubungi: ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append("0821-1479-9930")
-                        }
-                        append(" (Joshua Leonardo Hilman Hutajulu) dan ")
-                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append("0881-0118-64140")
-                        }
-                        append(" (Daffa Satya Alif Siregar).")
+                        appendStyled("0821-1479-9930", SpanStyle(fontWeight = FontWeight.Bold))
+                        appendStyled("0881-0118-64140", SpanStyle(fontWeight = FontWeight.Bold))
+                        append(current)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Justify

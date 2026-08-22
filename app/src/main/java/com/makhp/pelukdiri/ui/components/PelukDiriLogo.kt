@@ -15,7 +15,7 @@ fun PelukDiriLogo(
 ) {
     Image(
         painter = painterResource(id = R.drawable.pelukdiri_icon_ui),
-        contentDescription = "PelukDiri Logo",
+        contentDescription = androidx.compose.ui.res.stringResource(id = R.string.common_logo_desc),
         modifier = modifier.size(size)
     )
 }
