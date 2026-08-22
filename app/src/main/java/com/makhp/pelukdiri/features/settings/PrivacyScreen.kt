@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
@@ -68,7 +70,7 @@ fun PrivacyScreen(
         ) {
             item {
                 Text(
-                    text = "Kami berkomitmen untuk melindungi privasi dan data pribadimu.",
+                    text = stringResource(R.string.privacy_commitment),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -79,31 +81,31 @@ fun PrivacyScreen(
             }
             
             item {
-                SettingsSection(title = "Data yang Kami Kumpulkan") {
+                SettingsSection(title = stringResource(R.string.privacy_collected_section)) {
                     SettingsItem(
-                        title = "Waktu Layar",
-                        description = "Durasi penggunaan aplikasi dan waktu layar harian.",
+                        title = stringResource(R.string.privacy_item_screen_time_title),
+                        description = stringResource(R.string.privacy_item_screen_time_desc),
                         icon = Icons.Default.AccessTime,
                         onClick = {}
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Aplikasi yang Dibuka",
-                        description = "Informasi aplikasi yang kamu buka dan frekuensinya.",
+                        title = stringResource(R.string.privacy_item_apps_opened_title),
+                        description = stringResource(R.string.privacy_item_apps_opened_desc),
                         icon = Icons.Default.Apps,
                         onClick = {}
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Intervensi & Progres",
-                        description = "Riwayat intervensi, jawaban soal, dan progres mingguanmu.",
+                        title = stringResource(R.string.privacy_item_intervention_title),
+                        description = stringResource(R.string.privacy_item_intervention_desc),
                         icon = Icons.Default.Psychology,
                         onClick = {}
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Data Perangkat (Ringan)",
-                        description = "Informasi perangkat seperti model OS untuk mendukung stabilitas aplikasi.",
+                        title = stringResource(R.string.privacy_item_device_data_title),
+                        description = stringResource(R.string.privacy_item_device_data_desc),
                         icon = Icons.Default.Devices,
                         onClick = {}
                     )
@@ -119,17 +121,17 @@ fun PrivacyScreen(
                         .padding(DashboardTokens.CardPadding),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Shield, contentDescription = "Informasi privasi", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeMedium))
+                    Icon(Icons.Default.Shield, contentDescription = stringResource(R.string.privacy_title), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeMedium))
                     Spacer(Modifier.width(DashboardTokens.MediumGap))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            text = "Data yang Tidak Kami Kumpulkan",
+                            text = stringResource(R.string.privacy_not_collected_title),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "Kami tidak mengakses pesan, kontak, lokasi, foto, mikrofon, kamera, atau konten pribadimu lainnya.",
+                            text = stringResource(R.string.privacy_not_collected_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -138,10 +140,10 @@ fun PrivacyScreen(
             }
             
             item {
-                SettingsSection(title = "Kepemilikan & Penyimpanan Data") {
+                SettingsSection(title = stringResource(R.string.privacy_ownership_section)) {
                     SettingsItem(
-                        title = "Penyimpanan Lokal",
-                        description = "Data kamu disimpan secara aman di perangkatmu dan tidak dikirim ke server eksternal.",
+                        title = stringResource(R.string.privacy_item_local_storage_title),
+                        description = stringResource(R.string.privacy_item_local_storage_desc),
                         icon = Icons.Default.CloudDone,
                         trailing = {
                             Box(
@@ -151,7 +153,7 @@ fun PrivacyScreen(
                                     .padding(horizontal = Dimens.spaceSmall - Dimens.dividerThickness * 2, vertical = Dimens.dividerThickness * 2)
                             ) {
                                 Text(
-                                    text = "Lokal",
+                                    text = stringResource(R.string.privacy_item_local_badge),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -160,8 +162,8 @@ fun PrivacyScreen(
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Hapus Data Saya",
-                        description = "Hapus semua data yang dikumpulkan oleh PELUKDIRI dari perangkat ini.",
+                        title = stringResource(R.string.privacy_delete_data_title),
+                        description = stringResource(R.string.privacy_delete_data_desc),
                         icon = Icons.Default.DeleteOutline,
                         iconColor = MaterialTheme.colorScheme.error,
                         iconContainerColor = MaterialTheme.colorScheme.errorContainer,
@@ -169,8 +171,8 @@ fun PrivacyScreen(
                     )
                     SettingsDivider()
                     SettingsItem(
-                        title = "Export Data",
-                        description = "Unduh data penggunaan dan intervensi kamu dalam format CSV.",
+                        title = stringResource(R.string.settings_export_csv_title),
+                        description = stringResource(R.string.settings_export_csv_desc),
                         icon = Icons.Default.FileDownload,
                         onClick = {}
                     )
@@ -198,12 +200,12 @@ fun PrivacyScreen(
                         Spacer(Modifier.width(DashboardTokens.MediumGap))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = "Punya pertanyaan tentang privasi?",
+                                text = stringResource(R.string.privacy_questions_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Hubungi kami di pelukdiri.support@gmail.com",
+                                text = stringResource(R.string.privacy_questions_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -229,16 +231,16 @@ private fun PrivacyHeader(onBackClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClick) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali ke pengaturan")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Text(
-            text = "Privacy",
+            text = stringResource(R.string.privacy_title),
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium
         )
         IconButton(onClick = {}) {
-            Icon(Icons.Default.Shield, contentDescription = "Privacy Shield", tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Default.Shield, contentDescription = stringResource(R.string.privacy_title), tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -263,12 +265,12 @@ private fun PrivacyNoticeBanner() {
             Spacer(Modifier.width(DashboardTokens.CardPadding))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Privasi adalah prioritas kami",
+                    text = stringResource(R.string.privacy_prioritized_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Data kamu digunakan hanya untuk membantu PELUKDIRI bekerja lebih baik untukmu. Kami tidak menjual data kamu ke pihak manapun.",
+                    text = stringResource(R.string.privacy_prioritized_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ADB_BIN="${PELUKDIRI_ADB:-/home/daffa-satya/Android/Sdk/platform-tools/adb}"
+ADB_BIN="${PELUKDIRI_ADB:-adb}"
 PACKAGE="com.makhp.pelukdiri"
 MAIN_ACTIVITY="$PACKAGE/.MainActivity"
 APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"

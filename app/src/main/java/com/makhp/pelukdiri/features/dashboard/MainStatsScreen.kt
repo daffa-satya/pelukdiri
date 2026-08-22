@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -297,31 +298,53 @@ private fun DashboardDataActions(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(DashboardTokens.MediumGap)
     ) {
-        OutlinedButton(
+        DashboardDataActionCard(
+            label = stringResource(R.string.dashboard_sync_now),
+            icon = Icons.Default.Sync,
+            isLoading = isRefreshing,
+            enabled = !isRefreshing && !isBackfilling,
             onClick = onRefresh,
+            modifier = Modifier.weight(1f),
+        )
+        DashboardDataActionCard(
+            label = stringResource(R.string.dashboard_backfill_14_days),
+            icon = Icons.Default.History,
+            isLoading = isBackfilling,
             enabled = !isRefreshing && !isBackfilling,
-            modifier = Modifier.weight(1f)
-        ) {
-            if (isRefreshing) {
-                CircularProgressIndicator(Modifier.size(DashboardTokens.MediumGap), strokeWidth = 2.dp)
-            } else {
-                Icon(Icons.Default.Sync, contentDescription = null)
-            }
-            Spacer(Modifier.width(DashboardTokens.SmallGap))
-            Text(stringResource(R.string.dashboard_sync_now), maxLines = 2, textAlign = TextAlign.Center)
-        }
-        OutlinedButton(
             onClick = onBackfill,
-            enabled = !isRefreshing && !isBackfilling,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun DashboardDataActionCard(
+    label: String,
+    icon: ImageVector,
+    isLoading: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    PelukCard(modifier = modifier.clickable(enabled = enabled, onClick = onClick)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
         ) {
-            if (isBackfilling) {
+            if (isLoading) {
                 CircularProgressIndicator(Modifier.size(DashboardTokens.MediumGap), strokeWidth = 2.dp)
             } else {
-                Icon(Icons.Default.History, contentDescription = null)
+                Icon(icon, contentDescription = null, modifier = Modifier.size(DashboardTokens.MediumGap))
             }
             Spacer(Modifier.width(DashboardTokens.SmallGap))
-            Text(stringResource(R.string.dashboard_backfill_14_days), maxLines = 2, textAlign = TextAlign.Center)
+            Text(
+                text = label,
+                maxLines = 2,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

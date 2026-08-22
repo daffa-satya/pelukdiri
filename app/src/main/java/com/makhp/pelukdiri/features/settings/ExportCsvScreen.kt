@@ -43,6 +43,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
@@ -68,7 +70,7 @@ fun ExportCsvScreen(
         ) {
             item {
                 Text(
-                    text = "Ekspor data penggunaan aplikasi dan intervensi kamu dalam format CSV/ZIP untuk keperluan penelitian.",
+                    text = stringResource(R.string.export_intro_text),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -79,18 +81,18 @@ fun ExportCsvScreen(
             }
             
             item {
-                SettingsSection(title = "Jenis Data yang Diekspor") {
-                    ExportDataItem("App Usage & Screen Time", "Ringkasan waktu penggunaan harian per aplikasi.", Icons.Default.AccessTime, true)
+                SettingsSection(title = stringResource(R.string.settings_export_confirm_title)) {
+                    ExportDataItem(stringResource(R.string.export_item_usage_title), stringResource(R.string.export_item_usage_desc), Icons.Default.AccessTime, true)
                     SettingsDivider()
-                    ExportDataItem("Sensor Logs", "Log sensor pencahayaan ambient.", Icons.Default.Lock, true)
+                    ExportDataItem(stringResource(R.string.export_item_sensor_title), stringResource(R.string.export_item_sensor_desc), Icons.Default.Lock, true)
                     SettingsDivider()
-                    ExportDataItem("Daily Summary", "Ringkasan total waktu penggunaan harian.", Icons.Default.GridView, true)
+                    ExportDataItem(stringResource(R.string.export_item_summary_title), stringResource(R.string.export_item_summary_desc), Icons.Default.GridView, true)
                     SettingsDivider()
-                    ExportDataItem("Intervention Logs", "Riwayat intervensi, tipe tantangan, deviasi, dan bypass.", Icons.Default.Psychology, true)
+                    ExportDataItem(stringResource(R.string.export_item_intervention_title), stringResource(R.string.export_item_intervention_desc), Icons.Default.Psychology, true)
                     SettingsDivider()
-                    ExportDataItem("Intervention Decisions", "Audit jejak keputusan evaluasi kelayakan intervensi.", Icons.Default.SpeakerNotes, true)
+                    ExportDataItem(stringResource(R.string.export_item_decisions_title), stringResource(R.string.export_item_decisions_desc), Icons.Default.SpeakerNotes, true)
                     SettingsDivider()
-                    ExportDataItem("Adaptive Limits & Notifications", "Batas adaptif harian dan riwayat notifikasi.", Icons.Default.Lock, true)
+                    ExportDataItem(stringResource(R.string.export_item_limits_title), stringResource(R.string.export_item_limits_desc), Icons.Default.Lock, true)
                 }
             }
             
@@ -109,12 +111,12 @@ fun ExportCsvScreen(
                         Spacer(Modifier.width(DashboardTokens.MediumGap))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = "Format File",
+                                text = stringResource(R.string.export_format_label),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Data akan diekspor dalam format ZIP berisi 7 file CSV yang sesuai standar RFC-4180.",
+                                text = stringResource(R.string.export_format_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -124,7 +126,7 @@ fun ExportCsvScreen(
                             color = MaterialTheme.colorScheme.primaryContainer
                         ) {
                             Text(
-                                text = "Semua (ZIP)",
+                                text = stringResource(R.string.export_format_all_zip),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = Dimens.spaceSmall, vertical = Dimens.spaceExtraSmall),
@@ -142,9 +144,9 @@ fun ExportCsvScreen(
                     shape = RoundedCornerShape(DashboardTokens.MediumRadius),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Icon(Icons.Default.FileDownload, contentDescription = "Unduh file CSV")
+                    Icon(Icons.Default.FileDownload, contentDescription = stringResource(R.string.export_download_icon_desc))
                     Spacer(Modifier.width(DashboardTokens.SmallGap))
-                    Text("Export CSV / ZIP", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.export_button_text), style = MaterialTheme.typography.titleMedium)
                 }
             }
             
@@ -154,12 +156,12 @@ fun ExportCsvScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "File akan tersimpan di perangkat kamu",
+                        text = stringResource(R.string.export_storage_location_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Folder: Android/data/com.makhp.pelukdiri/files/exports",
+                        text = stringResource(R.string.export_folder_label),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -176,10 +178,10 @@ fun ExportCsvScreen(
                         .padding(DashboardTokens.CardPadding),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Lock, contentDescription = "Ikon keamanan", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeMedium - Dimens.spaceExtraSmall))
+                    Icon(Icons.Default.Lock, contentDescription = stringResource(R.string.privacy_title), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(Dimens.iconSizeMedium - Dimens.spaceExtraSmall))
                     Spacer(Modifier.width(DashboardTokens.MediumGap))
                     Text(
-                        text = "Privasi Terjamin: Seluruh data diproses secara lokal di perangkat kamu dan tidak dikirim ke server eksternal.",
+                        text = stringResource(R.string.export_privacy_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f)

@@ -74,12 +74,12 @@ fun AboutScreen(
                 }
                 Spacer(Modifier.height(DashboardTokens.MediumGap))
                 Text(
-                    text = "PELUKDIRI",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "Think. Control. Freedom.",
+                    text = stringResource(R.string.about_tagline),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -89,14 +89,14 @@ fun AboutScreen(
                 SettingsSection(title = stringResource(R.string.settings_about_info_section)) {
                     SettingsItem(
                         title = stringResource(R.string.settings_about_version_label),
-                        description = "1.0.0 (Build 20260807)",
+                        description = stringResource(R.string.about_version_value),
                         icon = Icons.Default.Update,
                         onClick = {}
                     )
                     SettingsDivider()
                     SettingsItem(
                         title = stringResource(R.string.settings_about_website_label),
-                        description = "www.pelukdiri.com",
+                        description = stringResource(R.string.about_website_value),
                         icon = Icons.Default.Language,
                         onClick = {}
                     )

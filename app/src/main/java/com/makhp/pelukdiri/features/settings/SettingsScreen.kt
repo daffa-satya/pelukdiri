@@ -21,9 +21,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
@@ -66,7 +63,7 @@ fun SettingsScreen(
         val timePickerState = rememberTimePickerState(
             initialHour = parts.getOrNull(0)?.toIntOrNull() ?: 22,
             initialMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0,
-            is24Hour = false
+            is24Hour = true
         )
 
         AlertDialog(
@@ -212,7 +209,7 @@ private fun SettingsLayout(
                         onClick = onSleepTimeClick,
                         trailing = {
                             Text(
-                                text = formatTo12Hour(state.sleepTime),
+                                text = state.sleepTime,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -226,7 +223,7 @@ private fun SettingsLayout(
                         onClick = onWakeTimeClick,
                         trailing = {
                             Text(
-                                text = formatTo12Hour(state.wakeTime),
+                                text = state.wakeTime,
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -356,13 +353,3 @@ private fun SettingsNavigation(
         )
     }
 }
-
-private fun formatTo12Hour(timeStr: String): String {
-    return try {
-        val localTime = LocalTime.parse(timeStr)
-        localTime.format(DateTimeFormatter.ofPattern("h:mm a", Locale.US))
-    } catch (_: Exception) {
-        timeStr
-    }
-}
-

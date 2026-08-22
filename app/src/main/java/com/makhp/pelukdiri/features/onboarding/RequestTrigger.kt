@@ -6,6 +6,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.collector.isUsageStatsPermissionGranted
 
 @Composable
@@ -21,6 +23,6 @@ fun UsagePermissionPrompt() {
             context.startActivity(intent)
         }
     }) {
-        Text("Grant Usage Access")
+        Text(stringResource(R.string.onboarding_grant_usage_access))
     }
 }
