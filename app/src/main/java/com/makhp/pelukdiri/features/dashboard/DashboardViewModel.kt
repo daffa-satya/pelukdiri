@@ -276,10 +276,10 @@ class DashboardViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             csvExporter.exportFullDatabaseToZip().fold(
-                onSuccess = { file ->
+                onSuccess = { export ->
                     _uiState.update { state ->
                         if (state is DashboardUiState.Success) {
-                            state.copy(isExporting = false, exportedFile = file)
+                            state.copy(isExporting = false, exportedFile = export.archiveFile)
                         } else {
                             state
                         }

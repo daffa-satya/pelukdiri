@@ -4,6 +4,10 @@
     <string name="test_lab_engine">Engine scenarios</string>
     <string name="test_lab_boundaries">Time and failure boundaries</string>
     <string name="test_lab_intervention">Intervention launch</string>
+    <string name="test_lab_normal_math">Test normal Math intervention</string>
+    <string name="test_lab_normal_pattern">Test normal Pattern intervention</string>
+    <string name="test_lab_watched_app_math">Arm Math for next watched app</string>
+    <string name="test_lab_watched_app_pattern">Arm Pattern for next watched app</string>
     <string name="test_lab_refresh">Refresh</string>
     <string name="test_lab_system_time">Use system time</string>
     <string name="test_lab_before">nextEligible − 1 ms</string>

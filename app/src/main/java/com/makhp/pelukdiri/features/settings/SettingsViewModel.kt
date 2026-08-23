@@ -83,8 +83,8 @@ class SettingsViewModel @Inject constructor(
         exportState.value = ExportState(isExporting = true)
         viewModelScope.launch(Dispatchers.IO) {
             csvExporter.exportFullDatabaseToZip().fold(
-                onSuccess = { file ->
-                    exportState.value = ExportState(exportedFilePath = file.absolutePath)
+                onSuccess = { export ->
+                    exportState.value = ExportState(exportedFilePath = export.savedPath)
                 },
                 onFailure = { error ->
                     exportState.value = ExportState(error = error.message ?: "Export failed")

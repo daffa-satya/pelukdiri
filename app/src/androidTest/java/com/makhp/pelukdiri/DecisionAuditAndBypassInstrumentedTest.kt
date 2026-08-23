@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri
 
 import androidx.room.Room
+import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.makhp.pelukdiri.core.database.PelukDiriDatabase
@@ -128,8 +129,20 @@ class DecisionAuditAndBypassInstrumentedTest {
             database.adaptiveLimitDao(),
         )
 
-        val file = exporter.exportFullDatabaseToZip().getOrThrow()
+        val export = exporter.exportFullDatabaseToZip().getOrThrow()
+        val file = export.archiveFile
         try {
+            assertEquals("Downloads/${file.name}", export.savedPath)
+            context.contentResolver.query(
+                export.downloadUri,
+                arrayOf(MediaStore.Downloads.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )!!.use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(file.name, cursor.getString(0))
+            }
             ZipFile(file).use { zip ->
                 assertEquals(7, zip.entries().toList().size)
                 val entry = zip.getEntry("intervention_decisions.csv")
@@ -147,6 +160,7 @@ class DecisionAuditAndBypassInstrumentedTest {
                 assertTrue(appUsageCsv.contains("\"2020-01-01\""))
             }
         } finally {
+            context.contentResolver.delete(export.downloadUri, null, null)
             file.delete()
         }
     }
