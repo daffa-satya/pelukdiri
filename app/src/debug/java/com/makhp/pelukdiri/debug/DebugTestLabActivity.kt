@@ -94,6 +94,8 @@ class DebugTestLabActivity : ComponentActivity() {
                     onPerformance = ::insertPerformance,
                     onSeedHistory = ::seedHistory,
                     onScenario = ::runScenario,
+                    onNormalIntervention = ::launchNormalIntervention,
+                    onWatchedAppIntervention = ::armWatchedAppIntervention,
                     onLaunch = { level -> launchIntervention(level) },
                     onLaunchPattern = { level ->
                         launchIntervention(level, challengeType = InterventionChallengeType.PATTERN)
@@ -114,7 +116,7 @@ class DebugTestLabActivity : ComponentActivity() {
         val session = preferences.activeInterventionSession.first()
         val count = logs.getAllLogsList().size
         val decisionCount = decisions.getAllList().size
-        status = "now=${controls.nowMillis()}\ndifficulty=$difficulty\nnextEligible=$next\nbypassUntil=$bypass\nactiveSession=${session != null}\ninterventionLogs=$count\ndecisionAudits=$decisionCount"
+        status = "now=${controls.nowMillis()}\ndifficulty=$difficulty\nnextEligible=$next\nbypassUntil=$bypass\nactiveSession=${session != null}\narmedWatchedApp=${controls.pendingForcedChallenge()?.name ?: "none"}\ninterventionLogs=$count\ndecisionAudits=$decisionCount"
     }
 
     private fun setBoundary(offset: Long) = mutate {
@@ -168,23 +170,45 @@ class DebugTestLabActivity : ComponentActivity() {
         challengeType: InterventionChallengeType = InterventionChallengeType.MATH,
     ) {
         lifecycleScope.launch {
-            val launchedAt = controls.nowMillis()
-            preferences.setNextEligibleInterventionAt(
-                launchedAt + TEST_LAUNCH_INTERVAL_MINUTES * 60_000L
-            )
-            preferences.setCurrentDifficulty(level)
-            lockManager.acquireLock()
-            startActivity(Intent(this@DebugTestLabActivity, InterventionActivity::class.java).apply {
-                putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 90.0)
-                putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, TEST_LAUNCH_INTERVAL_MINUTES.toDouble())
-                putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 25f)
-                putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
-                putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
-                putExtra(InterventionActivity.EXTRA_DIFFICULTY, level)
-                putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, challengeType.name)
-            })
+            launchInterventionNow(level, challengeType)
             afterLaunch()
         }
+    }
+
+    private fun launchNormalIntervention(challengeType: InterventionChallengeType) = mutate {
+        controls.useSystemTime()
+        activeSession.clear()
+        lockManager.releaseLock()
+        preferences.setNextEligibleInterventionAt(0L)
+        preferences.setEmergencyBypassUntil(0L)
+        launchInterventionNow(preferences.currentDifficulty.first(), challengeType)
+    }
+
+    private fun armWatchedAppIntervention(challengeType: InterventionChallengeType) = mutate {
+        controls.useSystemTime()
+        activeSession.clear()
+        lockManager.releaseLock()
+        preferences.setNextEligibleInterventionAt(0L)
+        preferences.setEmergencyBypassUntil(0L)
+        controls.armForcedChallenge(challengeType)
+    }
+
+    private suspend fun launchInterventionNow(level: Int, challengeType: InterventionChallengeType) {
+        val launchedAt = controls.nowMillis()
+        preferences.setNextEligibleInterventionAt(
+            launchedAt + TEST_LAUNCH_INTERVAL_MINUTES * 60_000L
+        )
+        preferences.setCurrentDifficulty(level)
+        lockManager.acquireLock()
+        startActivity(Intent(this@DebugTestLabActivity, InterventionActivity::class.java).apply {
+            putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 90.0)
+            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, TEST_LAUNCH_INTERVAL_MINUTES.toDouble())
+            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 25f)
+            putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
+            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
+            putExtra(InterventionActivity.EXTRA_DIFFICULTY, level)
+            putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, challengeType.name)
+        })
     }
 
     private fun mutate(block: suspend () -> Unit) {
@@ -216,6 +240,8 @@ private fun DebugTestLabScreen(
     onPerformance: (Boolean) -> Unit,
     onSeedHistory: () -> Unit,
     onScenario: (Boolean) -> Unit,
+    onNormalIntervention: (InterventionChallengeType) -> Unit,
+    onWatchedAppIntervention: (InterventionChallengeType) -> Unit,
     onLaunch: (Int) -> Unit,
     onLaunchPattern: (Int) -> Unit,
 ) {
@@ -247,6 +273,18 @@ private fun DebugTestLabScreen(
             Action(stringResource(R.string.test_lab_clear_timing), onClearTiming)
             Action(stringResource(R.string.test_lab_clear_session), onClearSession)
             Text(stringResource(R.string.test_lab_intervention), style = MaterialTheme.typography.titleMedium)
+            Action(stringResource(R.string.test_lab_normal_math), {
+                onNormalIntervention(InterventionChallengeType.MATH)
+            })
+            Action(stringResource(R.string.test_lab_normal_pattern), {
+                onNormalIntervention(InterventionChallengeType.PATTERN)
+            })
+            Action(stringResource(R.string.test_lab_watched_app_math), {
+                onWatchedAppIntervention(InterventionChallengeType.MATH)
+            })
+            Action(stringResource(R.string.test_lab_watched_app_pattern), {
+                onWatchedAppIntervention(InterventionChallengeType.PATTERN)
+            })
             (1..3).forEach { level -> Action(stringResource(R.string.test_lab_launch_level, level), { onLaunch(level) }) }
             (1..5).forEach { level ->
                 Action(stringResource(R.string.test_lab_launch_pattern_level, level), { onLaunchPattern(level) })
@@ -260,10 +298,10 @@ private fun DebugTestLabScreen(
 }
 
 @Preview(showBackground = true) @Composable private fun LabLightPreview() {
-    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
 }
 
 @Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable private fun LabDarkPreview() {
-    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
 }

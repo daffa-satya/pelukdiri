@@ -1,6 +1,10 @@
 package com.makhp.pelukdiri.core.database.export
 
+import android.content.ContentValues
 import android.content.Context
+import android.net.Uri
+import android.os.Environment
+import android.provider.MediaStore
 import com.makhp.pelukdiri.core.database.dao.AdaptiveLimitDao
 import com.makhp.pelukdiri.core.database.dao.InterventionDao
 import com.makhp.pelukdiri.core.database.dao.InterventionDecisionDao
@@ -34,7 +38,13 @@ class CsvExporter @Inject constructor(
     private val adaptiveLimitDao: AdaptiveLimitDao
 ) {
 
-    suspend fun exportFullDatabaseToZip(): Result<File> = withContext(Dispatchers.IO) {
+    data class ExportResult(
+        val archiveFile: File,
+        val savedPath: String,
+        val downloadUri: Uri,
+    )
+
+    suspend fun exportFullDatabaseToZip(): Result<ExportResult> = withContext(Dispatchers.IO) {
         try {
             // Always include every expected CSV. Empty tables still produce a
             // header-only file so exports have a stable, machine-readable schema.
@@ -67,10 +77,42 @@ class CsvExporter @Inject constructor(
                 }
             }
 
-            Result.success(zipFile)
+            val downloadUri = saveToDownloads(zipFile)
+            Result.success(
+                ExportResult(
+                    archiveFile = zipFile,
+                    savedPath = "${Environment.DIRECTORY_DOWNLOADS}/${zipFile.name}",
+                    downloadUri = downloadUri,
+                )
+            )
         } catch (e: Exception) {
             e.printStackTrace()
             Result.failure(e)
+        }
+    }
+
+    private fun saveToDownloads(source: File): Uri {
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, source.name)
+            put(MediaStore.Downloads.MIME_TYPE, "application/zip")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val uri = checkNotNull(resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)) {
+            "Unable to create export in Downloads"
+        }
+        try {
+            checkNotNull(resolver.openOutputStream(uri)).use { output ->
+                source.inputStream().use { it.copyTo(output) }
+            }
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            return uri
+        } catch (error: Exception) {
+            resolver.delete(uri, null, null)
+            throw error
         }
     }
 

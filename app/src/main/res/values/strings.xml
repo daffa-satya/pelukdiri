@@ -10,8 +10,8 @@
     <string name="dashboard_recalculate_limit_failed">Batas adaptif tidak dapat dihitung ulang.</string>
     <string name="dashboard_from_yesterday">%1$d%% dari kemarin</string>
     <string name="dashboard_more_than_yesterday">%1$d%% lebih lama dari kemarin</string>
-    <string name="dashboard_sync_now">Sinkronkan sekarang</string>
-    <string name="dashboard_backfill_14_days">Tarik data 14 hari</string>
+    <string name="dashboard_sync_now">Sinkron sekarang</string>
+    <string name="dashboard_backfill_14_days">Tarik data</string>
     <string name="dashboard_export_data">Ekspor data</string>
     <string name="dashboard_usage_access_needed">Akses penggunaan diperlukan agar waktu layar bisa dihitung.</string>
     <string name="dashboard_open_permission">Buka izin</string>

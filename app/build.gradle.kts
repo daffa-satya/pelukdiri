@@ -20,11 +20,6 @@ android {
     }
 
     buildTypes {
-        debug {
-            optimization{
-                enable = true
-            }
-        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

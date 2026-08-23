@@ -13,6 +13,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.makhp.pelukdiri.core.domain.InterventionLockManager
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
 import com.makhp.pelukdiri.core.domain.model.PatternQuestion
 import com.makhp.pelukdiri.core.domain.model.PatternShape
@@ -46,6 +47,7 @@ class InterventionLifecycleInstrumentedTest {
         dependencies.session().clear()
         dependencies.lock().releaseLock()
         dependencies.controls().useSystemTime()
+        dependencies.controls().consumeForcedChallenge()
     }
 
     @Test fun exactQuestionAndInputSurviveActivityRecreation() = runBlocking {
@@ -86,6 +88,16 @@ class InterventionLifecycleInstrumentedTest {
         )
         assertTrue(interventionInfo.flags and ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS != 0)
         assertNotNull(packageManager.getActivityInfo(ComponentName(context, "com.makhp.pelukdiri.debug.DebugTestLabActivity"), 0))
+    }
+
+    @Test fun watchedAppChallengeArmPersistsAndIsConsumedOnce() {
+        val controls = dependencies.controls()
+        controls.armForcedChallenge(InterventionChallengeType.PATTERN)
+
+        val recreated = DebugRuntimeControls(context)
+        assertEquals(InterventionChallengeType.PATTERN, recreated.pendingForcedChallenge())
+        assertEquals(InterventionChallengeType.PATTERN, recreated.consumeForcedChallenge())
+        assertEquals(null, recreated.consumeForcedChallenge())
     }
 
     @Test fun exactPatternAndInputSurviveActivityRecreation() = runBlocking {

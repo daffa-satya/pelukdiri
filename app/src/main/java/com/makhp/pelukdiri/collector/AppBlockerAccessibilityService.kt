@@ -10,6 +10,7 @@ import com.makhp.pelukdiri.core.domain.usecase.EvaluateInterventionEligibilityUs
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.features.intervention.ActiveInterventionSession
 import com.makhp.pelukdiri.core.domain.InterventionLaunchPolicy
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import com.makhp.pelukdiri.core.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
@@ -22,6 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -55,6 +57,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private val EVALUATION_THROTTLE_MS = 30_000L
     private val EVALUATION_TIMEOUT_MS = 10_000L
     private val SYNC_INTERVAL_MS = 30_000L
+    private val FORCED_TEST_INTERVAL_MINUTES = 5L
     private var lastSyncTimestamp: Long = 0L
     private var lastEvaluationTimestamp: Long = 0L
 
@@ -198,7 +201,10 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         // 3. Start tracking if new package is a target app
         if (!systemApps.contains(newPackage) && currentMonitoredPackages.contains(newPackage)) {
-            if (lockManager.isLocked.value) {
+            val forcedChallenge = launchPolicy.consumeForcedChallenge()
+            if (forcedChallenge != null) {
+                serviceScope.launch { launchForcedIntervention(newPackage, forcedChallenge) }
+            } else if (lockManager.isLocked.value) {
                 Log.d("AppBlockerService", "Restoring unanswered intervention over: $newPackage")
                 restoreActiveIntervention()
             } else {
@@ -206,6 +212,31 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             }
         } else {
             Log.d("AppBlockerService", "$newPackage is not a monitored target app.")
+        }
+    }
+
+    private suspend fun launchForcedIntervention(
+        packageName: String,
+        challengeType: InterventionChallengeType,
+    ) {
+        if (!lockManager.acquireLock()) return
+        val difficulty = userPreferencesRepository.currentDifficulty.first()
+        val launched = launchInterventionOverlay(
+            packageName = packageName,
+            monitoredUsageMinutes = 90.0,
+            launchFreq = FORCED_TEST_INTERVAL_MINUTES.toDouble(),
+            ambientLux = appUsageCollector.getCurrentAmbientLightLux(),
+            deviation = 0.4,
+            difficultyControlSignal = 0.5,
+            difficulty = difficulty,
+            challengeType = challengeType,
+        )
+        if (launched) {
+            userPreferencesRepository.setNextEligibleInterventionAt(
+                timeProvider.nowMillis() + FORCED_TEST_INTERVAL_MINUTES * 60_000L
+            )
+        } else {
+            lockManager.releaseLock()
         }
     }
 
