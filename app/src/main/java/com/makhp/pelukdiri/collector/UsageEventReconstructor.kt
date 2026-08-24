@@ -123,9 +123,7 @@ class UsageEventReconstructor @Inject constructor() {
         sessions: List<UsageSession>,
         rangeStart: Long,
         rangeEnd: Long,
-        ignoredPackages: Set<String> = emptySet(),
     ): Long = sessions.asSequence()
-        .filter { it.packageName !in ignoredPackages }
         .maxOfOrNull { session ->
             (min(session.endTime, rangeEnd) - max(session.startTime, rangeStart)).coerceAtLeast(0L)
         } ?: 0L
@@ -135,11 +133,9 @@ class UsageEventReconstructor @Inject constructor() {
         rangeStart: Long,
         rangeEnd: Long,
         zoneId: ZoneId,
-        ignoredPackages: Set<String> = emptySet(),
     ): List<Long> {
         val hourlyUsage = LongArray(24)
         sessions.asSequence()
-            .filter { it.packageName !in ignoredPackages }
             .forEach { session ->
                 var cursor = max(session.startTime, rangeStart)
                 val sessionEnd = min(session.endTime, rangeEnd)

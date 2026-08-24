@@ -124,21 +124,21 @@ class UsageEventReconstructorTest {
     }
 
     @Test
-    fun `longest session clips range and ignores system packages`() {
+    fun `longest session clips range and includes system and PelukDiri packages`() {
         val sessions = listOf(
             UsageSession(pkgA, 50L, 250L),
             UsageSession(pkgB, 110L, 190L),
-            UsageSession("com.android.systemui", 100L, 300L),
+            UsageSession("com.android.settings", 100L, 300L),
+            UsageSession("com.makhp.pelukdiri", 120L, 130L),
         )
 
         val longest = reconstructor.longestSessionDuration(
             sessions = sessions,
             rangeStart = 100L,
             rangeEnd = 300L,
-            ignoredPackages = setOf("com.android.systemui"),
         )
 
-        assertEquals(150L, longest)
+        assertEquals(200L, longest)
     }
 
     @Test

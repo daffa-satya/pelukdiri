@@ -84,6 +84,7 @@ fun MainStatsScreen(
                             putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
+                            putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType.MATH.name)
                         }
                         context.startActivity(intent)
                     }

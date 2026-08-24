@@ -19,10 +19,6 @@ class UsageEventCollector @Inject constructor(
     private val screenReconstructor: ScreenInteractiveReconstructor
 ) {
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-    private val ignoredPackages = setOf(
-        "com.miui.home", "com.android.launcher", "com.google.android.apps.nexuslauncher",
-        "com.android.settings", "com.android.systemui", "app.olauncher", "com.makhp.pelukdiri"
-    )
 
     /**
      * Reconstructs usage for a specific local date.
@@ -32,7 +28,7 @@ class UsageEventCollector @Inject constructor(
         val day = reconstructDay(date)
         val usageMap = reconstructor.aggregateUsage(day.sessions, day.startMillis, day.endMillis)
 
-        return usageMap.filter { it.key !in ignoredPackages && it.value.duration > 0 }
+        return usageMap.filter { it.value.duration > 0 }
             .map { (pkg, stats) ->
                 AppUsage(
                     packageName = pkg,
@@ -45,12 +41,7 @@ class UsageEventCollector @Inject constructor(
 
     fun getLongestSessionForDay(date: LocalDate): Long {
         val day = reconstructDay(date)
-        return reconstructor.longestSessionDuration(
-            day.sessions,
-            day.startMillis,
-            day.endMillis,
-            ignoredPackages,
-        )
+        return reconstructor.longestSessionDuration(day.sessions, day.startMillis, day.endMillis)
     }
 
     fun getHourlyUsageForDay(date: LocalDate): List<Long> {
@@ -60,7 +51,6 @@ class UsageEventCollector @Inject constructor(
             rangeStart = day.startMillis,
             rangeEnd = day.endMillis,
             zoneId = ZoneId.systemDefault(),
-            ignoredPackages = ignoredPackages,
         )
     }
 

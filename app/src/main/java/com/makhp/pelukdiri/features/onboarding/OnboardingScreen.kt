@@ -52,6 +52,10 @@ fun OnboardingScreen(
     var currentStep by remember { mutableStateOf<OnboardingStep>(OnboardingStep.Intro) }
     val context = LocalContext.current
 
+    LaunchedEffect(viewModel) {
+        viewModel.onboardingCompleted.collect { onComplete() }
+    }
+
     BackHandler {
         if (currentStep == OnboardingStep.Intro) {
             (context as? Activity)?.finish()
@@ -81,7 +85,6 @@ fun OnboardingScreen(
                             currentStep = OnboardingStep.Permissions(step.step + 1)
                         } else {
                             viewModel.completeOnboarding()
-                            onComplete()
                         }
                     },
                     onBack = {

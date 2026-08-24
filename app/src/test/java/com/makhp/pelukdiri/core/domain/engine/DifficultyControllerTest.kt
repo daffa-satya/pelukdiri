@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri.core.domain.engine
 
 import com.makhp.pelukdiri.core.domain.model.ControlConfig
+import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,5 +68,54 @@ class DifficultyControllerTest {
         val result = controller.calculate(0.9, 0.5, 1.0, 2, true)
         assertTrue(result.nextLevel <= 2)
         assertEquals(2, result.nextLevel)
+    }
+
+    @Test
+    fun `calculate - reversal blocks the prior direction for three valid completions`() {
+        val immediate = controller.calculate(0.5, 1.0, 0.0, 2, false, history(2, 3, 2))
+        val afterTwo = controller.calculate(0.5, 1.0, 0.0, 2, false, history(2, 2, 2, 3, 2))
+        val afterThree = controller.calculate(0.5, 1.0, 0.0, 2, false, history(2, 2, 2, 2, 3, 2))
+
+        assertEquals(2, immediate.nextLevel)
+        assertEquals(2, afterTwo.nextLevel)
+        assertEquals(3, afterThree.nextLevel)
+    }
+
+    @Test
+    fun `calculate - reversal guard is symmetric and permits the new direction`() {
+        val blockedDown = controller.calculate(0.0, 0.0, 0.0, 3, false, history(3, 2, 3))
+        val continuedDown = controller.calculate(0.0, 0.0, 0.0, 2, false, history(2, 3, 2))
+
+        assertEquals(3, blockedDown.nextLevel)
+        assertEquals(1, continuedDown.nextLevel)
+    }
+
+    @Test
+    fun `calculate - invalid interventions do not age the reversal guard`() {
+        val twoValidAfterReversal = listOf(
+            DifficultyHistoryEntry(2, true),
+            DifficultyHistoryEntry(2, false),
+            DifficultyHistoryEntry(2, true),
+            DifficultyHistoryEntry(2, false),
+            DifficultyHistoryEntry(2, true),
+            DifficultyHistoryEntry(3, true),
+            DifficultyHistoryEntry(2, true),
+        )
+        val blocked = controller.calculate(0.5, 1.0, 0.0, 2, false, twoValidAfterReversal)
+        val allowed = controller.calculate(
+            0.5,
+            1.0,
+            0.0,
+            2,
+            false,
+            listOf(DifficultyHistoryEntry(2, true)) + twoValidAfterReversal,
+        )
+
+        assertEquals(2, blocked.nextLevel)
+        assertEquals(3, allowed.nextLevel)
+    }
+
+    private fun history(vararg levels: Int) = levels.map {
+        DifficultyHistoryEntry(it, isValidResponse = true)
     }
 }

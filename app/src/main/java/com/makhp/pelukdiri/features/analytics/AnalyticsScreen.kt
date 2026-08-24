@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.R
-import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.features.dashboard.AppDetailBottomSheet
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.features.dashboard.UiAppUsage
@@ -435,7 +434,7 @@ private fun DateSelector(
 
 @Composable
 private fun DailyInsightCard(state: AnalyticsUiState.Success) {
-    val usedMinutes = (state.summary?.totalScreenTimeMillis ?: 0L) / 60_000L
+    val usedMinutes = (state.summary?.monitoredUsageMillis ?: 0L) / 60_000L
     val limitMinutes = state.adaptiveLimitMinutes?.toLong()
     
     if (limitMinutes == null) {

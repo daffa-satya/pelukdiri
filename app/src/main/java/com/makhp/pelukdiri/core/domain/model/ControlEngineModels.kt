@@ -49,3 +49,8 @@ data class PerformanceMetrics(
     val isSuccess: Boolean,
     val difficulty: Int
 )
+
+data class DifficultyHistoryEntry(
+    val difficulty: Int,
+    val isValidResponse: Boolean,
+)

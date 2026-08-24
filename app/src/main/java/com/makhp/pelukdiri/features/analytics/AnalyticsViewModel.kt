@@ -41,13 +41,6 @@ class AnalyticsViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var graphJob: Job? = null
 
-    private val socialMediaPackages = setOf(
-        "com.instagram.android", "com.zhiliaoapp.musically", "com.ss.android.ugc.trill",
-        "com.google.android.youtube", "com.twitter.android", "com.facebook.katana",
-        "com.whatsapp", "com.snapchat.android", "com.facebook.orca", "com.google.android.apps.messaging",
-        "com.tencent.mm", "com.viber.voip", "jp.naver.line.android", "com.discord"
-    )
-
     init { 
         load(LocalDate.now(), AnalyticsPeriod.DAILY) 
         startFunFactRotation()
@@ -66,12 +59,10 @@ class AnalyticsViewModel @Inject constructor(
     }
 
     private fun generateFunFact(state: AnalyticsUiState.Success): String {
-        val socialTime = state.topApps
-            .filter { socialMediaPackages.contains(it.packageName) }
-            .sumOf { it.usageDurationMillis }
+        val monitoredTime = state.summary?.monitoredUsageMillis ?: 0L
         
         val totalTime = state.summary?.totalScreenTimeMillis ?: 0L
-        val activeTime = if (socialTime > 0) socialTime else totalTime
+        val activeTime = if (monitoredTime > 0) monitoredTime else totalTime
         
         if (activeTime == 0L) return context.getString(R.string.analytics_fun_fact_empty)
 
@@ -166,12 +157,8 @@ class AnalyticsViewModel @Inject constructor(
             val interventions = allInterventions.count { it.timestamp in startMillis..endMillis }
             val comparisonInterventions = allInterventions.count { it.timestamp in comparisonStartMillis..comparisonEndMillis }
             
-            val socialMediaUsage = topApps
-                .filter { socialMediaPackages.contains(it.packageName) }
-                .sumOf { it.usageDurationMillis }
-            val comparisonSocialMediaUsage = comparisonApps
-                .filter { socialMediaPackages.contains(it.packageName) }
-                .sumOf { it.usageDurationMillis }
+            val socialMediaUsage = aggregatedSummary?.monitoredUsageMillis ?: 0L
+            val comparisonSocialMediaUsage = comparisonSummary?.monitoredUsageMillis ?: 0L
             val longestSession = longestSessionInRange(startDate, endDate)
             val comparisonLongestSession = longestSessionInRange(comparisonStartDate, comparisonEndDate)
 

@@ -26,4 +26,23 @@ class ForegroundTrackingPolicyTest {
     @Test fun `unmonitored same package does not start evaluator`() {
         assertFalse(ForegroundTrackingPolicy.shouldRestart("example.app", "example.app", monitored, false))
     }
+
+    @Test fun `both app variants are excluded from their own interventions`() {
+        assertFalse(
+            ForegroundTrackingPolicy.shouldTrack(
+                "com.makhp.pelukdiri",
+                "com.makhp.pelukdiri",
+                setOf("com.makhp.pelukdiri"),
+                emptySet(),
+            )
+        )
+        assertFalse(
+            ForegroundTrackingPolicy.shouldTrack(
+                "com.makhp.pelukdiri.debug",
+                "com.makhp.pelukdiri.debug",
+                setOf("com.makhp.pelukdiri.debug"),
+                emptySet(),
+            )
+        )
+    }
 }

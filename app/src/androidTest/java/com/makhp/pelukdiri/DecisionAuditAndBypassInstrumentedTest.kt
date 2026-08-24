@@ -119,6 +119,19 @@ class DecisionAuditAndBypassInstrumentedTest {
                 errorType = null,
             )
         )
+        database.interventionDao().insertLog(
+            InterventionLogEntity(
+                timestamp = 1_787_303_920_000L,
+                deviation = 0.8,
+                difficultyControlSignal = 0.7,
+                difficultyLevel = 4,
+                responseTimeMs = 2_004L,
+                isSuccess = true,
+                isBypassed = false,
+                penaltyAppliedMinutes = 0,
+                challengeType = "PATTERN",
+            )
+        )
         val exporter = CsvExporter(
             context,
             database.usageDao(),
@@ -144,7 +157,7 @@ class DecisionAuditAndBypassInstrumentedTest {
                 assertEquals(file.name, cursor.getString(0))
             }
             ZipFile(file).use { zip ->
-                assertEquals(7, zip.entries().toList().size)
+                assertEquals(8, zip.entries().toList().size)
                 val entry = zip.getEntry("intervention_decisions.csv")
                 assertNotNull(entry)
                 val csv = zip.getInputStream(entry).bufferedReader().use { it.readText() }
@@ -153,11 +166,30 @@ class DecisionAuditAndBypassInstrumentedTest {
                 assertTrue(csv.contains("\"PATTERN\""))
                 assertTrue(csv.contains("\"TRIGGERED\",\"PERSONALIZED\""))
 
+                val interventionEntry = zip.getEntry("intervention_logs.csv")
+                assertNotNull(interventionEntry)
+                val interventionCsv = zip.getInputStream(interventionEntry).bufferedReader().use {
+                    it.readText()
+                }
+                assertEquals(2, interventionCsv.lineSequence().count { it.isNotEmpty() })
+                assertTrue(interventionCsv.contains("\"PATTERN\""))
+                assertTrue(interventionCsv.contains(",2004,true,false,0,"))
+
                 val appUsageEntry = zip.getEntry("app_usage.csv")
                 assertNotNull(appUsageEntry)
                 val appUsageCsv = zip.getInputStream(appUsageEntry).bufferedReader().use { it.readText() }
                 assertTrue(appUsageCsv.contains("\"com.example.older-than-14-days\""))
                 assertTrue(appUsageCsv.contains("\"2020-01-01\""))
+
+                val deviceInfoEntry = zip.getEntry("device_info.txt")
+                assertNotNull(deviceInfoEntry)
+                val deviceInfo = zip.getInputStream(deviceInfoEntry).bufferedReader().use { it.readText() }
+                assertTrue(deviceInfo.contains("app.package_name=${context.packageName}\r\n"))
+                assertTrue(deviceInfo.contains("intervention.policy_version=v0.6-candidate-3\r\n"))
+                assertTrue(deviceInfo.contains("device.model="))
+                assertTrue(deviceInfo.contains("os.api_level="))
+                assertTrue(deviceInfo.contains("battery.level_percent="))
+                assertTrue(deviceInfo.contains("permissions.usage_access="))
             }
         } finally {
             context.contentResolver.delete(export.downloadUri, null, null)

@@ -15,11 +15,11 @@ object EngineModule {
 
     @Provides
     @Singleton
-    fun provideControlConfig(): ControlConfig = ControlConfig()
+    fun provideControlConfig(): ControlConfig = ControlConfig.CANDIDATE_3
 
     @Provides
     @Singleton
-    fun provideDeviationConfig(): DeviationConfig = DeviationConfig()
+    fun provideDeviationConfig(): DeviationConfig = DeviationConfig.CANDIDATE_3
 
     @Provides
     @Singleton

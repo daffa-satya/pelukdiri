@@ -2,6 +2,11 @@ package com.makhp.pelukdiri.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -14,6 +19,7 @@ import com.makhp.pelukdiri.features.analytics.AnalyticsPeriod
 import com.makhp.pelukdiri.features.dashboard.AllAppsScreen
 import com.makhp.pelukdiri.features.dashboard.MainStatsScreen
 import com.makhp.pelukdiri.features.onboarding.OnboardingScreen
+import com.makhp.pelukdiri.features.onboarding.OnboardingViewModel
 import com.makhp.pelukdiri.features.settings.*
 
 sealed class Screen(val route: String) {
@@ -40,9 +46,19 @@ fun NavGraph(
     navController: NavHostController,
     onExitApp: () -> Unit
 ) {
+    val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+    val isOnboardingCompleted by onboardingViewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
+
+    if (isOnboardingCompleted == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route
+        startDestination = initialRoute(requireNotNull(isOnboardingCompleted))
     ) {
         composable(Screen.Home.route) {
             MainStatsScreen(
@@ -56,7 +72,12 @@ fun NavGraph(
         }
         composable(Screen.Onboarding.route) {
             OnboardingScreen(
-                onComplete = { navController.popBackStack() }
+                onComplete = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
         composable(
@@ -135,3 +156,6 @@ fun NavGraph(
         }
     }
 }
+
+internal fun initialRoute(isOnboardingCompleted: Boolean): String =
+    if (isOnboardingCompleted) Screen.Home.route else Screen.Onboarding.route
