@@ -41,13 +41,6 @@ class DashboardViewModel @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    private val socialMediaPackages = setOf(
-        "com.instagram.android", "com.zhiliaoapp.musically", "com.ss.android.ugc.trill",
-        "com.google.android.youtube", "com.twitter.android", "com.facebook.katana",
-        "com.whatsapp", "com.snapchat.android", "com.facebook.orca", "com.google.android.apps.messaging",
-        "com.tencent.mm", "com.viber.voip", "jp.naver.line.android", "com.discord"
-    )
-
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
@@ -161,8 +154,8 @@ class DashboardViewModel @Inject constructor(
             yesterdayTopApps = yesterdayApps.values.map { UiAppUsage(it) }.toImmutableList(),
             isRefreshing = isRefreshing,
             isDndEnabled = isDndEnabled,
-            socialMediaUsageMillis = enrichedTodayApps.filter { it.packageName in socialMediaPackages }.sumOf { it.usageDurationMillis },
-            yesterdaySocialMediaUsageMillis = enrichedTodayApps.filter { it.packageName in socialMediaPackages }.sumOf { it.usageDurationYesterdayMillis ?: 0L }
+            socialMediaUsageMillis = usageRepository.getDailySummary(today).first()?.monitoredUsageMillis ?: 0L,
+            yesterdaySocialMediaUsageMillis = usageRepository.getDailySummary(yesterday).first()?.monitoredUsageMillis ?: 0L
         )
     }
 

@@ -10,6 +10,7 @@ import com.makhp.pelukdiri.core.domain.model.InterventionDecision
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionAudit
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
 import com.makhp.pelukdiri.core.domain.model.DeviationResult
+import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
@@ -17,6 +18,7 @@ import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
 import android.util.Log
 import java.time.LocalTime
 import javax.inject.Inject
@@ -38,6 +40,8 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         val currentTimeMs = timeProvider.nowMillis()
         return try {
             evaluate(packageName, currentTimeMs)
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             val currentDifficulty = try {
                 userPreferencesRepository.currentDifficulty.first()
@@ -148,6 +152,12 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         // 4. Performance & Sensitivity
         Log.d("EligibilityUseCase", "Stage: reading performance context")
         val recentLogs = interventionLogRepository.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
+        val difficultyHistory = recentLogs.map {
+            DifficultyHistoryEntry(
+                difficulty = it.difficultyLevel,
+                isValidResponse = !it.isBypassed && it.responseTimeMs > 0L,
+            )
+        }
         val challengeType = challengeSelector.select()
         val currentDifficultyRun = recentLogs
             .takeWhile { it.difficultyLevel == currentDifficulty }
@@ -185,10 +195,15 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             bedtime = bedtime,
             wakeTime = wakeTime,
             currentLevel = currentDifficulty,
-            timestampMs = currentTimeMs
+            timestampMs = currentTimeMs,
+            difficultyHistory = difficultyHistory,
         )
         
-        val shouldTrigger = devResult.deviation != null && devResult.deviation > 0.05
+        val shouldSchedule = nextEligible <= 0L
+        val shouldTrigger = !shouldSchedule
+        if (shouldSchedule) {
+            userPreferencesRepository.setNextEligibleInterventionAt(controlResult.nextEligibleInterventionAt)
+        }
         Log.d("EligibilityUseCase", "Stage: complete trigger=$shouldTrigger")
         
         val decision = InterventionDecision(
@@ -204,10 +219,10 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             timestamp = currentTimeMs,
             packageName = packageName,
             currentDifficulty = currentDifficulty,
-            reason = when {
-                devResult.deviation == null -> InterventionDecisionReason.INSUFFICIENT_HISTORY
-                shouldTrigger -> InterventionDecisionReason.TRIGGERED
-                else -> InterventionDecisionReason.BELOW_DEVIATION_THRESHOLD
+            reason = if (shouldSchedule) {
+                InterventionDecisionReason.INTERVAL_SCHEDULED
+            } else {
+                InterventionDecisionReason.TRIGGERED
             },
             historyCount = history.size,
             deviationResult = devResult,

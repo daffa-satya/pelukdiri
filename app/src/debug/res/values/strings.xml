@@ -1,4 +1,5 @@
 <resources>
+    <string name="app_name">PELUKDIRI Debug</string>
     <string name="test_lab_title">PelukDiri Test Lab</string>
     <string name="test_lab_runtime">Runtime state</string>
     <string name="test_lab_engine">Engine scenarios</string>

@@ -57,19 +57,30 @@ class DeviationEngine @Inject constructor(
         // 4. Positive excess Δ+ = max(0, x - B)
         val deltaPlus = max(0.0, currentUsage - baseline)
 
-        // 5. Handle singular cases explicitly (MAD=0 or Baseline=0)
-        // Relative deviation R = Δ+ / M
+        // 5. Stabilize zero/near-zero historical scales so a tiny excess does not
+        // saturate D. Raw MAD remains in telemetry; the effective scale is
+        // reproducible from the baseline and versioned policy parameters.
+        val effectiveMad = max(
+            mad,
+            max(
+                config.minimumMadMinutes,
+                baseline * config.minimumMadFractionOfBaseline,
+            ),
+        )
+
+        // Relative deviation R = Δ+ / effective MAD
         val relativeDeviation = when {
             deltaPlus == 0.0 -> 0.0
-            mad == 0.0 -> Double.POSITIVE_INFINITY
-            else -> deltaPlus / mad
+            effectiveMad == 0.0 -> Double.POSITIVE_INFINITY
+            else -> deltaPlus / effectiveMad
         }
 
-        // Relative magnitude A = Δ+ / B
+        // Relative magnitude A = Δ+ / max(B, minimum scale)
+        val magnitudeScale = max(baseline, config.minimumMadMinutes)
         val relativeMagnitude = when {
             deltaPlus == 0.0 -> 0.0
-            baseline == 0.0 -> Double.POSITIVE_INFINITY
-            else -> deltaPlus / baseline
+            magnitudeScale == 0.0 -> Double.POSITIVE_INFINITY
+            else -> deltaPlus / magnitudeScale
         }
 
         // 6. Combined signal S = R(1 + alpha * A)

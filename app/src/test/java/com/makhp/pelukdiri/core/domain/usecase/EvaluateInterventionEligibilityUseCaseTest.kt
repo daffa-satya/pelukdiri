@@ -12,6 +12,7 @@ import com.makhp.pelukdiri.core.domain.model.ControlMode
 import com.makhp.pelukdiri.core.domain.model.ControlResult
 import com.makhp.pelukdiri.core.domain.model.DeviationResult
 import com.makhp.pelukdiri.core.domain.model.DeviationStatus
+import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.InterventionDecision
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionAudit
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
@@ -27,6 +28,7 @@ import io.mockk.verify
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
@@ -54,6 +56,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
     fun setup() {
         coEvery { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
         every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
+        coEvery { userPreferencesRepository.setNextEligibleInterventionAt(any()) } returns Unit
         coEvery { interventionDecisionRepository.insert(any()) } returns Unit
         every { challengeSelector.select() } returns InterventionChallengeType.MATH
         useCase = EvaluateInterventionEligibilityUseCase(
@@ -126,6 +129,72 @@ class EvaluateInterventionEligibilityUseCaseTest {
     }
 
     @Test
+    fun `first monitored evaluation schedules an intervention instead of launching immediately`() = runBlocking {
+        stubEligibleEvaluation(nextEligibleAt = 0L)
+
+        val result = useCase(targetPackage)
+
+        assertFalse(result.shouldTrigger)
+        coVerify(exactly = 1) { userPreferencesRepository.setNextEligibleInterventionAt(1_000L) }
+        coVerify {
+            interventionDecisionRepository.insert(match {
+                it.reason == InterventionDecisionReason.INTERVAL_SCHEDULED &&
+                    it.nextEligibleAt == 1_000L && !it.shouldTrigger
+            })
+        }
+    }
+
+    @Test
+    fun `expired interval triggers even when deviation is below old threshold`() = runBlocking {
+        stubEligibleEvaluation(nextEligibleAt = 1L)
+        every { deviationEngine.calculate(any(), any()) } returns DeviationResult(
+            deviation = 0.0,
+            baseline = 10.0,
+            mad = 1.0,
+            signal = 0.0,
+            relativeDeviation = 0.0,
+            relativeMagnitude = 0.0,
+            status = DeviationStatus.Success,
+        )
+
+        val result = useCase(targetPackage)
+
+        assertTrue(result.shouldTrigger)
+        coVerify(exactly = 0) { userPreferencesRepository.setNextEligibleInterventionAt(any()) }
+        coVerify {
+            interventionDecisionRepository.insert(match {
+                it.reason == InterventionDecisionReason.TRIGGERED &&
+                    it.deviation == 0.0 && it.shouldTrigger
+            })
+        }
+    }
+
+    @Test
+    fun `expired interval triggers with insufficient history and null deviation`() = runBlocking {
+        stubEligibleEvaluation(nextEligibleAt = 1L)
+        coEvery { getAdaptiveHistoryUseCase() } returns emptyList()
+        every { deviationEngine.calculate(any(), emptyList()) } returns DeviationResult(
+            deviation = null,
+            baseline = null,
+            mad = null,
+            signal = null,
+            relativeDeviation = null,
+            relativeMagnitude = null,
+            status = DeviationStatus.InsufficientHistory,
+        )
+
+        val result = useCase(targetPackage)
+
+        assertTrue(result.shouldTrigger)
+        coVerify {
+            interventionDecisionRepository.insert(match {
+                it.reason == InterventionDecisionReason.TRIGGERED &&
+                    it.historyCount == 0 && it.deviation == null && it.shouldTrigger
+            })
+        }
+    }
+
+    @Test
     fun `cooldown decision is audited without running engines`() = runBlocking {
         every { usageEventCollector.getUsageForDay(any()) } returns
             listOf(AppUsage(targetPackage, "Target", 60_000L, 0L))
@@ -161,10 +230,21 @@ class EvaluateInterventionEligibilityUseCaseTest {
     }
 
     @Test
+    fun `evaluation cancellation is rethrown without an error audit`() = runBlocking {
+        every { usageEventCollector.getUsageForDay(any()) } throws CancellationException("stopped")
+
+        val thrown = runCatching { useCase(targetPackage) }.exceptionOrNull()
+
+        assertTrue(thrown is CancellationException)
+        coVerify(exactly = 0) { interventionDecisionRepository.insert(any()) }
+    }
+
+    @Test
     fun `performance uses same difficulty excludes bypasses and omits current response from baseline`() = runBlocking {
         val latest = performanceLog(id = 10L, responseTimeMs = 500L)
+        val bypass = performanceLog(id = 9L, responseTimeMs = 0L, isBypassed = true)
         val previous = (1L..5L).map { id -> performanceLog(id = id, responseTimeMs = 1_000L) }
-        stubEligibleEvaluation(recentLogs = listOf(latest) + previous)
+        stubEligibleEvaluation(recentLogs = listOf(latest, bypass) + previous)
 
         useCase(targetPackage)
 
@@ -179,7 +259,12 @@ class EvaluateInterventionEligibilityUseCaseTest {
                 any(),
                 2,
                 any(),
-                any()
+                any(),
+                match {
+                    it.map(DifficultyHistoryEntry::difficulty) == List(7) { 2 } &&
+                        it.map(DifficultyHistoryEntry::isValidResponse) ==
+                        listOf(true, false, true, true, true, true, true)
+                },
             )
         }
     }
@@ -199,7 +284,11 @@ class EvaluateInterventionEligibilityUseCaseTest {
 
         verify {
             controlEngine.calculateNextIntervention(
-                any(), null, emptyList(), any(), any(), any(), 2, any(), any()
+                any(), null, emptyList(), any(), any(), any(), 2, any(), any(),
+                match {
+                    it.map(DifficultyHistoryEntry::difficulty) == listOf(3, 2, 2, 2, 2, 2, 2) &&
+                        it.all(DifficultyHistoryEntry::isValidResponse)
+                },
             )
         }
     }
@@ -222,7 +311,11 @@ class EvaluateInterventionEligibilityUseCaseTest {
                 any(),
                 match { it.responseTimeMs == 500L },
                 match { it == listOf(1_000L) },
-                any(), any(), any(), 2, any(), any()
+                any(), any(), any(), 2, any(), any(),
+                match {
+                    it.map(DifficultyHistoryEntry::difficulty) == listOf(2, 2, 2) &&
+                        it.all(DifficultyHistoryEntry::isValidResponse)
+                },
             )
         }
     }
@@ -241,10 +334,11 @@ class EvaluateInterventionEligibilityUseCaseTest {
     private fun stubEligibleEvaluation(
         usage: List<AppUsage> = listOf(AppUsage(targetPackage, "Target", 10 * 60_000L, 0L)),
         recentLogs: List<InterventionLog> = emptyList(),
+        nextEligibleAt: Long = 1L,
     ) {
         every { usageEventCollector.getUsageForDay(any()) } returns usage
         every { userPreferencesRepository.monitoredPackages } returns flowOf(setOf(targetPackage))
-        every { userPreferencesRepository.nextEligibleInterventionAt } returns flowOf(0L)
+        every { userPreferencesRepository.nextEligibleInterventionAt } returns flowOf(nextEligibleAt)
         every { userPreferencesRepository.emergencyBypassUntil } returns flowOf(0L)
         every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
         every { userPreferencesRepository.bedtime } returns flowOf(null)
@@ -263,7 +357,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
         coEvery { interventionLogRepository.getRecentLogs(32) } returns recentLogs
         every {
             controlEngine.calculateNextIntervention(
-                any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
         } returns controlResult()
     }
@@ -274,6 +368,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
         difficulty: Int = 2,
         isSuccess: Boolean = true,
         challengeType: InterventionChallengeType = InterventionChallengeType.MATH,
+        isBypassed: Boolean = false,
     ) = InterventionLog(
         id = id,
         timestamp = id,
@@ -282,7 +377,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
         difficultyLevel = difficulty,
         responseTimeMs = responseTimeMs,
         isSuccess = isSuccess,
-        isBypassed = false,
+        isBypassed = isBypassed,
         penaltyAppliedMinutes = 0,
         challengeType = challengeType,
     )

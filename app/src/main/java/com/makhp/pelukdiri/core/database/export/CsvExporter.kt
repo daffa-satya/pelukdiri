@@ -2,15 +2,24 @@ package com.makhp.pelukdiri.core.database.export
 
 import android.content.ContentValues
 import android.content.Context
+import android.app.ActivityManager
+import android.app.NotificationManager
 import android.net.Uri
+import android.os.BatteryManager
+import android.os.Build
 import android.os.Environment
+import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.MediaStore
+import android.provider.Settings
+import com.makhp.pelukdiri.collector.isUsageStatsPermissionGranted
 import com.makhp.pelukdiri.core.database.dao.AdaptiveLimitDao
 import com.makhp.pelukdiri.core.database.dao.InterventionDao
 import com.makhp.pelukdiri.core.database.dao.InterventionDecisionDao
 import com.makhp.pelukdiri.core.database.dao.InterventionNotificationDao
 import com.makhp.pelukdiri.core.database.dao.UsageDao
 import com.makhp.pelukdiri.core.database.dao.UsageSensorDao
+import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,6 +31,8 @@ import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.TimeZone
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
@@ -56,6 +67,7 @@ class CsvExporter @Inject constructor(
                 exportInterventionLogs(),
                 exportInterventionDecisions(),
                 exportDailyAdaptiveLimits(),
+                exportDeviceInfo(),
             )
 
             // 2. Create ZIP package
@@ -214,6 +226,69 @@ class CsvExporter @Inject constructor(
                     )
                 )
             }
+        }
+        return file
+    }
+
+    @Suppress("DEPRECATION")
+    private fun exportDeviceInfo(): File {
+        val file = createTempFile("device_info.txt")
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        val activityManager = context.getSystemService(ActivityManager::class.java)
+        val memoryInfo = ActivityManager.MemoryInfo().also(activityManager::getMemoryInfo)
+        val batteryManager = context.getSystemService(BatteryManager::class.java)
+        val powerManager = context.getSystemService(PowerManager::class.java)
+        val notificationManager = context.getSystemService(NotificationManager::class.java)
+        val metrics = context.resources.displayMetrics
+        val data = linkedMapOf(
+            "export.generated_at_utc" to DateTimeFormatter.ISO_INSTANT.format(Instant.now()),
+            "app.package_name" to context.packageName,
+            "app.version_name" to (packageInfo.versionName ?: ""),
+            "app.version_code" to packageInfo.longVersionCode,
+            "intervention.policy_version" to ControlConfig.POLICY_VERSION,
+            "app.first_install_time_utc" to CsvFormat.timestamp(packageInfo.firstInstallTime),
+            "app.last_update_time_utc" to CsvFormat.timestamp(packageInfo.lastUpdateTime),
+            "device.manufacturer" to Build.MANUFACTURER,
+            "device.brand" to Build.BRAND,
+            "device.model" to Build.MODEL,
+            "device.device" to Build.DEVICE,
+            "device.product" to Build.PRODUCT,
+            "device.hardware" to Build.HARDWARE,
+            "device.board" to Build.BOARD,
+            "device.bootloader" to Build.BOOTLOADER,
+            "device.supported_abis" to Build.SUPPORTED_ABIS.joinToString(","),
+            "os.android_release" to Build.VERSION.RELEASE,
+            "os.api_level" to Build.VERSION.SDK_INT,
+            "os.security_patch" to Build.VERSION.SECURITY_PATCH,
+            "os.build_id" to Build.ID,
+            "os.build_display" to Build.DISPLAY,
+            "os.build_fingerprint" to Build.FINGERPRINT,
+            "os.build_type" to Build.TYPE,
+            "os.build_tags" to Build.TAGS,
+            "os.base_os" to Build.VERSION.BASE_OS,
+            "os.incremental" to Build.VERSION.INCREMENTAL,
+            "runtime.device_uptime_ms" to SystemClock.elapsedRealtime(),
+            "runtime.available_processors" to Runtime.getRuntime().availableProcessors(),
+            "locale.language_tag" to Locale.getDefault().toLanguageTag(),
+            "locale.time_zone" to TimeZone.getDefault().id,
+            "display.width_pixels" to metrics.widthPixels,
+            "display.height_pixels" to metrics.heightPixels,
+            "display.density_dpi" to metrics.densityDpi,
+            "display.scaled_density" to metrics.scaledDensity,
+            "memory.total_bytes" to memoryInfo.totalMem,
+            "memory.available_bytes" to memoryInfo.availMem,
+            "memory.low_memory" to memoryInfo.lowMemory,
+            "storage.internal_total_bytes" to context.filesDir.totalSpace,
+            "storage.internal_available_bytes" to context.filesDir.usableSpace,
+            "battery.level_percent" to batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY),
+            "battery.is_charging" to batteryManager.isCharging,
+            "permissions.usage_access" to isUsageStatsPermissionGranted(context),
+            "permissions.accessibility_enabled" to (Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1),
+            "permissions.notifications_enabled" to notificationManager.areNotificationsEnabled(),
+            "permissions.battery_optimization_ignored" to powerManager.isIgnoringBatteryOptimizations(context.packageName),
+        )
+        writerFor(file).use { writer ->
+            data.forEach { (key, value) -> writer.append(key).append('=').append(value.toString()).append("\r\n") }
         }
         return file
     }

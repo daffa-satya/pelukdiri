@@ -13,11 +13,13 @@ class DeviationEngineTest {
 
     // 1. Verify Default Configuration values
     @Test
-    fun `default configuration matches frozen v0_1 parameters`() {
+    fun `default configuration matches provisional synthetic tuned parameters`() {
         val config = DeviationConfig()
         assertEquals(0.1, config.alpha, 0.0)
-        assertEquals(0.75, config.k, 0.0)
-        assertEquals(2.0, config.s0, 0.0)
+        assertEquals(0.25, config.k, 0.0)
+        assertEquals(3.0, config.s0, 0.0)
+        assertEquals(1.0, config.minimumMadMinutes, 0.0)
+        assertEquals(0.2, config.minimumMadFractionOfBaseline, 0.0)
         assertEquals(7, config.minimumHistory)
     }
 
@@ -89,18 +91,18 @@ class DeviationEngineTest {
         // sorted abs dev: [0, 0, 0, 5, 5, 10, 10] -> M = 5
         val history = variedHistory()
         
-        // x = 90
+        // x = 90; effective MAD = max(5, 1, 20% * 60) = 12
         // Δ+ = 90 - 60 = 30
-        // R = 30 / 5 = 6.0
+        // R = 30 / 12 = 2.5
         // A = 30 / 60 = 0.5
-        // S = 6.0 * (1 + 0.1 * 0.5) = 6.0 * 1.05 = 6.3
+        // S = 2.5 * (1 + 0.1 * 0.5) = 2.5 * 1.05 = 2.625
         val result = engine.calculate(90.0, history)
         
         assertEquals(60.0, result.baseline!!, 0.0)
         assertEquals(5.0, result.mad!!, 0.0)
-        assertEquals(6.0, result.relativeDeviation!!, 0.0)
+        assertEquals(2.5, result.relativeDeviation!!, 0.0)
         assertEquals(0.5, result.relativeMagnitude!!, 0.0)
-        assertEquals(6.3, result.signal!!, 0.0001)
+        assertEquals(2.625, result.signal!!, 0.0001)
     }
 
     // 12. MAD = 0 with zero excess -> D = 0
@@ -114,24 +116,24 @@ class DeviationEngineTest {
         assertEquals(0.0, result.deviation!!, 0.0)
     }
 
-    // 13. MAD = 0 with positive excess -> D = 1
+    // 13. MAD = 0 uses the configured scale floor instead of saturating
     @Test
-    fun `MAD is zero and positive excess results in saturation`() {
+    fun `MAD is zero and tiny positive excess remains low deviation`() {
         val engine = DeviationEngine(DeviationConfig())
         val history = List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 60.0 }
         val result = engine.calculate(60.1, history)
-        assertEquals(Double.POSITIVE_INFINITY, result.signal!!, 0.0)
-        assertEquals(1.0, result.deviation!!, 0.0)
+        assertTrue(result.signal!!.isFinite())
+        assertTrue(result.deviation!! in 0.0..<0.1)
     }
 
-    // 14. Baseline = 0 with positive excess -> D = 1
+    // 14. Baseline = 0 uses the absolute one-minute scale floor
     @Test
-    fun `baseline is zero and positive excess results in saturation`() {
+    fun `baseline is zero and tiny positive excess remains finite`() {
         val engine = DeviationEngine(DeviationConfig())
         val history = List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 0.0 }
         val result = engine.calculate(0.1, history)
-        assertEquals(Double.POSITIVE_INFINITY, result.signal!!, 0.0)
-        assertEquals(1.0, result.deviation!!, 0.0)
+        assertTrue(result.signal!!.isFinite())
+        assertTrue(result.deviation!! in 0.0..<0.1)
     }
 
     // 15. Output is always within [0,1] for valid finite inputs

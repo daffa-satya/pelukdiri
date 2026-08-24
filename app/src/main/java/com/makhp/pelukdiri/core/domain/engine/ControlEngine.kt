@@ -3,6 +3,7 @@ package com.makhp.pelukdiri.core.domain.engine
 import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import com.makhp.pelukdiri.core.domain.model.ControlMode
 import com.makhp.pelukdiri.core.domain.model.ControlResult
+import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import java.time.LocalTime
 import javax.inject.Inject
@@ -28,11 +29,12 @@ class ControlEngine @Inject constructor(
         wakeTime: LocalTime?,
         currentLevel: Int,
         currentTime: LocalTime = LocalTime.now(),
-        timestampMs: Long = System.currentTimeMillis()
+        timestampMs: Long = System.currentTimeMillis(),
+        difficultyHistory: List<DifficultyHistoryEntry> = emptyList(),
     ): ControlResult {
         // 1. Fallback for Deviation
         if (deviation == null) {
-            return safeDefault(currentLevel, timestampMs)
+            return safeDefault(currentLevel, timestampMs, difficultyHistory)
         }
 
         // 2. Sensitivity
@@ -57,7 +59,14 @@ class ControlEngine @Inject constructor(
         }
 
         // 4. Difficulty
-        val diffResult = difficultyController.calculate(deviation, p, q, currentLevel, insufficientEvidence)
+        val diffResult = difficultyController.calculate(
+            deviation,
+            p,
+            q,
+            currentLevel,
+            insufficientEvidence,
+            difficultyHistory,
+        )
 
         // 5. Frequency
         val freqResult = frequencyController.calculate(deviation, q)
@@ -85,8 +94,17 @@ class ControlEngine @Inject constructor(
         )
     }
 
-    private fun safeDefault(currentLevel: Int, timestampMs: Long): ControlResult {
+    private fun safeDefault(
+        currentLevel: Int,
+        timestampMs: Long,
+        difficultyHistory: List<DifficultyHistoryEntry>,
+    ): ControlResult {
         val nextEligibleAt = timestampMs + (config.defaultFrequencyMinutes * 60 * 1000).toLong()
+        val nextDifficulty = difficultyController.applyReversalGuard(
+            currentLevel,
+            config.defaultDifficulty,
+            difficultyHistory,
+        )
         return ControlResult(
             deviation = null,
             performance = 0.5,
@@ -97,7 +115,7 @@ class ControlEngine @Inject constructor(
             normalizedDifficultyControl = 0.0,
             difficultyTarget = config.defaultDifficulty.toDouble(),
             currentDifficulty = currentLevel,
-            nextDifficulty = config.defaultDifficulty,
+            nextDifficulty = nextDifficulty,
             frequencyControl = 0.0,
             normalizedFrequencyControl = 0.0,
             intervalMinutes = config.defaultFrequencyMinutes,

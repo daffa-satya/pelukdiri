@@ -7,6 +7,8 @@ import android.view.accessibility.AccessibilityEvent
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.usecase.EvaluateInterventionEligibilityUseCase
+import com.makhp.pelukdiri.core.domain.usecase.AttemptInterventionLaunchUseCase
+import com.makhp.pelukdiri.core.domain.usecase.InterventionLaunchResult
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.features.intervention.ActiveInterventionSession
 import com.makhp.pelukdiri.core.domain.InterventionLaunchPolicy
@@ -42,6 +44,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     lateinit var evaluateInterventionEligibilityUseCase: EvaluateInterventionEligibilityUseCase
 
     @Inject
+    lateinit var attemptInterventionLaunchUseCase: AttemptInterventionLaunchUseCase
+
+    @Inject
     lateinit var lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager
 
     @Inject lateinit var activeInterventionSession: ActiveInterventionSession
@@ -61,8 +66,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private var lastSyncTimestamp: Long = 0L
     private var lastEvaluationTimestamp: Long = 0L
 
-    private val systemApps = setOf(
-        "com.makhp.pelukdiri",
+    // These packages are still recorded as usage; they are excluded only from interventions
+    // so PelukDiri cannot block itself or Android navigation/recovery surfaces.
+    private val nonInterventionPackages = setOf(
         "app.olauncher",
         "com.android.settings",
         "com.miui.securitycenter",
@@ -136,11 +142,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         val controlResult = decision.controlResult
 
         if (decision.shouldTrigger && controlResult != null) {
-            // Attempt to acquire lock before launching
-            if (lockManager.acquireLock()) {
+            val launchResult = attemptInterventionLaunchUseCase(controlResult) {
                 val launchFreq = appUsageCollector.getLaunchCountForPackage(packageName).toDouble()
-
-                val launched = launchInterventionOverlay(
+                launchInterventionOverlay(
                     packageName = packageName,
                     monitoredUsageMinutes = decision.monitoredUsageMinutes,
                     launchFreq = launchFreq,
@@ -150,24 +154,30 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                     difficulty = controlResult.nextDifficulty,
                     challengeType = decision.challengeType,
                 )
-
-                // Rollback lock if launch failed
-                if (!launched) {
-                    lockManager.releaseLock()
-                } else {
-                    userPreferencesRepository.setNextEligibleInterventionAt(controlResult.nextEligibleInterventionAt)
-                    userPreferencesRepository.setCurrentDifficulty(controlResult.nextDifficulty)
-                    Log.d("AppBlockerService", "Committed control result: Mode=${controlResult.mode}, Difficulty=${controlResult.nextDifficulty}, Interval=${controlResult.intervalMinutes}m")
-                }
-            } else {
-                Log.d("AppBlockerService", "Skipping trigger: Intervention lock already held.")
+            }
+            when (launchResult) {
+                InterventionLaunchResult.LAUNCHED -> Log.d(
+                    "AppBlockerService",
+                    "Committed control result: Mode=${controlResult.mode}, Difficulty=${controlResult.nextDifficulty}, Interval=${controlResult.intervalMinutes}m"
+                )
+                InterventionLaunchResult.LOCKED -> Log.d(
+                    "AppBlockerService",
+                    "Skipping trigger: Intervention lock already held."
+                )
+                InterventionLaunchResult.FAILED -> Unit
             }
         }
     }
 
     private fun handlePackageChanged(newPackage: String) {
+        val shouldTrack = ForegroundTrackingPolicy.shouldTrack(
+            resolvedPackage = newPackage,
+            ownPackage = packageName,
+            monitoredPackages = currentMonitoredPackages,
+            excludedPackages = nonInterventionPackages,
+        )
         if (newPackage == currentForegroundPackage) {
-            if (ForegroundTrackingPolicy.shouldRestart(
+            if (shouldTrack && ForegroundTrackingPolicy.shouldRestart(
                     resolvedPackage = newPackage,
                     currentPackage = currentForegroundPackage,
                     monitoredPackages = currentMonitoredPackages,
@@ -200,7 +210,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         currentForegroundPackage = newPackage
 
         // 3. Start tracking if new package is a target app
-        if (!systemApps.contains(newPackage) && currentMonitoredPackages.contains(newPackage)) {
+        if (shouldTrack) {
             val forcedChallenge = launchPolicy.consumeForcedChallenge()
             if (forcedChallenge != null) {
                 serviceScope.launch { launchForcedIntervention(newPackage, forcedChallenge) }

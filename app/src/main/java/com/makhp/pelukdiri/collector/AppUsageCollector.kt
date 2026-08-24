@@ -240,14 +240,8 @@ class AppUsageCollector @Inject constructor(
         
         if (statsMap.isNullOrEmpty()) return emptyList()
 
-        // List of common launchers and system packages to ignore to reduce DB noise
-        val ignoredPackages = listOf(
-            "com.miui.home", "com.android.launcher", "com.google.android.apps.nexuslauncher",
-            "com.android.settings", "com.android.systemui", "app.olauncher", "com.makhp.pelukdiri"
-        )
-
         return statsMap.values
-            .filter { it.totalTimeInForeground > 0 && it.packageName !in ignoredPackages }
+            .filter { it.totalTimeInForeground > 0 }
             .map { usageStats ->
                 AppUsage(
                     packageName = usageStats.packageName,

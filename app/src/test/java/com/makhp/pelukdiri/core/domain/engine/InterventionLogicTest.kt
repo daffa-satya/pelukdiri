@@ -90,4 +90,24 @@ class InterventionLogicTest {
         val isBlocked = currentTime < nextEligible
         assertFalse(isBlocked)
     }
+
+    @Test
+    fun `safe default also respects the reversal guard`() {
+        val result = controlEngine.calculateNextIntervention(
+            deviation = null,
+            lastPerformance = null,
+            performanceHistory = emptyList(),
+            lux = null,
+            bedtime = null,
+            wakeTime = null,
+            currentLevel = 3,
+            difficultyHistory = listOf(
+                DifficultyHistoryEntry(3, true),
+                DifficultyHistoryEntry(2, true),
+                DifficultyHistoryEntry(3, true),
+            ),
+        )
+
+        assertEquals(3, result.nextDifficulty)
+    }
 }

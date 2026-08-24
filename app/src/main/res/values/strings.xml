@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">PELUKDIRI</string>
-    <string name="accessibility_service_description">Monitors app usage to provide mindful interventions and prevent excessive screen time.</string>
+    <string name="accessibility_service_description">Memantau penggunaan aplikasi dan mencegah screen time berlebih</string>
 
     <!-- Dashboard -->
     <string name="dashboard_header_title">PELUKDIRI</string>
-    <string name="dashboard_screen_time_today">WAKTU LAYAR SOSMED</string>
+    <string name="dashboard_screen_time_today">WAKTU LAYAR PANTAUAN</string>
     <string name="dashboard_adaptive_limit">Batas Adaptif</string>
     <string name="dashboard_recalculate_limit">Hitung ulang</string>
     <string name="dashboard_recalculate_limit_failed">Batas adaptif tidak dapat dihitung ulang.</string>
@@ -45,7 +45,7 @@
     <string name="analytics_period_weekly">Mingguan</string>
     <string name="analytics_period_monthly">Bulanan</string>
     <string name="analytics_metric_total_screentime">Total Waktu Layar</string>
-    <string name="analytics_metric_social_media_screentime">Waktu Layar Sosmed</string>
+    <string name="analytics_metric_social_media_screentime">Waktu Layar Pantauan</string>
     <string name="analytics_avg_screentime">Rerata Waktu Layar</string>
     <string name="analytics_metric_unlocks">Buka Kunci</string>
     <string name="analytics_metric_longest_session">Sesi Terlama</string>
@@ -61,7 +61,7 @@
     <string name="analytics_graph_calculate">Hitung grafik</string>
     <string name="analytics_graph_calculating">Menghitung grafik…</string>
     <string name="analytics_graph_failed">Grafik tidak dapat dihitung. Coba lagi.</string>
-    <string name="analytics_screen_time_over_time">WAKTU LAYAR DARI WAKTU KE WAKTU</string>
+    <string name="analytics_screen_time_over_time">GRAFIK WAKTU LAYAR</string>
     <string name="analytics_top_apps">APLIKASI TERATAS</string>
     <string name="analytics_by_category">BERDASARKAN KATEGORI</string>
     <string name="analytics_vs_limit">VS BATAS</string>
@@ -149,7 +149,7 @@
     <string name="informed_consent_p9">Proses penggunaan aplikasi dapat menimbulkan ketidaknyamanan ringan, seperti merasa terganggu ketika intervensi muncul atau merasa kurang nyaman karena harus berhenti sejenak dari penggunaan aplikasi hiburan. Responden juga mungkin mengalami kesulitan ketika mengerjakan tantangan matematika mental atau pola. Intervensi dirancang dalam bentuk tantangan singkat dengan batas tingkat kesulitan yang telah ditentukan.</string>
     <string name="informed_consent_p10">Data yang diperoleh akan dijaga kerahasiaannya dan hanya dapat diakses oleh peneliti. Data penelitian akan disimpan secara lokal pada laptop peneliti. Identitas responden akan menggunakan kode dalam proses pengolahan data dan tidak akan dicantumkan dalam penyajian hasil penelitian. Hasil penelitian akan disajikan dalam bentuk data kelompok, tabel, grafik, atau analisis statistik sehingga identitas responden tidak dapat diketahui.</string>
     <string name="informed_consent_p11">Partisipasi dalam penelitian ini dilakukan sesuai prosedur penelitian dan persetujuan responden serta orang tua atau wali. Responden akan mendapatkan kompensasi sebesar Rp50.000,00 sebagai penghargaan atas waktu dan partisipasinya dalam penelitian. Kompensasi tersebut bukan merupakan paksaan untuk mengikuti penelitian.</string>
-    <string name="informed_consent_p12">Apabila terdapat pertanyaan, kendala dalam penggunaan aplikasi, atau hal yang ingin disampaikan berkaitan dengan penelitian ini, Anda dapat menghubungi: researcher1@gmail.com (Joshua Leonardo Hilman Hutajulu) dan researcher2@gmail.com (Daffa Satya Alif Siregar).</string>
+    <string name="informed_consent_p12">Apabila terdapat pertanyaan, kendala dalam penggunaan aplikasi, atau hal yang ingin disampaikan berkaitan dengan penelitian ini, Anda dapat menghubungi: josuaku091010@gmail.com (Joshua Leonardo Hilman Hutajulu) dan daffa.satya.alif@gmail.com (Daffa Satya Alif Siregar).</string>
     <string name="settings_logout_title">Keluar</string>
     <string name="settings_logout_desc">Keluar dari aplikasi PELUKDIRI di perangkat ini.</string>
     <string name="settings_banner_title">Kamu memegang kendali</string>
@@ -286,7 +286,7 @@
     <string name="profile_gallery">Galeri</string>
     <string name="profile_delete_photo">Hapus Foto Profil</string>
     <string name="profile_test_onboarding">Tes Onboarding</string>
-    <string name="profile_test_intervention">Tes Intervensi</string>
+    <string name="profile_test_intervention">Tes Intervensi MTK</string>
     <string name="profile_test_intervention_pattern">Tes Intervensi Pola</string>
 
     <!-- All Apps -->
@@ -522,7 +522,7 @@
     <!-- Export Screen -->
     <string name="export_intro_text">Ekspor data penggunaan aplikasi dan intervensi kamu dalam format CSV/ZIP untuk keperluan penelitian dan audit mandiri.</string>
     <string name="export_format_label">Format File</string>
-    <string name="export_format_desc">Data akan diekspor dalam format ZIP berisi 7 file CSV yang sesuai standar RFC-4180.</string>
+    <string name="export_format_desc">Data akan diekspor dalam format ZIP berisi 7 file CSV sesuai standar RFC-4180 dan 1 file TXT informasi perangkat.</string>
     <string name="export_format_all_zip">Semua (ZIP)</string>
     <string name="export_folder_label">Folder: Android/data/com.makhp.pelukdiri/files/exports</string>
     <string name="export_privacy_note">Privasi Terjamin: Seluruh data diproses secara lokal di perangkat kamu dan tidak dikirim ke server peneliti secara otomatis.</string>

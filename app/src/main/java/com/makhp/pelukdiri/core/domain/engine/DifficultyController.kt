@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri.core.domain.engine
 
 import com.makhp.pelukdiri.core.domain.model.ControlConfig
+import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
@@ -17,6 +18,7 @@ class DifficultyController @Inject constructor(
      * @param sensitivity Sensitivity modifier Q in [0,1].
      * @param currentLevel Current difficulty level [1,5].
      * @param insufficientEvidence True if performance history is insufficient.
+     * @param difficultyHistory Committed difficulty levels, newest first; only valid responses age the guard.
      * @return DifficultyResult.
      */
     fun calculate(
@@ -25,6 +27,7 @@ class DifficultyController @Inject constructor(
         sensitivity: Double,
         currentLevel: Int,
         insufficientEvidence: Boolean,
+        difficultyHistory: List<DifficultyHistoryEntry> = emptyList(),
     ): DifficultyResult {
         // C_D = D * P * (1 + lambda_D * Q)
         val controlSignal = deviation * performance * (1.0 + (config.lambdaDifficulty * sensitivity))
@@ -49,6 +52,8 @@ class DifficultyController @Inject constructor(
         if (insufficientEvidence && nextLevel > currentLevel) {
             nextLevel = currentLevel
         }
+
+        nextLevel = applyReversalGuard(currentLevel, nextLevel, difficultyHistory)
         
         return DifficultyResult(
             controlSignal = controlSignal,
@@ -56,6 +61,33 @@ class DifficultyController @Inject constructor(
             target = target,
             nextLevel = nextLevel
         )
+    }
+
+    internal fun applyReversalGuard(
+        currentLevel: Int,
+        proposedLevel: Int,
+        difficultyHistory: List<DifficultyHistoryEntry>,
+    ): Int {
+        val proposedDirection = (proposedLevel - currentLevel).compareTo(0)
+        if (proposedDirection == 0) return proposedLevel
+
+        val chronological = difficultyHistory.asReversed()
+        val moves = chronological.zipWithNext { previous, next ->
+            (next.difficulty - previous.difficulty).compareTo(0)
+        }
+        for (index in moves.lastIndex downTo 1) {
+            val previousDirection = moves[index - 1]
+            val reversalDirection = moves[index]
+            if (previousDirection == 0 || reversalDirection == 0 || previousDirection == reversalDirection) {
+                continue
+            }
+            val validCompletionsSinceReversal = chronological
+                .drop(index + 2)
+                .count { it.isValidResponse }
+            if (validCompletionsSinceReversal >= config.reversalGuardInterventions) return proposedLevel
+            return if (proposedDirection == previousDirection) currentLevel else proposedLevel
+        }
+        return proposedLevel
     }
 
     data class DifficultyResult(

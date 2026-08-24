@@ -259,7 +259,7 @@ private fun DebugTestLabScreen(
                 Action(stringResource(R.string.test_lab_low_deviation), { onScenario(false) }, Modifier.weight(1f))
                 Action(stringResource(R.string.test_lab_high_deviation), { onScenario(true) }, Modifier.weight(1f))
             }
-            (1..3).forEach { level -> Action(stringResource(R.string.test_lab_difficulty, level), { onSetDifficulty(level) }) }
+            (1..5).forEach { level -> Action(stringResource(R.string.test_lab_difficulty, level), { onSetDifficulty(level) }) }
             Action(stringResource(R.string.test_lab_good_performance), { onPerformance(true) })
             Action(stringResource(R.string.test_lab_poor_performance), { onPerformance(false) })
             Action(stringResource(R.string.test_lab_seed_history), onSeedHistory)
@@ -285,7 +285,7 @@ private fun DebugTestLabScreen(
             Action(stringResource(R.string.test_lab_watched_app_pattern), {
                 onWatchedAppIntervention(InterventionChallengeType.PATTERN)
             })
-            (1..3).forEach { level -> Action(stringResource(R.string.test_lab_launch_level, level), { onLaunch(level) }) }
+            (1..5).forEach { level -> Action(stringResource(R.string.test_lab_launch_level, level), { onLaunch(level) }) }
             (1..5).forEach { level ->
                 Action(stringResource(R.string.test_lab_launch_pattern_level, level), { onLaunchPattern(level) })
             }
