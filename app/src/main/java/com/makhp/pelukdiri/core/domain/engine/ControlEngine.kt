@@ -83,8 +83,6 @@ class ControlEngine @Inject constructor(
 
         val nextEligibleAt = timestampMs + (freqResult.intervalMinutes * 60 * 1000).toLong()
 
-        android.util.Log.d("ControlEngine", "Signals: D=$deviation, P=$p, Q_lux=$qLux, Q_time=$qTime, Q=$q, failures=$consecutiveFailures, Target=${diffResult.target}, Next=${diffResult.nextLevel}, Interval=${freqResult.intervalMinutes}")
-
         return ControlResult(
             deviation = deviation,
             performance = p,

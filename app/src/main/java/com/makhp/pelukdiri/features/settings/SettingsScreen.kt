@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,18 +14,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.theme.Dimens
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private val timeWithPeriodFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)
+
+internal fun formatTimeWithPeriod(time: String): String =
+    runCatching { LocalTime.parse(time).format(timeWithPeriodFormatter) }.getOrDefault(time)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +49,7 @@ fun SettingsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showExportDialog by remember { mutableStateOf(false) }
     var showTimePickerDialog by remember { mutableStateOf<String?>(null) } // "sleep" or "wake"
-    
+
     SettingsLayout(
         state = state,
         onHomeClick = onHomeClick,
@@ -53,6 +60,7 @@ fun SettingsScreen(
         onSleepTimeClick = { showTimePickerDialog = "sleep" },
         onWakeTimeClick = { showTimePickerDialog = "wake" },
         onExportClick = { showExportDialog = true },
+        onBackfillClick = viewModel::backfillHistory,
         onNavigateToAbout = onNavigateToAbout,
         onLogout = onExitApp
     )
@@ -63,19 +71,19 @@ fun SettingsScreen(
         val timePickerState = rememberTimePickerState(
             initialHour = parts.getOrNull(0)?.toIntOrNull() ?: 22,
             initialMinute = parts.getOrNull(1)?.toIntOrNull() ?: 0,
-            is24Hour = true
+            is24Hour = false
         )
 
         AlertDialog(
             onDismissRequest = { showTimePickerDialog = null },
-            title = { 
+            title = {
                 Text(
                     stringResource(
-                        if (showTimePickerDialog == "sleep") R.string.settings_sleep_time_label 
+                        if (showTimePickerDialog == "sleep") R.string.settings_sleep_time_label
                         else R.string.settings_wake_time_label
                     ),
                     fontWeight = FontWeight.Bold
-                ) 
+                )
             },
             text = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -159,10 +167,23 @@ fun SettingsScreen(
     state.exportError?.let { error ->
         AlertDialog(
             onDismissRequest = viewModel::clearExportResult,
-            title = { Text(stringResource(R.string.settings_export_error_title)) },
+            title = { Text(stringResource(R.string.export_failed)) },
             text = { Text(error) },
             confirmButton = {
                 Button(onClick = viewModel::clearExportResult) {
+                    Text(stringResource(R.string.settings_export_close))
+                }
+            },
+        )
+    }
+
+    if (state.backfillError) {
+        AlertDialog(
+            onDismissRequest = viewModel::clearBackfillError,
+            title = { Text(stringResource(R.string.settings_backfill_error_title)) },
+            text = { Text(stringResource(R.string.settings_backfill_error_msg)) },
+            confirmButton = {
+                Button(onClick = viewModel::clearBackfillError) {
                     Text(stringResource(R.string.settings_export_close))
                 }
             },
@@ -181,6 +202,7 @@ private fun SettingsLayout(
     onSleepTimeClick: () -> Unit,
     onWakeTimeClick: () -> Unit,
     onExportClick: () -> Unit,
+    onBackfillClick: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -198,7 +220,7 @@ private fun SettingsLayout(
             verticalArrangement = Arrangement.spacedBy(DashboardTokens.LargeGap)
         ) {
             item(key = "header") { SettingsHeader() }
-            
+
             item(key = "preferences") {
                 SettingsSection(title = stringResource(R.string.settings_preferences_section)) {
 
@@ -209,7 +231,7 @@ private fun SettingsLayout(
                         onClick = onSleepTimeClick,
                         trailing = {
                             Text(
-                                text = state.sleepTime,
+                                text = formatTimeWithPeriod(state.sleepTime),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -223,7 +245,7 @@ private fun SettingsLayout(
                         onClick = onWakeTimeClick,
                         trailing = {
                             Text(
-                                text = state.wakeTime,
+                                text = formatTimeWithPeriod(state.wakeTime),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -243,15 +265,25 @@ private fun SettingsLayout(
                         icon = Icons.Default.FileDownload,
                         onClick = onExportClick
                     )
+                    SettingsDivider()
+                    SettingsItem(
+                        title = stringResource(R.string.dashboard_backfill_14_days),
+                        description = stringResource(R.string.settings_backfill_desc),
+                        icon = Icons.Default.History,
+                        onClick = if (state.isBackfilling) null else onBackfillClick,
+                        trailing = if (state.isBackfilling) {
+                            { CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp) }
+                        } else null
+                    )
                 }
             }
-            
+
             item(key = "info") {
                 SettingsSection(title = stringResource(R.string.settings_info_section)) {
                     SettingsItem(
                         title = stringResource(R.string.settings_informed_consent_title),
                         description = stringResource(R.string.settings_informed_consent_desc),
-                        icon = Icons.Default.Assignment,
+                        icon = Icons.AutoMirrored.Filled.Assignment,
                         onClick = onNavigateToInformedConsent
                     )
                     SettingsDivider()
@@ -263,7 +295,7 @@ private fun SettingsLayout(
                     )
                 }
             }
-            
+
             item(key = "logout") {
                 PelukCard(
                     modifier = Modifier.fillMaxWidth().clickable { onLogout() }
@@ -302,7 +334,7 @@ private fun SettingsLayout(
                     }
                 }
             }
-            
+
             item(key = "bottom_spacer") { Spacer(Modifier.height(DashboardTokens.LargeGap)) }
         }
     }
@@ -322,7 +354,7 @@ private fun SettingsHeader() {
             style = MaterialTheme.typography.headlineMedium
         )
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            PelukDiriLogo(size = 28.dp)
+            PelukDiriLogo(size = DashboardTokens.AppIconSize)
         }
     }
 }

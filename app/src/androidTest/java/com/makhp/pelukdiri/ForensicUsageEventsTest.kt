@@ -10,8 +10,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.makhp.pelukdiri.collector.UsageEvent
 import com.makhp.pelukdiri.collector.UsageEventReconstructor
 import com.makhp.pelukdiri.core.database.PelukDiriDatabase
-import com.makhp.pelukdiri.core.database.entity.AppUsageEntity
-import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -36,7 +34,7 @@ class ForensicUsageEventsTest {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val reconstructor = UsageEventReconstructor()
         val db = Room.databaseBuilder(context, PelukDiriDatabase::class.java, "pelukdiri_db")
-            .fallbackToDestructiveMigration() // Should match app config or be safe
+            .fallbackToDestructiveMigration(dropAllTables = true) // Should match app config or be safe
             .build()
         val dao = db.usageDao()
 

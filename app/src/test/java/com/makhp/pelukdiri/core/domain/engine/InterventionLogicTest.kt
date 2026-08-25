@@ -4,7 +4,6 @@ import com.makhp.pelukdiri.core.domain.model.*
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import java.time.LocalTime
 
 class InterventionLogicTest {
 

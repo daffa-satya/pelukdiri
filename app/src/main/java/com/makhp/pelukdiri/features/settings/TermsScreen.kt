@@ -63,36 +63,36 @@ fun TermsScreen(
             
             item {
                 TermsSection(
-                    title = stringResource(R.string.onboarding_terms_1_title),
-                    content = stringResource(R.string.onboarding_terms_1_desc)
+                    title = stringResource(R.string.terms_section_1_title),
+                    content = stringResource(R.string.terms_section_1_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = stringResource(R.string.onboarding_terms_2_title),
-                    content = stringResource(R.string.onboarding_terms_2_desc)
+                    title = stringResource(R.string.terms_section_2_title),
+                    content = stringResource(R.string.terms_section_2_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = stringResource(R.string.onboarding_terms_3_title),
-                    content = stringResource(R.string.onboarding_terms_3_desc)
+                    title = stringResource(R.string.terms_section_3_title),
+                    content = stringResource(R.string.terms_section_3_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = stringResource(R.string.onboarding_terms_4_title),
-                    content = stringResource(R.string.onboarding_terms_4_desc)
+                    title = stringResource(R.string.terms_section_4_title),
+                    content = stringResource(R.string.terms_section_4_desc)
                 )
             }
             
             item {
                 TermsSection(
-                    title = stringResource(R.string.onboarding_terms_6_title), // No step 5 in main Res? Oh wait.
-                    content = stringResource(R.string.onboarding_terms_6_desc)
+                    title = stringResource(R.string.terms_section_5_title),
+                    content = stringResource(R.string.terms_section_5_desc)
                 )
             }
             

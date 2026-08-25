@@ -1,7 +1,6 @@
 package com.makhp.pelukdiri.core.domain.engine
 
 import com.makhp.pelukdiri.core.domain.model.DeviationConfig
-import com.makhp.pelukdiri.core.domain.model.DeviationStatus
 import org.junit.Test
 
 class DeviationSensitivityTest {

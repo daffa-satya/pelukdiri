@@ -1,6 +1,5 @@
 package com.makhp.pelukdiri.worker
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -108,8 +107,6 @@ class UsageSyncWorker @AssistedInject constructor(
         val monitoredUsageMillis = summary?.monitoredUsageMillis ?: 0L
         val limitMinutes = limit?.calculatedLimitMinutes
 
-        android.util.Log.d("UsageSyncWorker", "Sending status notification: usage=$monitoredUsageMillis, limit=$limitMinutes")
-        
         // 4. Update the persistent daily status notification
         notificationHelper.updateDailyUsageNotification(
             totalUsageMillis = monitoredUsageMillis,
@@ -119,7 +116,6 @@ class UsageSyncWorker @AssistedInject constructor(
         // 1. Daily Summary (around 20:00) - MANDATORY
         if (currentHour >= 20) {
             val lastSentDate = userPreferencesRepository.lastDailySummaryDate.firstOrNull()
-            android.util.Log.d("UsageSyncWorker", "DailySummary check: lastSent=$lastSentDate, current=$todayStr")
             if (lastSentDate != todayStr) {
                 notificationHelper.showDailySummaryNotification(monitoredUsageMillis)
                 userPreferencesRepository.setLastDailySummaryDate(todayStr)
@@ -130,7 +126,6 @@ class UsageSyncWorker @AssistedInject constructor(
         if (dayOfWeek == Calendar.SUNDAY && currentHour >= 19) {
             val weekId = "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.WEEK_OF_YEAR)}"
             val lastSentWeek = userPreferencesRepository.lastWeeklyReflectionDate.firstOrNull()
-            android.util.Log.d("UsageSyncWorker", "WeeklyReflection check: lastSent=$lastSentWeek, current=$weekId")
             if (lastSentWeek != weekId) {
                 notificationHelper.showWeeklyReflectionNotification()
                 userPreferencesRepository.setLastWeeklyReflectionDate(weekId)

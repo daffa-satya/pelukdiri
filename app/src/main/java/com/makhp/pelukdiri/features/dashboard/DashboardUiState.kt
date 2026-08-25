@@ -23,7 +23,6 @@ sealed interface DashboardUiState {
         val topApps: ImmutableList<UiAppUsage> = persistentListOf(),
         val yesterdayTopApps: ImmutableList<UiAppUsage> = persistentListOf(),
         val isRefreshing: Boolean = false,
-        val isBackfilling: Boolean = false,
         val isRecalculatingAdaptiveLimit: Boolean = false,
         val adaptiveLimitError: String? = null,
         val isHistoryBackfilled: Boolean = false,

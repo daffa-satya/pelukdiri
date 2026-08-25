@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -38,7 +37,7 @@ class DashboardViewModel @Inject constructor(
     private val csvExporter: CsvExporter,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val initializeDailyAdaptiveLimitUseCase: InitializeDailyAdaptiveLimitUseCase,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
@@ -52,6 +51,16 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             // Lightweight sync on startup instead of backfill
             usageRepository.syncRecentEventsOnly()
+
+            if (!userPreferencesRepository.isHistoryBackfilled.first()) {
+                try {
+                    usageRepository.executeFullBackfill(HistoricalConfig.BACKFILL_DAYS, force = false)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    // Settings keeps a visible, retryable import action if the automatic attempt fails.
+                }
+            }
 
             val isGranted = appUsageCollector.isPermissionGranted()
             val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
@@ -197,31 +206,6 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             userPreferencesRepository.toggleMonitoredPackage(packageName)
             updatePermissionStatus()
-        }
-    }
-
-    fun backfillHistory() {
-        val currentState = _uiState.value
-        if (currentState is DashboardUiState.Success) {
-            _uiState.update { currentState.copy(isBackfilling = true) }
-        }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                // strictly manual, on-demand operation
-                usageRepository.executeFullBackfill(daysHistory = HistoricalConfig.BACKFILL_DAYS, force = false)
-                val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
-
-                _uiState.update { state ->
-                    if (state is DashboardUiState.Success) {
-                        state.copy(isBackfilling = false, isHistoryBackfilled = isBackfilled)
-                    } else {
-                        state
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.value = DashboardUiState.Error(e.message ?: "Failed to backfill history")
-            }
         }
     }
 

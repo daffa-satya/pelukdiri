@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.remember
 import com.makhp.pelukdiri.R
-import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.ui.components.AppIcon
 import com.makhp.pelukdiri.ui.components.formatDuration
 
@@ -209,7 +208,7 @@ private fun MetricsGrid(app: UiAppUsage) {
                 subValue = stringResource(R.string.app_detail_yesterday, stringResource(R.string.app_detail_times_count, openingsYesterday)),
                 change = if (openingsYesterday > 0 && openingsToday != openingsYesterday) {
                     val diff = openingsYesterday - openingsToday
-                    if (diff > 0) "↓ $diff" else "↑ ${-diff}"
+                    if (diff > 0) "- $diff" else "+ ${-diff}"
                 } else null,
                 isPositive = isOpeningsPositive
             )

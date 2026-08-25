@@ -1,7 +1,5 @@
 package com.makhp.pelukdiri.core.data.repository
 
-import com.makhp.pelukdiri.collector.AppUsageCollector
-import com.makhp.pelukdiri.collector.UsageEventCollector
 import com.makhp.pelukdiri.core.database.dao.UsageDao
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import io.mockk.coVerify

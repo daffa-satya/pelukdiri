@@ -13,7 +13,7 @@ import kotlin.math.min
 
 @Singleton
 class UsageEventCollector @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val appUsageCollector: AppUsageCollector,
     private val reconstructor: UsageEventReconstructor,
     private val screenReconstructor: ScreenInteractiveReconstructor

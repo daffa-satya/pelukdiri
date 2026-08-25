@@ -5,7 +5,6 @@ import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.flow.first
-import java.time.LocalDate
 import javax.inject.Inject
 
 /**

@@ -12,7 +12,6 @@ import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
 import com.makhp.pelukdiri.core.domain.model.PatternQuestion

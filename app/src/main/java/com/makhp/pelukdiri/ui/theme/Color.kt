@@ -23,6 +23,7 @@ val InterventionScrim = Color(0xB3000000)
 // Dark Mode Tones
 val CharcoalDark = Color(0xFF121316)
 val CharcoalMedium = Color(0xFF1A1C20)
+val CharcoalLight = Color(0xFF2C2E33)
 val PelukBackgroundDark = CharcoalDark
 val PelukSurfaceDark = CharcoalMedium
 val PelukTextDark = Color(0xFFF1F3F5) // Soft off-white for text

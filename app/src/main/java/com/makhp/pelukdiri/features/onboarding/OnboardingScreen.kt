@@ -2,6 +2,7 @@ package com.makhp.pelukdiri.features.onboarding
 
 import android.app.Activity
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
@@ -9,8 +10,6 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,7 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,16 +30,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
+import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
 import kotlinx.coroutines.launch
 
 sealed class OnboardingStep {
     data object Intro : OnboardingStep()
-    data object Terms : OnboardingStep()
     data class Permissions(val step: Int) : OnboardingStep()
 }
 
@@ -49,12 +49,21 @@ fun OnboardingScreen(
     onComplete: () -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
-    var currentStep by remember { mutableStateOf<OnboardingStep>(OnboardingStep.Intro) }
-    val context = LocalContext.current
-
     LaunchedEffect(viewModel) {
         viewModel.onboardingCompleted.collect { onComplete() }
     }
+
+    OnboardingScreenInternal(
+        onFinishOnboarding = { viewModel.completeOnboarding() }
+    )
+}
+
+@Composable
+private fun OnboardingScreenInternal(
+    onFinishOnboarding: () -> Unit
+) {
+    var currentStep by remember { mutableStateOf<OnboardingStep>(OnboardingStep.Intro) }
+    val context = LocalContext.current
 
     BackHandler {
         if (currentStep == OnboardingStep.Intro) {
@@ -71,12 +80,8 @@ fun OnboardingScreen(
         Crossfade(targetState = currentStep, label = "OnboardingStep") { step ->
             when (step) {
                 OnboardingStep.Intro -> IntroPager(
-                    onSkip = { currentStep = OnboardingStep.Terms },
-                    onFinish = { currentStep = OnboardingStep.Terms }
-                )
-                OnboardingStep.Terms -> TermsScreen(
-                    onAgree = { currentStep = OnboardingStep.Permissions(1) },
-                    onDisagree = { currentStep = OnboardingStep.Intro }
+                    onSkip = { currentStep = OnboardingStep.Permissions(1) },
+                    onFinish = { currentStep = OnboardingStep.Permissions(1) }
                 )
                 is OnboardingStep.Permissions -> PermissionsStepScreen(
                     step = step.step,
@@ -84,14 +89,14 @@ fun OnboardingScreen(
                         if (step.step < 3) {
                             currentStep = OnboardingStep.Permissions(step.step + 1)
                         } else {
-                            viewModel.completeOnboarding()
+                            onFinishOnboarding()
                         }
                     },
                     onBack = {
                         if (step.step > 1) {
                             currentStep = OnboardingStep.Permissions(step.step - 1)
                         } else {
-                            currentStep = OnboardingStep.Terms
+                            currentStep = OnboardingStep.Intro
                         }
                     }
                 )
@@ -149,7 +154,7 @@ private fun IntroPager(
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(
                                     if (isSelected) Color(0xFF4CAF50) 
-                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
                                 )
                         )
                     }
@@ -266,9 +271,24 @@ private fun FactsPage() {
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            FactCard(stringResource(R.string.onboarding_fact_1_title), stringResource(R.string.onboarding_fact_1_desc), Icons.Default.AccessTime)
-            FactCard(stringResource(R.string.onboarding_fact_2_title), stringResource(R.string.onboarding_fact_2_desc), Icons.Default.Psychology)
-            FactCard(stringResource(R.string.onboarding_fact_3_title), stringResource(R.string.onboarding_fact_3_desc), Icons.Default.Bedtime)
+            FactCard(
+                title = stringResource(R.string.onboarding_fact_1_title),
+                desc = stringResource(R.string.onboarding_fact_1_desc),
+                icon = Icons.Default.AccessTime,
+                titleColor = MaterialTheme.colorScheme.error
+            )
+            FactCard(
+                title = stringResource(R.string.onboarding_fact_2_title),
+                desc = stringResource(R.string.onboarding_fact_2_desc),
+                icon = Icons.Default.Psychology,
+                titleColor = MaterialTheme.colorScheme.error
+            )
+            FactCard(
+                title = stringResource(R.string.onboarding_fact_3_title),
+                desc = stringResource(R.string.onboarding_fact_3_desc),
+                icon = Icons.Default.Bedtime,
+                titleColor = MaterialTheme.colorScheme.error
+            )
         }
 
         Spacer(Modifier.weight(1f))
@@ -276,21 +296,29 @@ private fun FactsPage() {
 }
 
 @Composable
-private fun FactCard(title: String, desc: String, icon: ImageVector) {
+private fun FactCard(
+    title: String,
+    desc: String,
+    icon: ImageVector,
+    titleColor: Color = Color(0xFF4CAF50),
+    iconColor: Color = Color(0xFF4CAF50),
+    iconContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    descColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFE8F5E9)), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
+            Box(Modifier.size(40.dp).clip(CircleShape).background(iconContainerColor), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(16.dp))
             Column {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
-                Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = titleColor)
+                Text(desc, style = MaterialTheme.typography.bodySmall, color = descColor, fontSize = 11.sp)
             }
         }
     }
@@ -372,115 +400,6 @@ private fun HowStepItem(num: Int, text: String) {
     }
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TermsScreen(
-    onAgree: () -> Unit,
-    onDisagree: () -> Unit
-) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { PelukDiriLogo(size = 28.dp) },
-                modifier = Modifier.statusBarsPadding(),
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
-                navigationIcon = {
-                    IconButton(onClick = onDisagree) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
-                }
-            )
-        },
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(start = 24.dp, end = 24.dp, bottom = 48.dp, top = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Button(
-                    onClick = onAgree,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.onboarding_terms_agree), fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Spacer(Modifier.width(8.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
-                    }
-                }
-
-                TextButton(
-                    onClick = onDisagree,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                ) {
-                    Text(stringResource(R.string.onboarding_terms_disagree), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 24.dp)) {
-            Text(
-                stringResource(R.string.onboarding_terms_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                stringResource(R.string.onboarding_terms_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp)
-            )
-
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                val terms = listOf(
-                    R.string.onboarding_terms_1_title to R.string.onboarding_terms_1_desc,
-                    R.string.onboarding_terms_2_title to R.string.onboarding_terms_2_desc,
-                    R.string.onboarding_terms_3_title to R.string.onboarding_terms_3_desc,
-                    R.string.onboarding_terms_4_title to R.string.onboarding_terms_4_desc,
-                    R.string.onboarding_terms_5_title to R.string.onboarding_terms_5_desc,
-                    R.string.onboarding_terms_6_title to R.string.onboarding_terms_6_desc
-                )
-                itemsIndexed(terms) { index, term ->
-                    TermItem(stringResource(term.first), stringResource(term.second), index)
-                }
-                
-                item {
-                    Spacer(Modifier.height(32.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TermItem(title: String, desc: String, index: Int) {
-    val icon = when (index) {
-        0 -> Icons.Default.Lock
-        1 -> Icons.Default.BarChart
-        2 -> Icons.Default.PrivacyTip
-        3 -> Icons.Default.Info
-        4 -> Icons.Default.Person
-        else -> Icons.AutoMirrored.Filled.Article
-    }
-    Row(verticalAlignment = Alignment.Top) {
-        Box(Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFE8F5E9)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
-        }
-        Spacer(Modifier.width(16.dp))
-        Column {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -598,7 +517,7 @@ private fun PermissionsStepScreen(
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(24.dp)
             ) {
                 Column(Modifier.padding(20.dp)) {
@@ -628,7 +547,7 @@ private fun PermissionsStepScreen(
                         }
                         3 -> {
                             WhyItem(stringResource(R.string.onboarding_perm_why_notif_1_title), stringResource(R.string.onboarding_perm_why_notif_1_desc), Icons.Default.NotificationsActive)
-                            WhyItem(stringResource(R.string.onboarding_perm_why_notif_2_title), stringResource(R.string.onboarding_perm_why_notif_2_desc), Icons.Default.Assignment)
+                            WhyItem(stringResource(R.string.onboarding_perm_why_notif_2_title), stringResource(R.string.onboarding_perm_why_notif_2_desc), Icons.AutoMirrored.Filled.Assignment)
                             WhyItem(stringResource(R.string.onboarding_perm_why_notif_3_title), stringResource(R.string.onboarding_perm_why_notif_3_desc), Icons.Default.Star)
                         }
                     }
@@ -655,13 +574,79 @@ private fun PermissionStepIndicator(num: Int, active: Boolean) {
 @Composable
 private fun WhyItem(title: String, desc: String, icon: ImageVector) {
     Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
+        Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(16.dp))
         Column {
             Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
             Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+// Previews
+
+@Preview(name = "Onboarding - Light", showBackground = true)
+@Preview(name = "Onboarding - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun OnboardingScreenPreview() {
+    PELUKDIRITheme {
+        OnboardingScreenInternal(onFinishOnboarding = {})
+    }
+}
+
+@Preview(name = "Welcome Page - Light", showBackground = true)
+@Preview(name = "Welcome Page - Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun WelcomePagePreview() {
+    PELUKDIRITheme {
+        Surface {
+            WelcomePage()
+        }
+    }
+}
+
+@Preview(name = "Facts Page - Light", showBackground = true)
+@Composable
+private fun FactsPagePreview() {
+    PELUKDIRITheme {
+        Surface {
+            FactsPage()
+        }
+    }
+}
+
+@Preview(name = "How It Works - Light", showBackground = true)
+@Composable
+private fun HowItWorksPagePreview() {
+    PELUKDIRITheme {
+        Surface {
+            HowItWorksPage()
+        }
+    }
+}
+
+@Preview(name = "Permissions Step 1 - Light", showBackground = true)
+@Composable
+private fun PermissionsStep1Preview() {
+    PELUKDIRITheme {
+        PermissionsStepScreen(step = 1, onNext = {}, onBack = {})
+    }
+}
+
+@Preview(name = "Permissions Step 2 - Light", showBackground = true)
+@Composable
+private fun PermissionsStep2Preview() {
+    PELUKDIRITheme {
+        PermissionsStepScreen(step = 2, onNext = {}, onBack = {})
+    }
+}
+
+@Preview(name = "Permissions Step 3 - Light", showBackground = true)
+@Composable
+private fun PermissionsStep3Preview() {
+    PELUKDIRITheme {
+        PermissionsStepScreen(step = 3, onNext = {}, onBack = {})
     }
 }

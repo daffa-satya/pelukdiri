@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.core.database.export.CsvExporter
 import com.makhp.pelukdiri.core.domain.model.AggressivenessLevel
+import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
+import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.R
 import android.content.Context
@@ -18,10 +20,12 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val csvExporter: CsvExporter,
-    @ApplicationContext private val context: Context
+    private val usageRepository: UsageRepository,
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val exportState = MutableStateFlow(ExportState())
+    private val backfillState = MutableStateFlow(BackfillState())
 
     private val preferencesState = combine(
         userPreferencesRepository.aggressivenessLevel,
@@ -40,11 +44,17 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    val uiState: StateFlow<SettingsUiState> = combine(preferencesState, exportState) { settings, export ->
+    val uiState: StateFlow<SettingsUiState> = combine(
+        preferencesState,
+        exportState,
+        backfillState,
+    ) { settings, export, backfill ->
         settings.copy(
             isExporting = export.isExporting,
             exportedFilePath = export.exportedFilePath,
             exportError = export.error,
+            isBackfilling = backfill.isRunning,
+            backfillError = backfill.hasError,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -100,7 +110,26 @@ class SettingsViewModel @Inject constructor(
     fun clearExportResult() {
         exportState.value = ExportState()
     }
-    
+
+    fun backfillHistory() {
+        if (backfillState.value.isRunning) return
+        backfillState.value = BackfillState(isRunning = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                usageRepository.executeFullBackfill(HistoricalConfig.BACKFILL_DAYS, force = false)
+                backfillState.value = BackfillState()
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                backfillState.value = BackfillState(hasError = true)
+            }
+        }
+    }
+
+    fun clearBackfillError() {
+        backfillState.value = BackfillState()
+    }
+
     fun logout() {
         // Handle logout logic
     }
@@ -109,5 +138,10 @@ class SettingsViewModel @Inject constructor(
         val isExporting: Boolean = false,
         val exportedFilePath: String? = null,
         val error: String? = null,
+    )
+
+    private data class BackfillState(
+        val isRunning: Boolean = false,
+        val hasError: Boolean = false,
     )
 }

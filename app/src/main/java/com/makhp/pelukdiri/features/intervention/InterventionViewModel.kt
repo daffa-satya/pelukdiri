@@ -131,8 +131,8 @@ class InterventionViewModel @Inject constructor(
                 }
             } catch (error: CancellationException) {
                 throw error
-            } catch (error: Exception) {
-                showOperationError(FailedInterventionOperation.START, error)
+            } catch (_: Exception) {
+                showOperationError(FailedInterventionOperation.START)
             }
         }
     }
@@ -181,8 +181,8 @@ class InterventionViewModel @Inject constructor(
                     else -> _uiState.value = state
                 }
                 onResult(true)
-            } catch (error: Exception) {
-                showOperationError(FailedInterventionOperation.RESTORE, error)
+            } catch (_: Exception) {
+                showOperationError(FailedInterventionOperation.RESTORE)
                 onResult(true)
             }
         }
@@ -276,8 +276,8 @@ class InterventionViewModel @Inject constructor(
                         )
                     }
                 )
-            } catch (error: Exception) {
-                showOperationError(FailedInterventionOperation.SUBMIT_ANSWER, error)
+            } catch (_: Exception) {
+                showOperationError(FailedInterventionOperation.SUBMIT_ANSWER)
             } finally {
                 isAnswerProcessing = false
             }
@@ -359,8 +359,8 @@ class InterventionViewModel @Inject constructor(
                     remainingBypasses = getRemainingBypasses()
                 )
             })
-            } catch (error: Exception) {
-                showOperationError(FailedInterventionOperation.SUBMIT_ANSWER, error)
+            } catch (_: Exception) {
+                showOperationError(FailedInterventionOperation.SUBMIT_ANSWER)
             } finally {
                 isAnswerProcessing = false
             }
@@ -447,8 +447,8 @@ class InterventionViewModel @Inject constructor(
                         })
                     }
                 }
-            } catch (error: Exception) {
-                showOperationError(FailedInterventionOperation.EMERGENCY_BYPASS, error)
+            } catch (_: Exception) {
+                showOperationError(FailedInterventionOperation.EMERGENCY_BYPASS)
             } finally {
                 isBypassProcessing = false
             }
@@ -480,8 +480,8 @@ class InterventionViewModel @Inject constructor(
                 activeInterventionSession.clear()
                 publishState(InterventionUiState.Idle)
                 lockManager.releaseLock()
-            } catch (error: Exception) {
-                showOperationError(FailedInterventionOperation.COMPLETE, error)
+            } catch (_: Exception) {
+                showOperationError(FailedInterventionOperation.COMPLETE)
             } finally {
                 isCompletionProcessing = false
             }
@@ -519,8 +519,8 @@ class InterventionViewModel @Inject constructor(
         lockManager.releaseLock()
     }
 
-    private fun showOperationError(operation: FailedInterventionOperation, error: Exception) {
-        Log.e(TAG, "Intervention operation failed: $operation", error)
+    private fun showOperationError(operation: FailedInterventionOperation) {
+        Log.e(TAG, "Intervention operation failed")
         if (_uiState.value !is InterventionUiState.Error) {
             stateBeforeError = _uiState.value
         }
@@ -550,8 +550,8 @@ class InterventionViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 activeInterventionSession.save(snapshot)
-            } catch (error: Exception) {
-                Log.e(TAG, "Unable to persist active intervention snapshot", error)
+            } catch (_: Exception) {
+                Log.e(TAG, "Unable to persist active intervention snapshot")
             }
         }
     }

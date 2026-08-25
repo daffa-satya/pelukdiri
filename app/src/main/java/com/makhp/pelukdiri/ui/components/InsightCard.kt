@@ -36,7 +36,7 @@ fun InsightCard(
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                if (emoji == "🌿" || emoji == "🌱") {
+                if (emoji.isEmpty()) {
                     PelukDiriLogo(size = 40.dp)
                 } else {
                     Text(text = emoji, style = MaterialTheme.typography.headlineMedium)

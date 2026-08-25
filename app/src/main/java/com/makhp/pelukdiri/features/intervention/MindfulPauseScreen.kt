@@ -3,6 +3,7 @@ package com.makhp.pelukdiri.features.intervention
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,9 +65,13 @@ import com.makhp.pelukdiri.ui.theme.PatternAmber
 import com.makhp.pelukdiri.ui.theme.PatternBlue
 import com.makhp.pelukdiri.ui.theme.PatternGreen
 import com.makhp.pelukdiri.ui.theme.PatternPink
+import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+
+internal fun formatResponseTimeSeconds(responseTimeMs: Long): String =
+    String.format(Locale.ROOT, "%.1f", responseTimeMs / 1_000.0)
 
 @Composable
 fun MindfulPauseScreen(
@@ -82,7 +87,25 @@ fun MindfulPauseScreen(
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    BoxWithConstraints(
+    val colors = MaterialTheme.colorScheme
+    val isMathState = state is InterventionUiState.QuestionActive ||
+        state is InterventionUiState.MaxPenalized ||
+        state is InterventionUiState.CorrectAnswer ||
+        state is InterventionUiState.IncorrectAnswer
+    val interventionColors = if (isMathState && !isSystemInDarkTheme()) {
+        colors.copy(
+            primary = colors.onSurface,
+            onPrimary = colors.surface,
+            primaryContainer = colors.outlineVariant,
+            onPrimaryContainer = colors.onSurface,
+            surfaceVariant = colors.background,
+        )
+    } else {
+        colors
+    }
+
+    MaterialTheme(colorScheme = interventionColors) {
+        BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(InterventionScrim)
@@ -91,8 +114,8 @@ fun MindfulPauseScreen(
                 vertical = InterventionDimens.screenVerticalPadding,
             ),
         contentAlignment = Alignment.Center,
-    ) {
-        Card(
+        ) {
+            Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = InterventionDimens.cardMaxWidth)
@@ -103,8 +126,8 @@ fun MindfulPauseScreen(
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = InterventionDimens.cardElevation),
-        ) {
-            Column(
+            ) {
+                Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
@@ -113,8 +136,8 @@ fun MindfulPauseScreen(
                         vertical = InterventionDimens.cardVerticalPadding,
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                when (state) {
+                ) {
+                    when (state) {
                     is InterventionUiState.Idle -> LoadingContent()
                     is InterventionUiState.Loading -> LoadingContent()
                     is InterventionUiState.Error -> ErrorContent(state.operation, onRetry)
@@ -154,6 +177,7 @@ fun MindfulPauseScreen(
                     is InterventionUiState.IncorrectAnswer -> ResultContent(isSuccess = false, state = state, onReset = onReset)
                     is InterventionUiState.PatternCorrectAnswer -> ResultContent(isSuccess = true, state = state, onReset = onReset)
                     is InterventionUiState.PatternIncorrectAnswer -> ResultContent(isSuccess = false, state = state, onReset = onReset)
+                    }
                 }
             }
         }
@@ -781,7 +805,7 @@ private fun ResultContent(
     when (state) {
         is InterventionUiState.CorrectAnswer -> {
             Text(
-                text = stringResource(R.string.intervention_response_time, state.responseTimeMs / 1_000.0),
+                text = stringResource(R.string.intervention_response_time, formatResponseTimeSeconds(state.responseTimeMs)),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
@@ -806,7 +830,7 @@ private fun ResultContent(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = stringResource(R.string.intervention_response_time, state.responseTimeMs / 1_000.0),
+                text = stringResource(R.string.intervention_response_time, formatResponseTimeSeconds(state.responseTimeMs)),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }

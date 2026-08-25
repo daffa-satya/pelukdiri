@@ -90,9 +90,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 1. Authoritative measurement
-        Log.d("EligibilityUseCase", "Stage: collecting usage events")
         val usageList = usageEventCollector.getUsageForDay(today)
-        Log.d("EligibilityUseCase", "Stage: reading monitored packages")
         val monitoredPackages = userPreferencesRepository.monitoredPackages.first()
         
         val totalUsageMillis = usageList.sumOf { it.usageDurationMillis }
@@ -120,7 +118,6 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 2. Cooldown & Quota check
-        Log.d("EligibilityUseCase", "Stage: reading cooldown and bypass")
         val nextEligible = userPreferencesRepository.nextEligibleInterventionAt.first()
         val bypassUntil = userPreferencesRepository.emergencyBypassUntil.first()
         
@@ -147,12 +144,10 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 3. Deviation
-        Log.d("EligibilityUseCase", "Stage: reading adaptive history")
         val history = getAdaptiveHistoryUseCase()
         val devResult = deviationEngine.calculate(currentMonitoredUsageMinutes, history)
         
         // 4. Performance & Sensitivity
-        Log.d("EligibilityUseCase", "Stage: reading performance context")
         val recentLogs = interventionLogRepository.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
         val difficultyHistory = recentLogs.map {
             DifficultyHistoryEntry(
@@ -185,14 +180,13 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             
         val lux = appUsageCollector.getCurrentAmbientLightLux()
         val bedtime = userPreferencesRepository.bedtime.first()?.let { 
-            try { LocalTime.parse(it) } catch (e: Exception) { null } 
+            try { LocalTime.parse(it) } catch (_: Exception) { null }
         }
         val wakeTime = userPreferencesRepository.wakeTime.first()?.let { 
-            try { LocalTime.parse(it) } catch (e: Exception) { null } 
+            try { LocalTime.parse(it) } catch (_: Exception) { null }
         }
         
         // 5. Control Decision
-        Log.d("EligibilityUseCase", "Stage: calculating control result")
         val controlResult = controlEngine.calculateNextIntervention(
             deviation = devResult.deviation,
             lastPerformance = lastPerformance,
@@ -211,8 +205,6 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         if (shouldSchedule) {
             userPreferencesRepository.setNextEligibleInterventionAt(controlResult.nextEligibleInterventionAt)
         }
-        Log.d("EligibilityUseCase", "Stage: complete trigger=$shouldTrigger")
-        
         val decision = InterventionDecision(
             shouldTrigger = shouldTrigger,
             controlResult = controlResult,
@@ -285,8 +277,8 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
                     errorType = errorType,
                 )
             )
-        } catch (error: Exception) {
-            Log.e("EligibilityUseCase", "Unable to persist intervention decision audit", error)
+        } catch (_: Exception) {
+            Log.e("EligibilityUseCase", "Unable to persist intervention decision audit")
         }
         return decision
     }

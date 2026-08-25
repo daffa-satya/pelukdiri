@@ -40,7 +40,7 @@ import javax.inject.Singleton
 
 @Singleton
 class CsvExporter @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val usageDao: UsageDao,
     private val usageSensorDao: UsageSensorDao,
     private val interventionDao: InterventionDao,

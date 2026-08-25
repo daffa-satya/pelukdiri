@@ -14,12 +14,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -27,21 +27,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
-import com.makhp.pelukdiri.core.domain.model.DailySummary
-import com.makhp.pelukdiri.features.dashboard.UiAppUsage
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.ui.components.*
 import com.makhp.pelukdiri.ui.theme.Dimens
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import kotlin.math.max
 
 @Composable
 fun MainStatsScreen(
@@ -117,7 +112,6 @@ fun MainStatsScreen(
             profileState = profileState,
             snackbarHostState = snackbarHostState,
             onRefresh = viewModel::forceRefresh,
-            onBackfill = viewModel::backfillHistory,
             onRecalculateAdaptiveLimit = viewModel::recalculateAdaptiveLimit,
             onGrantUsageAccess = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
             onGrantAccessibility = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
@@ -143,7 +137,6 @@ private fun DashboardScaffold(
     profileState: ProfileUiState,
     snackbarHostState: SnackbarHostState,
     onRefresh: () -> Unit,
-    onBackfill: () -> Unit,
     onRecalculateAdaptiveLimit: () -> Unit,
     onGrantUsageAccess: () -> Unit,
     onGrantAccessibility: () -> Unit,
@@ -169,7 +162,6 @@ private fun DashboardScaffold(
                 profileState = profileState,
                 modifier = Modifier.padding(paddingValues),
                 onRefresh = onRefresh,
-                onBackfill = onBackfill,
                 onRecalculateAdaptiveLimit = onRecalculateAdaptiveLimit,
                 onGrantUsageAccess = onGrantUsageAccess,
                 onGrantAccessibility = onGrantAccessibility,
@@ -182,13 +174,13 @@ private fun DashboardScaffold(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DashboardContent(
     state: DashboardUiState.Success,
     profileState: ProfileUiState,
     modifier: Modifier,
     onRefresh: () -> Unit,
-    onBackfill: () -> Unit,
     onRecalculateAdaptiveLimit: () -> Unit,
     onGrantUsageAccess: () -> Unit,
     onGrantAccessibility: () -> Unit,
@@ -199,48 +191,41 @@ private fun DashboardContent(
 ) {
     var selectedApp by remember { mutableStateOf<UiAppUsage?>(null) }
 
-    LazyColumn(
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(DashboardTokens.ScreenPadding),
-        verticalArrangement = Arrangement.spacedBy(DashboardTokens.LargeGap)
     ) {
-        item(key = "header") { 
-            DashboardHeader(
-                profileState = profileState,
-                onMenuClick = onMenuClick
-            ) 
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(DashboardTokens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(DashboardTokens.LargeGap)
+        ) {
+            item(key = "header") {
+                DashboardHeader(profileState = profileState, onMenuClick = onMenuClick)
+            }
+            if (!state.isPermissionGranted) item(key = "perm_usage") { PermissionNotice(stringResource(R.string.dashboard_usage_access_needed), stringResource(R.string.dashboard_open_permission), onGrantUsageAccess) }
+            if (!state.isAccessibilityEnabled) item(key = "perm_acc") { PermissionNotice(stringResource(R.string.dashboard_accessibility_needed), stringResource(R.string.dashboard_enable), onGrantAccessibility) }
+            if (!state.isBatteryOptimizationIgnored) item(key = "perm_batt") { PermissionNotice(stringResource(R.string.dashboard_battery_optimization_needed), stringResource(R.string.dashboard_allow), onGrantBatteryExemption) }
+            item(key = "screentime") {
+                ScreenTimeCard(
+                    usageMillis = state.socialMediaUsageMillis,
+                    yesterdayMillis = state.yesterdaySocialMediaUsageMillis,
+                    adaptiveLimitMinutes = state.todayAdaptiveLimit,
+                    isRecalculatingLimit = state.isRecalculatingAdaptiveLimit,
+                    adaptiveLimitError = state.adaptiveLimitError,
+                    onRecalculateLimit = onRecalculateAdaptiveLimit
+                )
+            }
+            item(key = "weekly_chart") { WeeklyChart(state.weeklySummaries) }
+            item(key = "top_apps") {
+                TopAppsCard(
+                    apps = state.topApps,
+                    onViewAllClick = onViewAllClick,
+                    onAppClick = { selectedApp = it }
+                )
+            }
         }
-        if (!state.isPermissionGranted) item(key = "perm_usage") { PermissionNotice(stringResource(R.string.dashboard_usage_access_needed), stringResource(R.string.dashboard_open_permission), onGrantUsageAccess) }
-        if (!state.isAccessibilityEnabled) item(key = "perm_acc") { PermissionNotice(stringResource(R.string.dashboard_accessibility_needed), stringResource(R.string.dashboard_enable), onGrantAccessibility) }
-        if (!state.isBatteryOptimizationIgnored) item(key = "perm_batt") { PermissionNotice(stringResource(R.string.dashboard_battery_optimization_needed), stringResource(R.string.dashboard_allow), onGrantBatteryExemption) }
-        item(key = "screentime") {
-            ScreenTimeCard(
-                usageMillis = state.socialMediaUsageMillis,
-                yesterdayMillis = state.yesterdaySocialMediaUsageMillis,
-                adaptiveLimitMinutes = state.todayAdaptiveLimit,
-                isRecalculatingLimit = state.isRecalculatingAdaptiveLimit,
-                adaptiveLimitError = state.adaptiveLimitError,
-                onRecalculateLimit = onRecalculateAdaptiveLimit
-            )
-        }
-        item(key = "data_actions") {
-            DashboardDataActions(
-                isRefreshing = state.isRefreshing,
-                isBackfilling = state.isBackfilling,
-                onRefresh = onRefresh,
-                onBackfill = onBackfill
-            )
-        }
-        item(key = "weekly_chart") { WeeklyChart(state.weeklySummaries) }
-
-        item(key = "top_apps") {
-            TopAppsCard(
-                apps = state.topApps,
-                onViewAllClick = onViewAllClick,
-                onAppClick = { selectedApp = it }
-            )
-        }
-
     }
 
     selectedApp?.let { app ->
@@ -285,69 +270,7 @@ private fun DashboardHeader(
             Text(stringResource(R.string.dashboard_header_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            PelukDiriLogo(size = 28.dp)
-        }
-    }
-}
-
-@Composable
-private fun DashboardDataActions(
-    isRefreshing: Boolean,
-    isBackfilling: Boolean,
-    onRefresh: () -> Unit,
-    onBackfill: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(DashboardTokens.MediumGap)
-    ) {
-        DashboardDataActionCard(
-            label = stringResource(R.string.dashboard_sync_now),
-            icon = Icons.Default.Sync,
-            isLoading = isRefreshing,
-            enabled = !isRefreshing && !isBackfilling,
-            onClick = onRefresh,
-            modifier = Modifier.weight(1f),
-        )
-        DashboardDataActionCard(
-            label = stringResource(R.string.dashboard_backfill_14_days),
-            icon = Icons.Default.History,
-            isLoading = isBackfilling,
-            enabled = !isRefreshing && !isBackfilling,
-            onClick = onBackfill,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun DashboardDataActionCard(
-    label: String,
-    icon: ImageVector,
-    isLoading: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    PelukCard(modifier = modifier.clickable(enabled = enabled, onClick = onClick)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(Modifier.size(DashboardTokens.MediumGap), strokeWidth = 2.dp)
-            } else {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(DashboardTokens.MediumGap))
-            }
-            Spacer(Modifier.width(DashboardTokens.SmallGap))
-            Text(
-                text = label,
-                maxLines = 2,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            PelukDiriLogo(size = DashboardTokens.AppIconSize)
         }
     }
 }

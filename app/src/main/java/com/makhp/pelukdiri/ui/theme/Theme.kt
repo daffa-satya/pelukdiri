@@ -17,10 +17,10 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = PelukTextDark,
     surface = PelukSurfaceDark,
     onSurface = PelukTextDark,
-    surfaceVariant = CharcoalMedium,
-    onSurfaceVariant = PelukSecondaryTextDark,
+    surfaceVariant = CharcoalLight,
+    onSurfaceVariant = PelukTextDark,
     outline = PelukSecondaryTextDark,
-    outlineVariant = PelukBackgroundDark,
+    outlineVariant = CharcoalLight,
     error = PelukDanger
 )
 

@@ -8,7 +8,6 @@ import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.usecase.EvaluateInterventionEligibilityUseCase
 import com.makhp.pelukdiri.core.domain.usecase.AttemptInterventionLaunchUseCase
-import com.makhp.pelukdiri.core.domain.usecase.InterventionLaunchResult
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.features.intervention.ActiveInterventionSession
 import com.makhp.pelukdiri.core.domain.InterventionLaunchPolicy
@@ -80,26 +79,17 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
     override fun onCreate() {
         super.onCreate()
-        Log.d("AppBlockerService", "Service Created - Hilt Injection Success")
-        
         serviceScope.launch {
             userPreferencesRepository.monitoredPackages.collect { packages ->
                 currentMonitoredPackages = packages
-                Log.d("AppBlockerService", "Updated Monitored Packages: $packages")
 
                 // If the current app just became a target app, start tracking
                 val foreground = currentForegroundPackage
                 if (foreground != null && packages.contains(foreground) && foregroundTrackingJob == null) {
-                    Log.d("AppBlockerService", "Current app $foreground is now monitored. Starting tracking.")
                     startForegroundTracking(foreground)
                 }
             }
         }
-    }
-
-    override fun onServiceConnected() {
-        super.onServiceConnected()
-        Log.d("AppBlockerService", "Service Connected - Listening for events")
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -113,36 +103,26 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             )
             
             if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-                Log.d(
-                    "AppBlockerService",
-                    ">>> Window Changed: event=$eventPackage active=$activeWindowPackage resolved=$packageName class=${event.className}"
-                )
                 handlePackageChanged(packageName)
             }
-        } catch (e: Exception) {
-            Log.e("AppBlockerService", "Error in onAccessibilityEvent", e)
+        } catch (_: Exception) {
+            Log.e("AppBlockerService", "Accessibility event handling failed")
         }
     }
 
     private suspend fun evaluateIntervention(packageName: String) {
-        Log.d("AppBlockerService", ">>> evaluateIntervention called for $packageName")
-
-        Log.d("AppBlockerService", "Evaluation stage: restoring active session")
         val savedSession = activeInterventionSession.restore()
-        Log.d("AppBlockerService", "Evaluation stage: active session restored=${savedSession != null}")
         if (savedSession != null) {
             lockManager.acquireLock()
             restoreActiveIntervention()
             return
         }
         
-        Log.d("AppBlockerService", "Evaluation stage: calculating eligibility")
         val decision = evaluateInterventionEligibilityUseCase(packageName)
-        Log.d("AppBlockerService", "Evaluation stage: eligibility complete trigger=${decision.shouldTrigger}")
         val controlResult = decision.controlResult
 
         if (decision.shouldTrigger && controlResult != null) {
-            val launchResult = attemptInterventionLaunchUseCase(controlResult) {
+            attemptInterventionLaunchUseCase(controlResult) {
                 launchInterventionOverlay(
                     packageName = packageName,
                     monitoredUsageMinutes = decision.monitoredUsageMinutes,
@@ -153,17 +133,6 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                     difficulty = controlResult.nextDifficulty,
                     challengeType = decision.challengeType,
                 )
-            }
-            when (launchResult) {
-                InterventionLaunchResult.LAUNCHED -> Log.d(
-                    "AppBlockerService",
-                    "Committed control result: Mode=${controlResult.mode}, Difficulty=${controlResult.nextDifficulty}, Interval=${controlResult.intervalMinutes}m"
-                )
-                InterventionLaunchResult.LOCKED -> Log.d(
-                    "AppBlockerService",
-                    "Skipping trigger: Intervention lock already held."
-                )
-                InterventionLaunchResult.FAILED -> Unit
             }
         }
     }
@@ -183,14 +152,11 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                     trackingJobActive = foregroundTrackingJob?.isActive == true,
                 )
             ) {
-                Log.w("AppBlockerService", "Evaluator missing for $newPackage; restarting tracking")
                 if (lockManager.isLocked.value) restoreActiveIntervention() else startForegroundTracking(newPackage)
             }
             return
         }
         
-        Log.d("AppBlockerService", "Package switched from $currentForegroundPackage to $newPackage")
-
         // 1. Stop previous tracking
         foregroundTrackingJob?.cancel()
         foregroundTrackingJob = null
@@ -201,7 +167,6 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         // 2. Sync usage for previous package if it was a target app
         val previous = currentForegroundPackage
         if (previous != null && currentMonitoredPackages.contains(previous)) {
-            Log.d("AppBlockerService", "Exiting target app: $previous. Syncing data and stopping sensor.")
             serviceScope.launch { usageRepository.refreshUsageData() }
             appUsageCollector.stopLightSensor()
         }
@@ -214,13 +179,10 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             if (forcedChallenge != null) {
                 serviceScope.launch { launchForcedIntervention(newPackage, forcedChallenge) }
             } else if (lockManager.isLocked.value) {
-                Log.d("AppBlockerService", "Restoring unanswered intervention over: $newPackage")
                 restoreActiveIntervention()
             } else {
                 startForegroundTracking(newPackage)
             }
-        } else {
-            Log.d("AppBlockerService", "$newPackage is not a monitored target app.")
         }
     }
 
@@ -253,14 +215,13 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         foregroundTrackingJob?.cancel()
         appUsageCollector.startLightSensor()
         val trackingJob = serviceScope.launch {
-            Log.d("AppBlockerService", "Started periodic tracking for: $packageName")
             while (isActive) {
                 val currentTime = timeProvider.nowMillis()
                 
                 // Periodically flush data to Room/Prefs (every 30s)
                 if (currentTime - lastSyncTimestamp > SYNC_INTERVAL_MS) {
                     runCatching { usageRepository.refreshUsageData() }
-                        .onFailure { Log.e("AppBlockerService", "Periodic usage sync failed", it) }
+                        .onFailure { Log.e("AppBlockerService", "Periodic usage sync failed") }
                     lastSyncTimestamp = currentTime
                 }
 
@@ -269,7 +230,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                     runCatching {
                         withTimeout(EVALUATION_TIMEOUT_MS) { evaluateIntervention(packageName) }
                     }
-                        .onFailure { Log.e("AppBlockerService", "Periodic intervention evaluation failed", it) }
+                        .onFailure { Log.e("AppBlockerService", "Periodic intervention evaluation failed") }
                     lastEvaluationTimestamp = currentTime
                 }
                 
@@ -279,7 +240,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         foregroundTrackingJob = trackingJob
         trackingJob.invokeOnCompletion { cause ->
             if (cause != null && cause !is kotlinx.coroutines.CancellationException) {
-                Log.e("AppBlockerService", "Foreground evaluator stopped unexpectedly", cause)
+                Log.e("AppBlockerService", "Foreground evaluator stopped unexpectedly")
             }
             if (foregroundTrackingJob === trackingJob) foregroundTrackingJob = null
         }
@@ -295,9 +256,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         difficulty: Int,
         challengeType: com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType,
     ): Boolean {
-        Log.d("AppBlockerService", ">>> ATTEMPTING LAUNCH FOR: $packageName")
         if (launchPolicy.consumeForcedFailure()) {
-            Log.w("AppBlockerService", ">>> Debug control forced launch failure")
             return false
         }
         val intent = Intent(this, InterventionActivity::class.java).apply {
@@ -325,10 +284,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         return try {
             startActivity(intent)
-            Log.d("AppBlockerService", ">>> startActivity() called successfully")
             true
-        } catch (e: Exception) {
-            Log.e("AppBlockerService", ">>> FAILED to start activity", e)
+        } catch (_: Exception) {
+            Log.e("AppBlockerService", "Intervention launch failed")
             false
         }
     }
@@ -344,9 +302,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         try {
             startActivity(intent)
-            Log.d("AppBlockerService", "Restored the existing unanswered intervention")
-        } catch (e: Exception) {
-            Log.e("AppBlockerService", "Failed to restore active intervention", e)
+        } catch (_: Exception) {
+            Log.e("AppBlockerService", "Active intervention restore failed")
         }
     }
 

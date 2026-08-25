@@ -16,4 +16,6 @@ data class SettingsUiState(
     val isExporting: Boolean = false,
     val exportedFilePath: String? = null,
     val exportError: String? = null,
+    val isBackfilling: Boolean = false,
+    val backfillError: Boolean = false,
 )

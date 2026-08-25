@@ -1,7 +1,6 @@
 package com.makhp.pelukdiri.features.settings
 
 import android.content.Context
-import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.core.domain.model.AppUsage
@@ -23,7 +22,7 @@ import javax.inject.Inject
 class AppsInterventionViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val usageRepository: UsageRepository,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -44,7 +43,7 @@ class AppsInterventionViewModel @Inject constructor(
         
         AppsInterventionUiState(
             searchQuery = query,
-            apps = filtered.toImmutableList(),
+            apps = filtered.sortedByDescending { it.packageName in monitored }.toImmutableList(),
             selectedPackageNames = monitored.toImmutableSet(),
             isLoading = isLoading
         )

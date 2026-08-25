@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-import java.util.Calendar
 import javax.inject.Inject
 
 class UsageRepositoryImpl @Inject constructor(
@@ -69,13 +68,7 @@ class UsageRepositoryImpl @Inject constructor(
     }
 
     private suspend fun reconstructAndSave(date: LocalDate) {
-        android.util.Log.d("UsageRepository", "Starting reconstruction for $date")
         val usageList = usageEventCollector.getUsageForDay(date)
-        android.util.Log.d("UsageRepository", "Reconstructed ${usageList.size} apps for $date")
-        
-        val totalMs = usageList.sumOf { it.usageDurationMillis }
-        android.util.Log.d("UsageRepository", "Total Screen Time for $date: ${totalMs / 1000.0 / 60.0} minutes")
-        
         saveUsageData(usageList, date.toString())
     }
 

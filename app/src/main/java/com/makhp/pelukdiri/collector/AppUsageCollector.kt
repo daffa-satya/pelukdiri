@@ -23,7 +23,7 @@ import javax.inject.Singleton
 
 @Singleton
 class AppUsageCollector @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : SensorEventListener {
 
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager

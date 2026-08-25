@@ -21,7 +21,7 @@ import kotlin.random.Random
 
 @Singleton
 class NotificationHelper @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     companion object {
         private const val CHANNEL_ID = "daily_usage_status_channel"
@@ -168,12 +168,10 @@ class NotificationHelper @Inject constructor(
     private fun notify(id: Int, notification: android.app.Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val granted = ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-            android.util.Log.d("NotificationHelper", "notify: id=$id, permissionGranted=$granted")
             if (granted) {
                 NotificationManagerCompat.from(context).notify(id, notification)
             }
         } else {
-            android.util.Log.d("NotificationHelper", "notify: id=$id (Legacy API)")
             NotificationManagerCompat.from(context).notify(id, notification)
         }
     }

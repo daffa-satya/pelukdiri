@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.AppDetailBottomSheet
@@ -34,7 +34,6 @@ import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.features.dashboard.UiAppUsage
 import com.makhp.pelukdiri.ui.components.AppIcon
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
-import com.makhp.pelukdiri.ui.components.InsightCard
 import com.makhp.pelukdiri.ui.components.PelukCard
 import com.makhp.pelukdiri.ui.components.formatDuration
 import com.makhp.pelukdiri.ui.theme.Dimens
@@ -193,7 +192,7 @@ private fun AnalyticsHeader() {
             style = MaterialTheme.typography.headlineMedium
         )
         Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
-            PelukDiriLogo(size = 28.dp)
+            PelukDiriLogo(size = DashboardTokens.AppIconSize)
         }
     }
 }
@@ -521,8 +520,8 @@ private fun MetricGrid(state: AnalyticsUiState.Success) {
     fun comparison(current: Long, previous: Long): Pair<String, Boolean> {
         val change = percentageChange(current, previous)
         val value = when {
-            change != null && change > 0 -> "↗ ${change}%"
-            change != null && change < 0 -> "↘ ${-change}%"
+            change != null && change > 0 -> "+ ${change}%"
+            change != null && change < 0 -> "- ${-change}%"
             change != null -> "0%"
             current > 0 -> stringResource(R.string.analytics_comparison_new)
             else -> "0%"

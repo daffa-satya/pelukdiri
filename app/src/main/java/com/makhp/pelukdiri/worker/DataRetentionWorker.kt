@@ -23,11 +23,10 @@ class DataRetentionWorker @AssistedInject constructor(
         try {
             val retentionDays = 30L
             val cutoffEpochMillis = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(retentionDays)
-            val deletedCount = usageSensorRepository.deleteLogsBefore(cutoffEpochMillis)
-            Log.d(TAG, "DataRetentionWorker completed. Deleted $deletedCount sensor log rows older than $retentionDays days.")
+            usageSensorRepository.deleteLogsBefore(cutoffEpochMillis)
             Result.success()
-        } catch (e: Exception) {
-            Log.e(TAG, "DataRetentionWorker failed during retention cleanup", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "Data retention cleanup failed")
             Result.retry()
         }
     }

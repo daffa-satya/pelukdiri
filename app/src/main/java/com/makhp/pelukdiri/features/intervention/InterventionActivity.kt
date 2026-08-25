@@ -11,7 +11,6 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,8 +32,6 @@ class InterventionActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        android.util.Log.d("InterventionActivity", ">>> onCreate reached in InterventionActivity")
-
         // The service normally acquires this before launch. Acquiring here as well makes the
         // activity the authoritative owner when restored by Android or opened by a debug path.
         lockManager.acquireLock()
@@ -70,10 +67,7 @@ class InterventionActivity : ComponentActivity() {
                 ) {
                     InterventionOverlayScreen(
                         viewModel = viewModel,
-                        onDismiss = { 
-                            android.util.Log.d("InterventionActivity", ">>> Finishing activity")
-                            finishAndRemoveTask() 
-                        }
+                        onDismiss = { finishAndRemoveTask() }
                     )
                 }
             }
@@ -82,7 +76,6 @@ class InterventionActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
-        android.util.Log.d("InterventionActivity", ">>> onNewIntent reached")
         excludeCurrentTaskFromRecents()
         processIntent(intent)
     }
@@ -140,17 +133,12 @@ class InterventionActivity : ComponentActivity() {
                 difficulty = difficulty,
                 challengeType = challengeType,
             )
-        } else {
-            android.util.Log.w("InterventionActivity", ">>> No valid monitored usage data in intent. MonitoredUsage: $monitoredUsage")
         }
     }
 
     private fun restoreActiveInterventionOrFinish() {
         viewModel.restoreActiveIntervention { restored ->
-            if (restored) {
-                android.util.Log.d("InterventionActivity", ">>> Restored active intervention")
-            } else {
-                android.util.Log.w("InterventionActivity", ">>> Active intervention snapshot unavailable")
+            if (!restored) {
                 lockManager.releaseLock()
                 finishAndRemoveTask()
             }
@@ -160,10 +148,6 @@ class InterventionActivity : ComponentActivity() {
     override fun onStop() {
         abandonTransientAudioFocus()
         super.onStop()
-        android.util.Log.d(
-            "InterventionActivity",
-            ">>> onStop; finishing=$isFinishing changingConfigurations=$isChangingConfigurations"
-        )
         // The lock belongs to the unanswered intervention, not to the visible Activity
         // lifecycle. It is released only by resetToIdle after an answer or bypass.
     }
@@ -182,26 +166,14 @@ class InterventionActivity : ComponentActivity() {
                 .build()
             audioFocusRequest = request
             audioManager.requestAudioFocus(request)
-        } catch (error: RuntimeException) {
-            android.util.Log.w("InterventionActivity", ">>> Unable to pause active media", error)
-        }
+        } catch (_: RuntimeException) {}
     }
 
     private fun abandonTransientAudioFocus() {
         try {
             audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
             audioFocusRequest = null
-        } catch (error: RuntimeException) {
-            android.util.Log.w("InterventionActivity", ">>> Unable to release media pause", error)
-        }
-    }
-
-    override fun onDestroy() {
-        android.util.Log.d(
-            "InterventionActivity",
-            ">>> onDestroy; finishing=$isFinishing changingConfigurations=$isChangingConfigurations"
-        )
-        super.onDestroy()
+        } catch (_: RuntimeException) {}
     }
 
     companion object {

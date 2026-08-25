@@ -34,7 +34,7 @@ class AnalyticsViewModel @Inject constructor(
     private val interventionLogRepository: InterventionLogRepository,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val usageEventCollector: UsageEventCollector,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AnalyticsUiState>(AnalyticsUiState.Loading)
     val uiState: StateFlow<AnalyticsUiState> = _uiState.asStateFlow()
