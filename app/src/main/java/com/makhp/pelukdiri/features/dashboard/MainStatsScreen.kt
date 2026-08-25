@@ -284,7 +284,9 @@ private fun DashboardHeader(
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.dashboard_header_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
-        Spacer(Modifier.size(Dimens.minTouchTarget))
+        Box(Modifier.size(Dimens.minTouchTarget), contentAlignment = Alignment.Center) {
+            PelukDiriLogo(size = 28.dp)
+        }
     }
 }
 
