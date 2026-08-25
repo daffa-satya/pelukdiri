@@ -1,11 +1,16 @@
 *.iml
 .idea/
 .gradle/
+.android/
 local.properties
 *.jks
 *.keystore
+*.apk
+*.aab
+keystore.properties
 build/
 **/build/
+app/release/
 captures/
 .externalNativeBuild/
 .cxx/
