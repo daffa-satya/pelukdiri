@@ -26,4 +26,15 @@
     <string name="test_lab_launch_level">Launch level %1$d</string>
     <string name="test_lab_launch_pattern_level">Launch pattern level %1$d</string>
     <string name="test_lab_difficulty">Set difficulty %1$d</string>
+    <string name="test_lab_reset_complete">Data intervensi Debug telah direset.</string>
+    <string name="test_lab_simulator">Intervention simulator</string>
+    <string name="test_lab_simulator_description">Only deviation is overridden. All other values come from the current Debug intervention state and production policy.</string>
+    <string name="test_lab_deviation">Deviation D: %1$.2f</string>
+    <string name="test_lab_simulate">Calculate</string>
+    <string name="test_lab_launch_simulation">Test intervention</string>
+    <string name="test_lab_reset_simulation">Reset intervention data</string>
+    <string name="test_lab_simulation_result">Challenge: %1$s\nD=%2$.2f  lux=%3$.1f  λD=%4$.2f  λF=%5$.2f\nP=%6$.3f  Qlux=%7$.3f  Qtime=%8$.3f  Q=%9$.3f\nSuccess streak: %10$d/%11$d  failure streak: %12$d/%13$d  latest=%14$s\nCurrent=%15$d  CD=%16$.3f  target=%17$.2f  next=%18$d\nInterval=%19$.2f min  mode=%20$s</string>
+    <string name="test_lab_reset_title">Reset intervention data?</string>
+    <string name="test_lab_reset_message">Difficulty returns to level 2. Debug performance history, decisions, cooldown, bypass, and active session will be cleared.</string>
+    <string name="test_lab_reset_confirm">Reset</string>
 </resources>

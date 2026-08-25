@@ -14,8 +14,11 @@ data class ControlConfig(
     // Performance Correctness Floor (a = 0.5)
     val performanceCorrectnessFloor: Double = 0.5,
     
-    // Minimum successful responses to establish a baseline
+    // Prior consecutive successful responses required to establish a speed baseline
     val performanceEvidenceWindow: Int = 5,
+
+    // Consecutive failed responses required before decreasing difficulty
+    val difficultyDecreaseEvidenceWindow: Int = 0,
     
     // Sleep Sensitivity Ramp (minutes before bedtime)
     val sleepSensitivityRampMinutes: Int = 90,
@@ -39,7 +42,7 @@ data class ControlConfig(
     val reversalGuardInterventions: Int = 3,
 ) {
     companion object {
-        const val POLICY_VERSION = "v0.6-candidate-3"
+        const val POLICY_VERSION = "v1.1-failure-streak-decrease"
 
         /** Pre-tuning control constants, retained as a safe comparison baseline. */
         val LEGACY_DEFAULT = ControlConfig(
@@ -50,10 +53,12 @@ data class ControlConfig(
         /** First synthetic tuning result; also represented by constructor defaults. */
         val CANDIDATE_1 = ControlConfig()
 
-        /** Selected v0.6 production control constants. */
+        /** Selected production control constants. */
         val CANDIDATE_3 = ControlConfig(
-            lambdaDifficulty = 0.0,
+            lambdaDifficulty = 0.2,
             lambdaFrequency = 1.0,
+            performanceEvidenceWindow = 2,
+            difficultyDecreaseEvidenceWindow = 3,
         )
     }
 }

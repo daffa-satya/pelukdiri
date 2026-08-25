@@ -160,7 +160,7 @@ class NotificationHelper @Inject constructor(
         )
 
         return NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
     }

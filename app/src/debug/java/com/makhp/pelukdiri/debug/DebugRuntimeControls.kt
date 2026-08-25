@@ -39,6 +39,11 @@ class DebugRuntimeControls @Inject constructor(
         preferences.edit().putLong(KEY_VIRTUAL_NOW, advanced).commit()
     }
     fun forceNextLaunchFailure() = failNextLaunch.set(true)
+    fun resetInterventionOverrides() {
+        useSystemTime()
+        failNextLaunch.set(false)
+        preferences.edit().remove(KEY_FORCED_CHALLENGE).commit()
+    }
     fun armForcedChallenge(challengeType: InterventionChallengeType) {
         preferences.edit().putString(KEY_FORCED_CHALLENGE, challengeType.name).commit()
     }

@@ -176,7 +176,7 @@ class UsageSyncWorker @AssistedInject constructor(
         val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setContentTitle(applicationContext.getString(R.string.notification_sync_active_title))
             .setContentText(applicationContext.getString(R.string.notification_sync_collecting))
-            .setSmallIcon(R.mipmap.ic_launcher) // Use default icon
+            .setSmallIcon(R.drawable.ic_notification)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .build()

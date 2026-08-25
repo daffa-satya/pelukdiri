@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,10 +16,14 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -40,18 +45,21 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.makhp.pelukdiri.core.domain.model.MathQuestion
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
 import com.makhp.pelukdiri.core.domain.model.PatternShape
 import com.makhp.pelukdiri.core.domain.model.PatternQuestion
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.theme.PELUKDIRITheme
+import com.makhp.pelukdiri.ui.theme.Dimens
+import com.makhp.pelukdiri.ui.theme.InterventionDimens
+import com.makhp.pelukdiri.ui.theme.InterventionScrim
 import com.makhp.pelukdiri.ui.theme.PatternAmber
 import com.makhp.pelukdiri.ui.theme.PatternBlue
 import com.makhp.pelukdiri.ui.theme.PatternGreen
@@ -59,8 +67,6 @@ import com.makhp.pelukdiri.ui.theme.PatternPink
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
-
-private val ScreenScrim = Color(0xB3000000)
 
 @Composable
 fun MindfulPauseScreen(
@@ -74,27 +80,38 @@ fun MindfulPauseScreen(
     onReplayPattern: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    Box(
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(ScreenScrim)
-            .padding(horizontal = 20.dp),
+            .background(InterventionScrim)
+            .padding(
+                horizontal = InterventionDimens.screenHorizontalPadding,
+                vertical = InterventionDimens.screenVerticalPadding,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = InterventionDimens.cardMaxWidth)
+                .heightIn(max = maxHeight),
+            shape = RoundedCornerShape(InterventionDimens.cardCornerRadius),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = InterventionDimens.cardElevation),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 28.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        horizontal = InterventionDimens.cardHorizontalPadding,
+                        vertical = InterventionDimens.cardVerticalPadding,
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 when (state) {
@@ -155,7 +172,7 @@ private fun ErrorContent(
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
     )
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(InterventionDimens.contentGap))
     Text(
         text = stringResource(
             when (operation) {
@@ -170,10 +187,10 @@ private fun ErrorContent(
         style = MaterialTheme.typography.bodyLarge,
         textAlign = TextAlign.Center,
     )
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(Dimens.spaceLarge))
     Button(
         onClick = onRetry,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
+        modifier = Modifier.fillMaxWidth().height(Dimens.buttonHeight),
     ) {
         Text(stringResource(R.string.intervention_retry))
     }
@@ -198,78 +215,78 @@ private fun LandscapeQuestionContent(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalArrangement = Arrangement.spacedBy(InterventionDimens.sectionGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
             modifier = Modifier.weight(0.9f),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(InterventionDimens.compactGap),
         ) {
             Text(
                 text = stringResource(R.string.intervention_mindful_pause_title),
                 color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 24.sp,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
             if (isMaxPenalized) {
                 Text(
                     text = stringResource(R.string.intervention_max_penalty),
                     color = MaterialTheme.colorScheme.error,
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                 )
             }
             Text(
                 text = stringResource(R.string.intervention_difficulty_level, state.assessment.level),
                 color = MaterialTheme.colorScheme.primary,
-                fontSize = 15.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = displayExpr,
-                    fontSize = 28.sp,
+                    style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(InterventionDimens.compactGap))
                 OutlinedTextField(
                     value = state.answerInput,
                     onValueChange = {},
-                    modifier = Modifier.width(86.dp),
+                    modifier = Modifier.width(InterventionDimens.landscapeAnswerWidth),
                     readOnly = true,
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = 22.sp,
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurface,
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(InterventionDimens.compactGap),
                 )
             }
             Text(
                 text = stringResource(R.string.intervention_emergency_remaining, state.remainingBypasses),
                 color = if (state.remainingBypasses > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                fontSize = 15.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             if (state.bypassDenied) {
                 Text(
                     text = stringResource(R.string.intervention_bypass_exhausted),
                     color = MaterialTheme.colorScheme.error,
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(InterventionDimens.compactGap),
             ) {
                 OutlinedButton(
                     onClick = onEmergencyClick,
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(1f).height(Dimens.minTouchTarget),
                     enabled = state.remainingBypasses > 0,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                    border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error,
                         disabledContentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.38f),
@@ -277,7 +294,7 @@ private fun LandscapeQuestionContent(
                 ) { Text(stringResource(R.string.intervention_emergency_button_short)) }
                 Button(
                     onClick = onSubmitAnswer,
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(1f).height(Dimens.minTouchTarget),
                     enabled = state.answerInput.isNotEmpty(),
                 ) { Text(stringResource(R.string.intervention_submit_button_short)) }
             }
@@ -309,32 +326,37 @@ private fun QuestionContent(
     Text(
         text = stringResource(R.string.intervention_mindful_pause_title),
         color = MaterialTheme.colorScheme.onSurface,
-        fontSize = 30.sp,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
     )
 
-    Spacer(Modifier.height(12.dp))
-    Box(Modifier.width(36.dp).height(2.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)))
-    Spacer(Modifier.height(18.dp))
+    Spacer(Modifier.height(InterventionDimens.contentGap))
+    Box(
+        Modifier
+            .width(Dimens.iconSizeLarge)
+            .height(Dimens.dividerThickness)
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+    )
+    Spacer(Modifier.height(Dimens.iconSizeSmall))
 
     if (isMaxPenalized) {
         Text(
             text = stringResource(R.string.intervention_max_penalty),
             color = MaterialTheme.colorScheme.error,
-            fontSize = 14.sp,
+            style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = Dimens.spaceSmall)
         )
     }
 
     Text(
         text = stringResource(R.string.intervention_difficulty_level, state.assessment.level),
         color = MaterialTheme.colorScheme.primary,
-        fontSize = 17.sp,
+        style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
     )
 
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Dimens.spaceMedium))
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -343,27 +365,27 @@ private fun QuestionContent(
     ) {
         Text(
             text = displayExpr,
-            fontSize = 30.sp,
+            style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(InterventionDimens.compactGap))
         OutlinedTextField(
             value = state.answerInput,
             onValueChange = {},
-            modifier = Modifier.width(80.dp),
+            modifier = Modifier.width(InterventionDimens.answerWidth),
             readOnly = true,
             singleLine = true,
             textStyle = androidx.compose.ui.text.TextStyle(
-                fontSize = 24.sp,
+                fontSize = MaterialTheme.typography.headlineMedium.fontSize,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface
             ),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(InterventionDimens.compactGap),
         )
     }
 
-    Spacer(Modifier.height(18.dp))
+    Spacer(Modifier.height(Dimens.iconSizeSmall))
     NumericKeypad(
         onNumberClick = { num -> onAnswerChanged(state.answerInput + num) },
         onClearClick = { onAnswerChanged("") },
@@ -374,11 +396,11 @@ private fun QuestionContent(
         },
     )
 
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Dimens.spaceMedium))
     Text(
         text = stringResource(R.string.intervention_emergency_remaining, state.remainingBypasses),
         color = if (state.remainingBypasses > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-        fontSize = 18.sp,
+        style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
     )
 
@@ -386,38 +408,44 @@ private fun QuestionContent(
         Text(
             text = stringResource(R.string.intervention_bypass_exhausted),
             color = MaterialTheme.colorScheme.error,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(top = 4.dp)
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(top = Dimens.spaceExtraSmall)
         )
     }
 
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(InterventionDimens.sectionGap))
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(InterventionDimens.contentGap),
     ) {
         OutlinedButton(
             onClick = onEmergencyClick,
-            modifier = Modifier.weight(1f).height(56.dp),
+            modifier = Modifier.weight(1f).height(Dimens.buttonHeight),
             enabled = state.remainingBypasses > 0,
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+            shape = RoundedCornerShape(InterventionDimens.compactGap),
+            border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error,
                 disabledContentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.38f)
             ),
         ) {
-            Text(stringResource(R.string.intervention_emergency_button_short), fontSize = 18.sp)
+            Text(
+                stringResource(R.string.intervention_emergency_button_short),
+                style = MaterialTheme.typography.titleMedium,
+            )
         }
 
         Button(
             onClick = onSubmitAnswer,
-            modifier = Modifier.weight(1f).height(56.dp),
+            modifier = Modifier.weight(1f).height(Dimens.buttonHeight),
             enabled = state.answerInput.isNotEmpty(),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(InterventionDimens.compactGap),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
         ) {
-            Text(stringResource(R.string.intervention_submit_button_short), fontSize = 18.sp)
+            Text(
+                stringResource(R.string.intervention_submit_button_short),
+                style = MaterialTheme.typography.titleMedium,
+            )
         }
     }
 }
@@ -435,7 +463,6 @@ private fun PatternContent(
         return
     }
     val highlightedShape = state.playbackIndex?.let(state.question.sequence::getOrNull)
-    val gridSize = 310.dp
     val progressDescription = stringResource(
         R.string.intervention_pattern_progress,
         state.answerInput.size,
@@ -449,7 +476,7 @@ private fun PatternContent(
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Dimens.spaceSmall))
     Text(
         text = stringResource(R.string.intervention_pattern_hint),
         color = MaterialTheme.colorScheme.onSurface,
@@ -457,26 +484,29 @@ private fun PatternContent(
         fontWeight = FontWeight.SemiBold,
         textAlign = TextAlign.Center,
     )
-    Spacer(Modifier.height(if (isLandscape) 10.dp else 24.dp))
+    Spacer(Modifier.height(Dimens.spaceLarge))
 
     PatternGrid(
         highlightedShape = highlightedShape,
         enabled = !state.isPlaying && !state.bypassDenied,
         onPatternSelected = onPatternSelected,
-        modifier = Modifier.size(gridSize),
+        modifier = Modifier.size(InterventionDimens.patternGridSize),
     )
 
-    Spacer(Modifier.height(if (isLandscape) 8.dp else 20.dp))
+    Spacer(Modifier.height(InterventionDimens.sectionGap))
     Row(
         modifier = Modifier.semantics { contentDescription = progressDescription },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.spaceSmall),
     ) {
         state.question.sequence.indices.forEach { index ->
             val filled = index < state.answerInput.size
             val playing = index == state.playbackIndex
             Box(
                 Modifier
-                    .size(if (playing) 12.dp else 10.dp)
+                    .size(
+                        if (playing) InterventionDimens.contentGap
+                        else InterventionDimens.compactGap
+                    )
                     .background(
                         color = when {
                             playing -> MaterialTheme.colorScheme.primary
@@ -489,7 +519,7 @@ private fun PatternContent(
         }
     }
 
-    Spacer(Modifier.height(if (isLandscape) 8.dp else 18.dp))
+    Spacer(Modifier.height(Dimens.iconSizeSmall))
     OutlinedButton(
         onClick = onReplayPattern,
         enabled = !state.isPlaying,
@@ -503,12 +533,12 @@ private fun PatternContent(
         )
     }
 
-    Spacer(Modifier.height(if (isLandscape) 6.dp else 14.dp))
+    Spacer(Modifier.height(Dimens.spaceSmall))
     OutlinedButton(
         onClick = onEmergencyClick,
         enabled = state.remainingBypasses > 0,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+        border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
     ) {
         Text(stringResource(R.string.intervention_emergency_button))
     }
@@ -535,13 +565,13 @@ private fun LandscapePatternContent(
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalArrangement = Arrangement.spacedBy(InterventionDimens.sectionGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
             modifier = Modifier.weight(0.9f),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(InterventionDimens.compactGap),
         ) {
             Text(
                 text = stringResource(R.string.intervention_pattern_title),
@@ -558,12 +588,12 @@ private fun LandscapePatternContent(
             )
             Row(
                 modifier = Modifier.semantics { contentDescription = progressDescription },
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.spaceSmall),
             ) {
                 state.question.sequence.indices.forEach { index ->
                     Box(
                         Modifier
-                            .size(9.dp)
+                            .size(InterventionDimens.compactGap)
                             .background(
                                 if (index < state.answerInput.size) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.outlineVariant,
@@ -585,7 +615,7 @@ private fun LandscapePatternContent(
                 onClick = onEmergencyClick,
                 enabled = state.remainingBypasses > 0,
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
             ) {
                 Text(stringResource(R.string.intervention_emergency_button))
             }
@@ -594,7 +624,11 @@ private fun LandscapePatternContent(
             highlightedShape = state.playbackIndex?.let(state.question.sequence::getOrNull),
             enabled = !state.isPlaying && !state.bypassDenied,
             onPatternSelected = onPatternSelected,
-            modifier = Modifier.weight(1.1f).aspectRatio(1f),
+            compactShapes = true,
+            modifier = Modifier
+                .weight(1.1f)
+                .aspectRatio(1f)
+                .padding(InterventionDimens.sectionGap),
         )
     }
 }
@@ -605,10 +639,14 @@ private fun PatternGrid(
     enabled: Boolean,
     onPatternSelected: (PatternShape) -> Unit,
     modifier: Modifier = Modifier,
+    compactShapes: Boolean = false,
 ) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(InterventionDimens.contentGap)) {
         PatternShape.entries.chunked(2).forEach { shapes ->
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(InterventionDimens.contentGap),
+            ) {
                 shapes.forEach { shape ->
                     PatternTile(
                         shape = shape,
@@ -623,6 +661,7 @@ private fun PatternGrid(
                         highlighted = highlightedShape == shape,
                         enabled = enabled,
                         onClick = { onPatternSelected(shape) },
+                        compact = compactShapes,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -639,6 +678,7 @@ private fun PatternTile(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val color = when (shape) {
         PatternShape.CIRCLE -> PatternGreen
@@ -647,9 +687,21 @@ private fun PatternTile(
         PatternShape.PENTAGON -> PatternPink
     }
     val symbolSize = when (shape) {
-        PatternShape.CIRCLE, PatternShape.SQUARE -> 52.dp
-        PatternShape.TRIANGLE -> 62.dp
-        PatternShape.PENTAGON -> 60.dp
+        PatternShape.CIRCLE, PatternShape.SQUARE -> if (compact) {
+            InterventionDimens.patternCircleCompact
+        } else {
+            InterventionDimens.patternCircle
+        }
+        PatternShape.TRIANGLE -> if (compact) {
+            InterventionDimens.patternTriangleCompact
+        } else {
+            InterventionDimens.patternTriangle
+        }
+        PatternShape.PENTAGON -> if (compact) {
+            InterventionDimens.patternPentagonCompact
+        } else {
+            InterventionDimens.patternPentagon
+        }
     }
     val scale by animateFloatAsState(if (highlighted) 1.08f else 1f, label = "patternTileScale")
     Box(
@@ -662,10 +714,17 @@ private fun PatternTile(
             }
             .background(
                 if (highlighted) color.copy(alpha = 0.22f) else Color.Transparent,
-                RoundedCornerShape(22.dp),
+                RoundedCornerShape(InterventionDimens.patternTileRadius),
             )
-            .border(3.dp, color.copy(alpha = if (highlighted) 1f else 0.55f), RoundedCornerShape(22.dp))
-            .semantics { contentDescription = label }
+            .border(
+                InterventionDimens.patternTileBorder,
+                color.copy(alpha = if (highlighted) 1f else 0.55f),
+                RoundedCornerShape(InterventionDimens.patternTileRadius),
+            )
+            .semantics {
+                contentDescription = label
+                role = Role.Button
+            }
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -713,16 +772,16 @@ private fun ResultContent(
     Text(
         text = title,
         color = color,
-        fontSize = 30.sp,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
     )
     
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Dimens.spaceMedium))
     
     when (state) {
         is InterventionUiState.CorrectAnswer -> {
             Text(
-                text = stringResource(R.string.intervention_response_time, state.responseTimeMs),
+                text = stringResource(R.string.intervention_response_time, state.responseTimeMs / 1_000.0),
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
@@ -747,7 +806,7 @@ private fun ResultContent(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = stringResource(R.string.intervention_response_time, state.responseTimeMs),
+                text = stringResource(R.string.intervention_response_time, state.responseTimeMs / 1_000.0),
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -761,17 +820,17 @@ private fun ResultContent(
         else -> {}
     }
     
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(Dimens.spaceLarge))
     
     Button(
         onClick = onReset,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth().height(Dimens.buttonHeight),
+        shape = RoundedCornerShape(InterventionDimens.compactGap),
         colors = ButtonDefaults.buttonColors(containerColor = color)
     ) {
         Text(
             if (isSuccess) stringResource(R.string.intervention_result_finish) else stringResource(R.string.intervention_result_close),
-            fontSize = 18.sp
+            style = MaterialTheme.typography.titleMedium,
         )
     }
 }
@@ -784,7 +843,7 @@ private fun NumericKeypad(
     onBackspaceClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(Dimens.spaceSmall)) {
         listOf(
             listOf(1, 2, 3),
             listOf(4, 5, 6),
@@ -792,14 +851,19 @@ private fun NumericKeypad(
         ).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.spaceSmall),
             ) {
                 row.forEach { number ->
                     KeypadButton(
                         modifier = Modifier.weight(1f),
                         onClick = { onNumberClick(number) },
+                        contentDescription = number.toString(),
                     ) {
-                        Text(number.toString(), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            number.toString(),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
                     }
                 }
             }
@@ -807,16 +871,40 @@ private fun NumericKeypad(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Dimens.spaceSmall),
         ) {
-            KeypadButton(Modifier.weight(1f), onClearClick) {
-                Text(stringResource(R.string.keypad_clear), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            KeypadButton(
+                modifier = Modifier.weight(1f),
+                onClick = onClearClick,
+                contentDescription = stringResource(R.string.keypad_clear_description),
+            ) {
+                Text(
+                    stringResource(R.string.keypad_clear),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
-            KeypadButton(Modifier.weight(1f), { onNumberClick(0) }) {
-                Text(stringResource(R.string.keypad_zero), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+            KeypadButton(
+                modifier = Modifier.weight(1f),
+                onClick = { onNumberClick(0) },
+                contentDescription = stringResource(R.string.keypad_zero),
+            ) {
+                Text(
+                    stringResource(R.string.keypad_zero),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Medium,
+                )
             }
-            KeypadButton(Modifier.weight(1f), onBackspaceClick) {
-                Text(stringResource(R.string.keypad_backspace), fontSize = 28.sp, fontWeight = FontWeight.Medium)
+            KeypadButton(
+                modifier = Modifier.weight(1f),
+                onClick = onBackspaceClick,
+                contentDescription = stringResource(R.string.keypad_backspace_description),
+            ) {
+                Text(
+                    stringResource(R.string.keypad_backspace),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Medium,
+                )
             }
         }
     }
@@ -826,23 +914,34 @@ private fun NumericKeypad(
 private fun KeypadButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    contentDescription: String,
     content: @Composable () -> Unit,
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.aspectRatio(1.85f),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(InterventionDimens.compactGap),
+        modifier = modifier
+            .aspectRatio(1.85f)
+            .semantics { this.contentDescription = contentDescription },
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = InterventionDimens.keypadElevation),
     ) {
         content()
     }
 }
 
-@Preview(showBackground = true, widthDp = 412, heightDp = 915)
+@Preview(name = "Math Portrait", showBackground = true, widthDp = 412, heightDp = 915)
+@Preview(name = "Math Landscape", showBackground = true, widthDp = 915, heightDp = 412)
+@Preview(
+    name = "Math Large Font",
+    showBackground = true,
+    widthDp = 412,
+    heightDp = 915,
+    fontScale = 1.5f,
+)
 @Composable
 private fun MindfulPauseScreenPreview() {
     PELUKDIRITheme {
@@ -852,6 +951,40 @@ private fun MindfulPauseScreenPreview() {
                 assessment = RiskAssessmentResult(0.6, 3, 0, 120),
                 remainingBypasses = 5
             ),
+            onAnswerChanged = {},
+            onSubmitAnswer = {},
+            onEmergencyClick = {},
+            onReset = {},
+            onRetry = {},
+            onPatternSelected = {},
+            onReplayPattern = {},
+        )
+    }
+}
+
+@Preview(name = "Retry Error", showBackground = true, widthDp = 412, heightDp = 915)
+@Composable
+private fun MindfulPauseErrorPreview() {
+    PELUKDIRITheme {
+        MindfulPauseScreen(
+            state = InterventionUiState.Error(FailedInterventionOperation.START),
+            onAnswerChanged = {},
+            onSubmitAnswer = {},
+            onEmergencyClick = {},
+            onReset = {},
+            onRetry = {},
+            onPatternSelected = {},
+            onReplayPattern = {},
+        )
+    }
+}
+
+@Preview(name = "Loading", showBackground = true, widthDp = 412, heightDp = 915)
+@Composable
+private fun MindfulPauseLoadingPreview() {
+    PELUKDIRITheme {
+        MindfulPauseScreen(
+            state = InterventionUiState.Loading,
             onAnswerChanged = {},
             onSubmitAnswer = {},
             onEmergencyClick = {},
@@ -912,6 +1045,12 @@ private fun MindfulPauseFailurePreview() {
     widthDp = 412,
     heightDp = 915,
     uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
+@Preview(
+    name = "Pattern Landscape",
+    showBackground = true,
+    widthDp = 915,
+    heightDp = 412,
 )
 @Composable
 private fun MindfulPausePatternPreview() {

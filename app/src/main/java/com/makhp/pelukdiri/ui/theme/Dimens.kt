@@ -23,3 +23,29 @@ object Dimens {
     val progressBarHeight = 8.dp
     val dividerThickness = 1.dp
 }
+
+object InterventionDimens {
+    val screenHorizontalPadding = 20.dp
+    val screenVerticalPadding = 16.dp
+    val cardMaxWidth = 840.dp
+    val cardCornerRadius = 28.dp
+    val cardHorizontalPadding = 20.dp
+    val cardVerticalPadding = 28.dp
+    val cardElevation = 8.dp
+    val compactGap = 10.dp
+    val contentGap = 12.dp
+    val sectionGap = 20.dp
+    val answerWidth = 80.dp
+    val landscapeAnswerWidth = 86.dp
+    val patternGridSize = 310.dp
+    val patternTileRadius = 22.dp
+    val patternTileBorder = 3.dp
+    val thinBorder = 1.dp
+    val keypadElevation = 2.dp
+    val patternCircleCompact = 40.dp
+    val patternCircle = 52.dp
+    val patternTriangleCompact = 48.dp
+    val patternTriangle = 62.dp
+    val patternPentagonCompact = 48.dp
+    val patternPentagon = 60.dp
+}

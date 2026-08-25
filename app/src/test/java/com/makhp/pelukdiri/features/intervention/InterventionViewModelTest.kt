@@ -87,10 +87,10 @@ class InterventionViewModelTest {
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
 
         // WHEN: Start first intervention
-        viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 1)
         
         // AND: Start second intervention immediately with different data
-        viewModel.startIntervention(20.0, 2, 200f, 0.2, 0.6, 2)
+        viewModel.startIntervention(20.0, 2.0, 200f, 0.2, 0.6, 2)
         
         advanceUntilIdle()
 
@@ -108,7 +108,7 @@ class InterventionViewModelTest {
         coEvery { cognitiveQuestionGenerator.generateQuestion(1) } returns question
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
 
-        viewModel.startIntervention(130.0, 4, 25f, 0.08, 0.07, 1)
+        viewModel.startIntervention(130.0, 4.0, 25f, 0.08, 0.07, 1)
         advanceUntilIdle()
         viewModel.onAnswerChanged("9")
         val originalState = viewModel.uiState.value
@@ -139,7 +139,7 @@ class InterventionViewModelTest {
             MathQuestion("43 + 47", 90, 1)
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
 
-        viewModel.startIntervention(130.0, 4, 25f, 0.08, 0.07, 1)
+        viewModel.startIntervention(130.0, 4.0, 25f, 0.08, 0.07, 1)
         advanceUntilIdle()
         viewModel.onAnswerChanged("123456789")
 
@@ -154,7 +154,7 @@ class InterventionViewModelTest {
             MathQuestion("1+1", 2, 1)
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
 
-        viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 1)
         advanceUntilIdle()
 
         val error = viewModel.uiState.value as InterventionUiState.Error
@@ -173,7 +173,7 @@ class InterventionViewModelTest {
         coEvery { interventionLogRepository.insertLog(any()) } throws
             IllegalStateException("database unavailable") andThen Unit
 
-        viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 1)
         advanceUntilIdle()
         viewModel.onAnswerChanged("2")
         viewModel.submitAnswer()
@@ -193,7 +193,7 @@ class InterventionViewModelTest {
         coEvery { performEmergencyBypassUseCase(any(), any(), any(), any(), any(), any()) } throws
             IllegalStateException("preferences unavailable") andThen BypassResult.Success(4)
 
-        viewModel.startIntervention(10.0, 1, 100f, 0.1, 0.5, 1)
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 1)
         advanceUntilIdle()
         viewModel.emergencyBypass()
         advanceUntilIdle()
@@ -218,7 +218,7 @@ class InterventionViewModelTest {
         coEvery { interventionLogRepository.insertLog(any()) } returns Unit
 
         viewModel.startIntervention(
-            10.0, 1, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
+            10.0, 1.0, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
         )
         advanceUntilIdle()
 
@@ -236,7 +236,7 @@ class InterventionViewModelTest {
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
 
         viewModel.startIntervention(
-            10.0, 1, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
+            10.0, 1.0, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
         )
         advanceUntilIdle()
         viewModel.replayPattern()
@@ -251,5 +251,12 @@ class InterventionViewModelTest {
         assertEquals(false, afterSecondReplay.isPlaying)
         assertEquals(0, afterSecondReplay.replaysRemaining)
         assertEquals(emptyList<PatternShape>(), afterSecondReplay.answerInput)
+    }
+
+    @Test
+    fun `pattern keeps start delay while shortening only the inter-shape gap`() {
+        assertEquals(1_000L, InterventionViewModel.PATTERN_PREPARATION_MS)
+        assertEquals(500L, InterventionViewModel.PATTERN_HIGHLIGHT_MS)
+        assertEquals(100L, InterventionViewModel.PATTERN_GAP_MS)
     }
 }

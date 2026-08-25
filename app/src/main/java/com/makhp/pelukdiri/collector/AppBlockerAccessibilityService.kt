@@ -143,12 +143,11 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         if (decision.shouldTrigger && controlResult != null) {
             val launchResult = attemptInterventionLaunchUseCase(controlResult) {
-                val launchFreq = appUsageCollector.getLaunchCountForPackage(packageName).toDouble()
                 launchInterventionOverlay(
                     packageName = packageName,
                     monitoredUsageMinutes = decision.monitoredUsageMinutes,
-                    launchFreq = launchFreq,
-                    ambientLux = decision.ambientLux,
+                    intervalMinutesAtLaunch = controlResult.intervalMinutes,
+                    ambientLightLuxAtLaunch = decision.ambientLux,
                     deviation = controlResult.deviation ?: 0.0,
                     difficultyControlSignal = controlResult.normalizedDifficultyControl,
                     difficulty = controlResult.nextDifficulty,
@@ -234,8 +233,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         val launched = launchInterventionOverlay(
             packageName = packageName,
             monitoredUsageMinutes = 90.0,
-            launchFreq = FORCED_TEST_INTERVAL_MINUTES.toDouble(),
-            ambientLux = appUsageCollector.getCurrentAmbientLightLux(),
+            intervalMinutesAtLaunch = FORCED_TEST_INTERVAL_MINUTES.toDouble(),
+            ambientLightLuxAtLaunch = appUsageCollector.getCurrentAmbientLightLux(),
             deviation = 0.4,
             difficultyControlSignal = 0.5,
             difficulty = difficulty,
@@ -289,8 +288,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private fun launchInterventionOverlay(
         packageName: String,
         monitoredUsageMinutes: Double,
-        launchFreq: Double,
-        ambientLux: Float,
+        intervalMinutesAtLaunch: Double,
+        ambientLightLuxAtLaunch: Float,
         deviation: Double,
         difficultyControlSignal: Double,
         difficulty: Int,
@@ -308,8 +307,14 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                     Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
             putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, packageName)
             putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, monitoredUsageMinutes)
-            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, launchFreq)
-            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, ambientLux)
+            putExtra(
+                InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH,
+                intervalMinutesAtLaunch,
+            )
+            putExtra(
+                InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH,
+                ambientLightLuxAtLaunch,
+            )
             putExtra(InterventionActivity.EXTRA_DEVIATION, deviation)
             putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, difficultyControlSignal)
             putExtra(InterventionActivity.EXTRA_DIFFICULTY, difficulty)

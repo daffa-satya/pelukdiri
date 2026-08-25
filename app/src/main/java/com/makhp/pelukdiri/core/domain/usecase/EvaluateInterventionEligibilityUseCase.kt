@@ -9,6 +9,7 @@ import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.InterventionDecision
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionAudit
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
+import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import com.makhp.pelukdiri.core.domain.model.DeviationResult
 import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
@@ -34,6 +35,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
     private val challengeSelector: InterventionChallengeSelector,
     private val appUsageCollector: AppUsageCollector,
     private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
+    private val controlConfig: ControlConfig,
     private val timeProvider: TimeProvider = SystemTimeProvider()
 ) {
     suspend operator fun invoke(packageName: String): InterventionDecision {
@@ -173,9 +175,13 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         val perfHistory = currentDifficultyRun
             .drop(1)
-            .filter { it.isSuccess }
-            .take(5)
+            .take(controlConfig.performanceEvidenceWindow)
+            .takeWhile { it.isSuccess }
             .map { it.responseTimeMs }
+        val consecutiveFailures = currentDifficultyRun
+            .takeWhile { !it.isSuccess }
+            .take(controlConfig.difficultyDecreaseEvidenceWindow)
+            .count()
             
         val lux = appUsageCollector.getCurrentAmbientLightLux()
         val bedtime = userPreferencesRepository.bedtime.first()?.let { 
@@ -197,6 +203,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             currentLevel = currentDifficulty,
             timestampMs = currentTimeMs,
             difficultyHistory = difficultyHistory,
+            consecutiveFailures = consecutiveFailures,
         )
         
         val shouldSchedule = nextEligible <= 0L

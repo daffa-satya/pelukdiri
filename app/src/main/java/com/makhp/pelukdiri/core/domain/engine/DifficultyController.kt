@@ -19,6 +19,8 @@ class DifficultyController @Inject constructor(
      * @param currentLevel Current difficulty level [1,5].
      * @param insufficientEvidence True if performance history is insufficient.
      * @param difficultyHistory Committed difficulty levels, newest first; only valid responses age the guard.
+     * @param consecutiveFailures Consecutive valid failures for the selected challenge at this level.
+     * @param latestResponseFailed Whether the selected challenge's latest valid response failed.
      * @return DifficultyResult.
      */
     fun calculate(
@@ -28,6 +30,8 @@ class DifficultyController @Inject constructor(
         currentLevel: Int,
         insufficientEvidence: Boolean,
         difficultyHistory: List<DifficultyHistoryEntry> = emptyList(),
+        consecutiveFailures: Int = 0,
+        latestResponseFailed: Boolean = false,
     ): DifficultyResult {
         // C_D = D * P * (1 + lambda_D * Q)
         val controlSignal = deviation * performance * (1.0 + (config.lambdaDifficulty * sensitivity))
@@ -50,6 +54,14 @@ class DifficultyController @Inject constructor(
 
         // Rule: insufficientPerformanceEvidence -> nextDifficulty must not exceed currentDifficulty
         if (insufficientEvidence && nextLevel > currentLevel) {
+            nextLevel = currentLevel
+        }
+
+        if (
+            nextLevel < currentLevel &&
+            latestResponseFailed &&
+            consecutiveFailures < config.difficultyDecreaseEvidenceWindow
+        ) {
             nextLevel = currentLevel
         }
 

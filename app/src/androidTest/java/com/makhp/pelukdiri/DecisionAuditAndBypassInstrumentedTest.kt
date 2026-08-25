@@ -1,7 +1,8 @@
 package com.makhp.pelukdiri
 
-import androidx.room.Room
+import android.os.Environment
 import android.provider.MediaStore
+import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.makhp.pelukdiri.core.database.PelukDiriDatabase
@@ -145,7 +146,7 @@ class DecisionAuditAndBypassInstrumentedTest {
         val export = exporter.exportFullDatabaseToZip().getOrThrow()
         val file = export.archiveFile
         try {
-            assertEquals("Downloads/${file.name}", export.savedPath)
+            assertEquals("${Environment.DIRECTORY_DOWNLOADS}/${file.name}", export.savedPath)
             context.contentResolver.query(
                 export.downloadUri,
                 arrayOf(MediaStore.Downloads.DISPLAY_NAME),
@@ -173,7 +174,7 @@ class DecisionAuditAndBypassInstrumentedTest {
                 }
                 assertEquals(2, interventionCsv.lineSequence().count { it.isNotEmpty() })
                 assertTrue(interventionCsv.contains("\"PATTERN\""))
-                assertTrue(interventionCsv.contains(",2004,true,false,0,"))
+                assertTrue(interventionCsv.contains(",2004,true,false,0\r\n"))
 
                 val appUsageEntry = zip.getEntry("app_usage.csv")
                 assertNotNull(appUsageEntry)
@@ -185,7 +186,7 @@ class DecisionAuditAndBypassInstrumentedTest {
                 assertNotNull(deviceInfoEntry)
                 val deviceInfo = zip.getInputStream(deviceInfoEntry).bufferedReader().use { it.readText() }
                 assertTrue(deviceInfo.contains("app.package_name=${context.packageName}\r\n"))
-                assertTrue(deviceInfo.contains("intervention.policy_version=v0.6-candidate-3\r\n"))
+                assertTrue(deviceInfo.contains("intervention.policy_version=v1.1-failure-streak-decrease\r\n"))
                 assertTrue(deviceInfo.contains("device.model="))
                 assertTrue(deviceInfo.contains("os.api_level="))
                 assertTrue(deviceInfo.contains("battery.level_percent="))

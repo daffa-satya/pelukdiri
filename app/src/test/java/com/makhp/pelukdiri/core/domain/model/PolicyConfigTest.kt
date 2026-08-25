@@ -9,7 +9,7 @@ class PolicyConfigTest {
     fun `production uses candidate 3`() {
         assertEquals(ControlConfig.CANDIDATE_3, EngineModule.provideControlConfig())
         assertEquals(DeviationConfig.CANDIDATE_3, EngineModule.provideDeviationConfig())
-        assertEquals("v0.6-candidate-3", ControlConfig.POLICY_VERSION)
+        assertEquals("v1.1-failure-streak-decrease", ControlConfig.POLICY_VERSION)
     }
 
     @Test
@@ -24,8 +24,10 @@ class PolicyConfigTest {
         assertEquals(0.0, DeviationConfig.LEGACY_DEFAULT.minimumMadMinutes, 0.0)
         assertEquals(0.0, DeviationConfig.LEGACY_DEFAULT.minimumMadFractionOfBaseline, 0.0)
 
-        assertEquals(0.0, ControlConfig.CANDIDATE_3.lambdaDifficulty, 0.0)
+        assertEquals(0.2, ControlConfig.CANDIDATE_3.lambdaDifficulty, 0.0)
         assertEquals(1.0, ControlConfig.CANDIDATE_3.lambdaFrequency, 0.0)
+        assertEquals(2, ControlConfig.CANDIDATE_3.performanceEvidenceWindow)
+        assertEquals(3, ControlConfig.CANDIDATE_3.difficultyDecreaseEvidenceWindow)
         assertEquals(0.1, DeviationConfig.CANDIDATE_3.k, 0.0)
         assertEquals(0.5, DeviationConfig.CANDIDATE_3.minimumMadFractionOfBaseline, 0.0)
 
