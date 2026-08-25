@@ -142,6 +142,143 @@ class UsageEventReconstructorTest {
     }
 
     @Test
+    fun `app insights count launches and report each package longest clipped session`() {
+        val sessions = listOf(
+            UsageSession(pkgA, 50L, 160L),
+            UsageSession(pkgA, 180L, 260L),
+            UsageSession(pkgB, 120L, 150L),
+        )
+        val events = listOf(
+            UsageEvent(pkgA, 90L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgA, 190L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgB, 120L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgB, 250L, UsageEventReconstructor.ACTIVITY_RESUMED),
+        )
+
+        val insights = reconstructor.appInsights(events, sessions, rangeStart = 100L, rangeEnd = 200L)
+
+        assertEquals(1, insights[pkgA]?.launchCount)
+        assertEquals(100L, insights[pkgA]?.longestSessionStartMillis)
+        assertEquals(160L, insights[pkgA]?.longestSessionEndMillis)
+        assertEquals(60L, insights[pkgA]?.longestSessionDurationMillis)
+        assertEquals(1, insights[pkgB]?.launchCount)
+        assertEquals(120L, insights[pkgB]?.longestSessionStartMillis)
+        assertEquals(150L, insights[pkgB]?.longestSessionEndMillis)
+    }
+
+    @Test
+    fun `longest usage sequence joins target sessions separated by intervention overlay`() {
+        val intervention = "com.makhp.pelukdiri.debug"
+        val sessions = listOf(
+            UsageSession(pkgA, 100L, 500L),
+            UsageSession(intervention, 500L, 600L),
+            UsageSession(pkgA, 600L, 900L),
+            UsageSession(pkgB, 900L, 1_000L),
+            UsageSession(pkgA, 1_000L, 1_100L),
+        )
+        val events = listOf(
+            UsageEvent(pkgA, 100L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(intervention, 500L, UsageEventReconstructor.ACTIVITY_RESUMED, "InterventionActivity"),
+            UsageEvent(pkgA, 600L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgB, 900L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgA, 1_000L, UsageEventReconstructor.ACTIVITY_RESUMED),
+        )
+
+        val insights = reconstructor.appInsights(
+            events = events,
+            sessions = sessions,
+            rangeStart = 0L,
+            rangeEnd = 2_000L,
+            interstitialPackages = setOf(intervention),
+        )
+
+        assertEquals(700L, insights[pkgA]?.longestSessionDurationMillis)
+        assertEquals(100L, insights[pkgA]?.longestSessionStartMillis)
+        assertEquals(900L, insights[pkgA]?.longestSessionEndMillis)
+    }
+
+    @Test
+    fun `app opening count ignores repeated resumes inside one foreground session`() {
+        val events = listOf(
+            UsageEvent(pkgA, 100L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgA, 200L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgA, 300L, UsageEventReconstructor.ACTIVITY_PAUSED),
+            UsageEvent(pkgA, 600L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgB, 700L, UsageEventReconstructor.ACTIVITY_RESUMED),
+            UsageEvent(pkgB, 800L, UsageEventReconstructor.ACTIVITY_PAUSED),
+            UsageEvent(pkgA, 900L, UsageEventReconstructor.ACTIVITY_RESUMED),
+        )
+
+        val counts = reconstructor.countForegroundStarts(events, 0L, 1_000L)
+
+        assertEquals(2, counts[pkgA])
+        assertEquals(1, counts[pkgB])
+    }
+
+    @Test
+    fun `app opening count treats multiple activities in one package as one opening`() {
+        val activityA = "MainActivity"
+        val activityB = "DialogActivity"
+        val events = listOf(
+            UsageEvent(pkgA, 100L, UsageEventReconstructor.ACTIVITY_RESUMED, activityA),
+            UsageEvent(pkgA, 200L, UsageEventReconstructor.ACTIVITY_PAUSED, activityA),
+            UsageEvent(pkgA, 210L, UsageEventReconstructor.ACTIVITY_RESUMED, activityB),
+            UsageEvent(pkgA, 400L, UsageEventReconstructor.ACTIVITY_STOPPED, activityA),
+            UsageEvent(pkgA, 500L, UsageEventReconstructor.ACTIVITY_PAUSED, activityB),
+            UsageEvent(pkgA, 600L, UsageEventReconstructor.ACTIVITY_STOPPED, activityB),
+            UsageEvent(pkgA, 1_000L, UsageEventReconstructor.ACTIVITY_RESUMED, activityA),
+        )
+
+        val counts = reconstructor.countForegroundStarts(events, 0L, 2_000L)
+
+        assertEquals(2, counts[pkgA])
+    }
+
+    @Test
+    fun `screen off and unlock of the same app does not count another opening`() {
+        val events = listOf(
+            UsageEvent(pkgA, 100L, UsageEventReconstructor.ACTIVITY_RESUMED, "MainActivity"),
+            UsageEvent(pkgA, 190L, UsageEventReconstructor.ACTIVITY_PAUSED, "MainActivity"),
+            UsageEvent(pkgA, 200L, UsageEventReconstructor.SCREEN_NON_INTERACTIVE),
+            UsageEvent(pkgA, 300L, UsageEventReconstructor.ACTIVITY_RESUMED, "MainActivity"),
+            UsageEvent(pkgA, 310L, UsageEventReconstructor.ACTIVITY_RESUMED, "DialogActivity"),
+            UsageEvent(pkgB, 500L, UsageEventReconstructor.ACTIVITY_RESUMED, "OtherActivity"),
+            UsageEvent(pkgA, 600L, UsageEventReconstructor.ACTIVITY_RESUMED, "MainActivity"),
+        )
+
+        val counts = reconstructor.countForegroundStarts(
+            events = events,
+            rangeStart = 0L,
+            rangeEnd = 1_000L,
+            interstitialPackages = setOf(pkgA),
+        )
+
+        assertEquals(2, counts[pkgA])
+        assertEquals(1, counts[pkgB])
+    }
+
+    @Test
+    fun `intervention overlay does not count return to interrupted app as new opening`() {
+        val pelukDiri = "com.makhp.pelukdiri.debug"
+        val events = listOf(
+            UsageEvent(pkgA, 100L, UsageEventReconstructor.ACTIVITY_RESUMED, "VideoActivity"),
+            UsageEvent(pelukDiri, 200L, UsageEventReconstructor.ACTIVITY_RESUMED, "InterventionActivity"),
+            UsageEvent(pelukDiri, 300L, UsageEventReconstructor.ACTIVITY_PAUSED, "InterventionActivity"),
+            UsageEvent(pkgA, 400L, UsageEventReconstructor.ACTIVITY_RESUMED, "VideoActivity"),
+        )
+
+        val counts = reconstructor.countForegroundStarts(
+            events = events,
+            rangeStart = 0L,
+            rangeEnd = 1_000L,
+            interstitialPackages = setOf(pelukDiri),
+        )
+
+        assertEquals(1, counts[pkgA])
+        assertEquals(null, counts[pelukDiri])
+    }
+
+    @Test
     fun `hourly usage splits a session across hour boundaries`() {
         val hour = 60 * 60 * 1000L
         val sessions = listOf(UsageSession(pkgA, 30 * 60_000L, hour + 15 * 60_000L))

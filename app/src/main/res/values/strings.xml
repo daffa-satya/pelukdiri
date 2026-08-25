@@ -245,13 +245,13 @@
     <string name="app_detail_spent_more">Kamu menghabiskan %1$d%% lebih banyak waktu di %2$s dari hari kemarin.</string>
     <string name="app_detail_time_spent">Waktu terpakai</string>
     <string name="app_detail_openings">Dibuka</string>
-    <string name="app_detail_peak_time">Waktu puncak</string>
+    <string name="app_detail_peak_time">Sesi terlama</string>
     <string name="app_detail_interventions">Intervensi</string>
     <string name="app_detail_yesterday">Kemarin: %1$s</string>
     <string name="app_detail_times_count">%1$d kali</string>
-    <string name="app_detail_completed_today">Selesai hari ini</string>
+    <string name="app_detail_completed_today">Dipicu hari ini</string>
     <string name="app_detail_suggestion">Saran</string>
-    <string name="app_detail_suggestion_message">Coba hindari media sosial antara %1$s.\nJaga momentummu!</string>
+    <string name="app_detail_suggestion_message">Coba hindari aplikasi ini antara %1$s.\nJaga momentummu!</string>
     <string name="app_detail_view_full_analytics">Lihat analitik lengkap</string>
 
     <!-- Intervention UI -->

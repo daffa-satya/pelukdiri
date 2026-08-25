@@ -218,8 +218,11 @@ private fun MetricsGrid(app: UiAppUsage) {
                 modifier = Modifier.weight(1f),
                 title = stringResource(R.string.app_detail_peak_time),
                 icon = Icons.AutoMirrored.Filled.TrendingUp,
-                value = app.peakTimeToday ?: "--:--",
-                subValue = stringResource(R.string.app_detail_yesterday, app.peakTimeYesterday ?: "--:--"),
+                value = app.longestSessionTodayMillis?.let(::formatDuration) ?: "--",
+                subValue = stringResource(
+                    R.string.app_detail_yesterday,
+                    app.longestSessionYesterdayMillis?.let(::formatDuration) ?: "--",
+                ),
                 change = null, // Can add logic for earlier/later if peak time is parsed
                 isPositive = true
             )

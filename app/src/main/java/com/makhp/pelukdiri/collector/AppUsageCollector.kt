@@ -161,7 +161,8 @@ class AppUsageCollector @Inject constructor(
     }
 
     /**
-     * Menghitung frekuensi buka aplikasi (F) berdasarkan event ACTIVITY_RESUMED sejak awal hari ini.
+     * Counts foreground-session starts since midnight. Raw ACTIVITY_RESUMED is not a launch
+     * count because Android emits repeated resumes while an app replaces/restores Activities.
      */
     fun getLaunchCountForPackage(packageName: String): Int {
         if (!isPermissionGranted()) return 0
@@ -177,16 +178,19 @@ class AppUsageCollector @Inject constructor(
 
         val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
         val event = UsageEvents.Event()
-        var openCount = 0
+        val events = mutableListOf<UsageEvent>()
 
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
-            if (event.packageName == packageName && event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                openCount++
-            }
+            events += UsageEvent(event.packageName, event.timeStamp, event.eventType, event.className)
         }
 
-        return openCount
+        return UsageEventReconstructor().countForegroundStarts(
+            events = events,
+            rangeStart = startTime,
+            rangeEnd = endTime,
+            interstitialPackages = setOf(context.packageName),
+        )[packageName] ?: 0
     }
 
     // --- EXISTING METHODS (TETAP SAMA) ---

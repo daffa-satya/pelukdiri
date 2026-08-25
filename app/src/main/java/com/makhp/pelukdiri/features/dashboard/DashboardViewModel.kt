@@ -7,11 +7,15 @@ import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.collector.AppBlockerAccessibilityService
 import com.makhp.pelukdiri.collector.AppUsageCollector
+import com.makhp.pelukdiri.collector.AppUsageInsight
+import com.makhp.pelukdiri.collector.UsageEventCollector
 import com.makhp.pelukdiri.core.database.export.CsvExporter
 import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
 import com.makhp.pelukdiri.core.domain.usecase.InitializeDailyAdaptiveLimitUseCase
 import com.makhp.pelukdiri.core.util.AccessibilityUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +31,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -34,6 +40,8 @@ class DashboardViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val appUsageCollector: AppUsageCollector,
+    private val usageEventCollector: UsageEventCollector,
+    private val interventionDecisionRepository: InterventionDecisionRepository,
     private val csvExporter: CsvExporter,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val initializeDailyAdaptiveLimitUseCase: InitializeDailyAdaptiveLimitUseCase,
@@ -132,6 +140,17 @@ class DashboardViewModel @Inject constructor(
             .sortedByDescending { it.usageDurationMillis }
         val yesterdayApps = usageRepository.getDailyUsage(yesterday).first()
             .associateBy { it.packageName }
+        val todayInsights = usageEventCollector.getAppInsightsForDay(today)
+        val yesterdayInsights = usageEventCollector.getAppInsightsForDay(yesterday)
+        val zoneId = ZoneId.systemDefault()
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
+        val dayEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1
+        val interventionCounts = interventionDecisionRepository.getAllList()
+            .asSequence()
+            .filter { it.reason == InterventionDecisionReason.TRIGGERED && it.timestamp in dayStart..dayEnd }
+            .groupingBy { it.packageName }
+            .eachCount()
 
         // Enrich today's apps with yesterday's comparison data for the UI
         val enrichedTodayApps = todayApps.map { app ->
@@ -139,13 +158,13 @@ class DashboardViewModel @Inject constructor(
             UiAppUsage(
                 domain = app,
                 usageDurationYesterdayMillis = yesterdayApp?.usageDurationMillis,
-                // Removed mock openings and peak time. 
-                // These should come from the repository when implemented.
-                openingsToday = null,
-                openingsYesterday = null,
-                peakTimeToday = null,
-                peakTimeYesterday = null,
-                interventionsToday = null,
+                openingsToday = todayInsights[app.packageName]?.launchCount ?: 0,
+                openingsYesterday = yesterdayInsights[app.packageName]?.launchCount ?: 0,
+                peakTimeToday = todayInsights[app.packageName].toPeakTimeLabel(formatter, zoneId),
+                peakTimeYesterday = yesterdayInsights[app.packageName].toPeakTimeLabel(formatter, zoneId),
+                longestSessionTodayMillis = todayInsights[app.packageName]?.longestSessionDurationMillis,
+                longestSessionYesterdayMillis = yesterdayInsights[app.packageName]?.longestSessionDurationMillis,
+                interventionsToday = interventionCounts[app.packageName] ?: 0,
                 interventionsLimit = 10
             )
         }
@@ -284,4 +303,14 @@ class DashboardViewModel @Inject constructor(
             }
         }
     }
+}
+
+private fun AppUsageInsight?.toPeakTimeLabel(
+    formatter: DateTimeFormatter,
+    zoneId: ZoneId,
+): String? = this?.let { insight ->
+    val start = insight.longestSessionStartMillis ?: return@let null
+    val end = insight.longestSessionEndMillis ?: return@let null
+    "${java.time.Instant.ofEpochMilli(start).atZone(zoneId).format(formatter)}–" +
+        java.time.Instant.ofEpochMilli(end).atZone(zoneId).format(formatter)
 }

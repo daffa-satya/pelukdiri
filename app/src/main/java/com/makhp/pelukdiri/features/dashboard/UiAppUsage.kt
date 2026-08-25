@@ -9,6 +9,8 @@ data class UiAppUsage(
     val openingsYesterday: Int? = null,
     val peakTimeToday: String? = null,
     val peakTimeYesterday: String? = null,
+    val longestSessionTodayMillis: Long? = null,
+    val longestSessionYesterdayMillis: Long? = null,
     val interventionsToday: Int? = null,
     val interventionsLimit: Int? = 10
 ) {

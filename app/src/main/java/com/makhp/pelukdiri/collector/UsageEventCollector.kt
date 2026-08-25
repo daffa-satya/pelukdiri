@@ -44,6 +44,22 @@ class UsageEventCollector @Inject constructor(
         return reconstructor.longestSessionDuration(day.sessions, day.startMillis, day.endMillis)
     }
 
+    /**
+     * Returns per-package details reconstructed from the same event stream as daily usage.
+     * A launch is a foreground-session start in the requested local day; repeated resumes from
+     * the same package are coalesced. The peak session is clipped to that day.
+     */
+    fun getAppInsightsForDay(date: LocalDate): Map<String, AppUsageInsight> {
+        val day = reconstructDay(date)
+        return reconstructor.appInsights(
+            events = day.events,
+            sessions = day.sessions,
+            rangeStart = day.startMillis,
+            rangeEnd = day.endMillis,
+            interstitialPackages = setOf(context.packageName),
+        )
+    }
+
     fun getHourlyUsageForDay(date: LocalDate): List<Long> {
         val day = reconstructDay(date)
         return reconstructor.aggregateHourlyUsage(
@@ -76,11 +92,12 @@ class UsageEventCollector @Inject constructor(
             initialPackage = initialState?.packageName,
             initialStartTime = initialState?.timestamp ?: dayStart
         )
-        return ReconstructedDay(sessions, dayStart, queryEnd)
+        return ReconstructedDay(sessions, events, dayStart, queryEnd)
     }
 
     private data class ReconstructedDay(
         val sessions: List<UsageSession>,
+        val events: List<UsageEvent>,
         val startMillis: Long,
         val endMillis: Long,
     )
@@ -130,9 +147,11 @@ class UsageEventCollector @Inject constructor(
         val lastResumed = events.lastOrNull { it.type == UsageEventReconstructor.ACTIVITY_RESUMED } ?: return null
         
         // Find if there's any PAUSE or SCREEN_OFF after it
-        val closer = events.lastOrNull { 
-            (it.type == UsageEventReconstructor.ACTIVITY_PAUSED || it.type == UsageEventReconstructor.SCREEN_NON_INTERACTIVE) &&
-            it.timestamp >= lastResumed.timestamp 
+        val closer = events.lastOrNull {
+            (it.type == UsageEventReconstructor.ACTIVITY_PAUSED ||
+                it.type == UsageEventReconstructor.ACTIVITY_STOPPED ||
+                it.type == UsageEventReconstructor.SCREEN_NON_INTERACTIVE) &&
+                it.timestamp >= lastResumed.timestamp
         }
         
         return if (closer == null) lastResumed else null
@@ -147,7 +166,8 @@ class UsageEventCollector @Inject constructor(
             result.add(UsageEvent(
                 packageName = event.packageName,
                 timestamp = event.timeStamp,
-                type = event.eventType
+                type = event.eventType,
+                className = event.className,
             ))
         }
         return result

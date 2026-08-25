@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.collector.UsageEventCollector
+import com.makhp.pelukdiri.collector.AppUsageInsight
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.features.dashboard.UiAppUsage
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
+import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
+import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,12 +29,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
 class AnalyticsViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val interventionLogRepository: InterventionLogRepository,
+    private val interventionDecisionRepository: InterventionDecisionRepository,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val usageEventCollector: UsageEventCollector,
     @param:ApplicationContext private val context: Context
@@ -107,6 +113,8 @@ class AnalyticsViewModel @Inject constructor(
 
             val startMillis = startDate.atStartOfDay(zone).toInstant().toEpochMilli()
             val endMillis = endDate.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+            val comparisonStartMillis = comparisonStartDate.atStartOfDay(zone).toInstant().toEpochMilli()
+            val comparisonEndMillis = comparisonEndDate.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
 
             val history = usageRepository.getUsageHistory(startDate, endDate).first()
             val comparisonHistory = usageRepository
@@ -134,13 +142,27 @@ class AnalyticsViewModel @Inject constructor(
                 if (period == AnalyticsPeriod.DAILY) 1 else comparisonActiveDays
             )
             val comparisonAppsByPackage = comparisonApps.associateBy { it.packageName }
+            val currentAppInsights = loadAppInsights(startDate, endDate)
+            val comparisonAppInsights = loadAppInsights(comparisonStartDate, comparisonEndDate)
+            val allDecisions = interventionDecisionRepository.getAllList()
+            val triggeredInterventions = allDecisions.asSequence()
+                .filter { it.reason == InterventionDecisionReason.TRIGGERED && it.timestamp in startMillis..endMillis }
+                .groupingBy { it.packageName }
+                .eachCount()
+            val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
             val topApps = currentApps.map { app ->
                 UiAppUsage(
                     domain = app,
                     usageDurationYesterdayMillis = if (period == AnalyticsPeriod.DAILY) {
                         comparisonAppsByPackage[app.packageName]?.usageDurationMillis ?: 0L
                     } else null,
-                    interventionsToday = null
+                    openingsToday = currentAppInsights[app.packageName]?.launchCount ?: 0,
+                    openingsYesterday = comparisonAppInsights[app.packageName]?.launchCount ?: 0,
+                    peakTimeToday = currentAppInsights[app.packageName].toPeakTimeLabel(timeFormatter, zone),
+                    peakTimeYesterday = comparisonAppInsights[app.packageName].toPeakTimeLabel(timeFormatter, zone),
+                    longestSessionTodayMillis = currentAppInsights[app.packageName]?.longestSessionDurationMillis,
+                    longestSessionYesterdayMillis = comparisonAppInsights[app.packageName]?.longestSessionDurationMillis,
+                    interventionsToday = triggeredInterventions[app.packageName] ?: 0,
                 )
             }.sortedByDescending { it.usageDurationMillis }.toImmutableList()
 
@@ -151,8 +173,6 @@ class AnalyticsViewModel @Inject constructor(
                 List(24) { 0L }
             }
             
-            val comparisonStartMillis = comparisonStartDate.atStartOfDay(zone).toInstant().toEpochMilli()
-            val comparisonEndMillis = comparisonEndDate.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
             val allInterventions = interventionLogRepository.getAllLogsList()
             val interventions = allInterventions.count { it.timestamp in startMillis..endMillis }
             val comparisonInterventions = allInterventions.count { it.timestamp in comparisonStartMillis..comparisonEndMillis }
@@ -287,6 +307,24 @@ class AnalyticsViewModel @Inject constructor(
         return longest
     }
 
+    private fun loadAppInsights(startDate: LocalDate, endDate: LocalDate): Map<String, AppUsageInsight> {
+        val insights = mutableMapOf<String, AppUsageInsight>()
+        var date = startDate
+        while (!date.isAfter(endDate)) {
+            usageEventCollector.getAppInsightsForDay(date).forEach { (packageName, dailyInsight) ->
+                val existing = insights[packageName]
+                insights[packageName] = when {
+                    existing == null -> dailyInsight
+                    dailyInsight.longestSessionDurationMillis > existing.longestSessionDurationMillis ->
+                        dailyInsight.copy(launchCount = existing.launchCount + dailyInsight.launchCount)
+                    else -> existing.copy(launchCount = existing.launchCount + dailyInsight.launchCount)
+                }
+            }
+            date = date.plusDays(1)
+        }
+        return insights
+    }
+
     private fun loadAverageHourlyUsage(startDate: LocalDate, endDate: LocalDate): List<Long> {
         val totals = LongArray(24)
         var daysWithUsage = 0
@@ -319,4 +357,14 @@ class AnalyticsViewModel @Inject constructor(
             }
         }
     }
+}
+
+private fun AppUsageInsight?.toPeakTimeLabel(
+    formatter: DateTimeFormatter,
+    zoneId: ZoneId,
+): String? = this?.let { insight ->
+    val start = insight.longestSessionStartMillis ?: return@let null
+    val end = insight.longestSessionEndMillis ?: return@let null
+    "${Instant.ofEpochMilli(start).atZone(zoneId).format(formatter)}–" +
+        Instant.ofEpochMilli(end).atZone(zoneId).format(formatter)
 }
