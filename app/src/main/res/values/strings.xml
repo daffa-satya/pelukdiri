@@ -312,7 +312,7 @@
     <string name="onboarding_fact_3_desc">Penurunan kualitas tidur pada pengguna dengan waktu layar tinggi (Sumber: Sleep Foundation, 2021)</string>
 
     <string name="onboarding_how_label">CARA KERJA</string>
-    <string name="onboarding_how_title">Intervensi adaptif, buat ngeblokir doang nih</string>
+    <string name="onboarding_how_title">Intervensi adaptif, bukan ngeblokir doang nih</string>
     <string name="onboarding_how_desc">Saat kamu membuka aplikasi yang dipantau, PELUKDIRI akan memberikan tantangan untuk membantumu jeda sejenak dan berpikir.</string>
     <string name="onboarding_how_step_title">Seperti ini cara PELUKDIRI membantumu</string>
     <string name="onboarding_how_step_1">Kamu membuka maupun menggunakan aplikasi yang dipantau</string>

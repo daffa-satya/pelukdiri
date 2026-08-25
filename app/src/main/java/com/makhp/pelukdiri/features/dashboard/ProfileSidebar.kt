@@ -1,6 +1,5 @@
 package com.makhp.pelukdiri.features.dashboard
 
-import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -9,14 +8,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Launch
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,18 +32,8 @@ import com.makhp.pelukdiri.R
 fun ProfileSidebar(
     viewModel: ProfileViewModel,
     onClose: () -> Unit,
-    onOnboardingClick: () -> Unit,
-    onInterventionClick: () -> Unit,
-    onPatternInterventionClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
-    val testLabIntent = remember(context) {
-        Intent().setClassName(context.packageName, "com.makhp.pelukdiri.debug.DebugTestLabActivity")
-    }
-    val isTestLabAvailable = remember(testLabIntent) {
-        testLabIntent.resolveActivity(context.packageManager) != null
-    }
     
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showEditUserDialog by remember { mutableStateOf(false) }
@@ -130,77 +116,6 @@ fun ProfileSidebar(
             )
 
             Spacer(Modifier.height(16.dp))
-
-            // Test Onboarding Button
-            OutlinedButton(
-                onClick = onOnboardingClick,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Launch, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.profile_test_onboarding))
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Test Intervention Button
-            OutlinedButton(
-                onClick = onInterventionClick,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Launch, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.profile_test_intervention))
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Test Pattern Intervention Button
-            OutlinedButton(
-                onClick = onPatternInterventionClick,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Launch, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.profile_test_intervention_pattern))
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Test Notification Button
-            OutlinedButton(
-                onClick = { viewModel.triggerTestNotification() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
-            ) {
-                Icon(Icons.Default.NotificationsActive, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.profile_test_notification))
-            }
-
-            if (isTestLabAvailable) {
-                Spacer(Modifier.height(8.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        context.startActivity(testLabIntent)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
-                ) {
-                    Icon(Icons.Default.Science, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.profile_test_lab))
-                }
-            }
 
             Spacer(Modifier.weight(1f))
             

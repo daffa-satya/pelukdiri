@@ -33,7 +33,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
-import com.makhp.pelukdiri.features.intervention.InterventionActivity
 import com.makhp.pelukdiri.ui.components.*
 import com.makhp.pelukdiri.ui.theme.Dimens
 import kotlinx.coroutines.launch
@@ -43,7 +42,6 @@ fun MainStatsScreen(
     onProgressClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onViewAllClick: () -> Unit,
-    onOnboardingClick: () -> Unit,
     viewModel: DashboardViewModel = hiltViewModel(),
     profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -60,50 +58,6 @@ fun MainStatsScreen(
             ProfileSidebar(
                 viewModel = profileViewModel,
                 onClose = { scope.launch { drawerState.close() } },
-                onOnboardingClick = {
-                    scope.launch { drawerState.close() }
-                    onOnboardingClick()
-                },
-                onInterventionClick = {
-                    if (profileViewModel.tryAcquireInterventionLock()) {
-                        scope.launch { drawerState.close() }
-                        val intent = Intent(context, InterventionActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-                            putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
-                            putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
-                            putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 20.0)
-                            putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 100f)
-                            putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
-                            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
-                            putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
-                            putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType.MATH.name)
-                        }
-                        context.startActivity(intent)
-                    }
-                },
-                onPatternInterventionClick = {
-                    if (profileViewModel.tryAcquireInterventionLock()) {
-                        scope.launch { drawerState.close() }
-                        val intent = Intent(context, InterventionActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                    Intent.FLAG_ACTIVITY_SINGLE_TOP or 
-                                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-                            putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
-                            putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
-                            putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 20.0)
-                            putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 100f)
-                            putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
-                            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
-                            putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
-                            putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType.PATTERN.name)
-                        }
-                        context.startActivity(intent)
-                    }
-                }
             )
         }
     ) {

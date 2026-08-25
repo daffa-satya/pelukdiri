@@ -65,8 +65,7 @@ fun NavGraph(
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onViewAllClick = {
                     navController.navigate(Screen.AllApps.route(java.time.LocalDate.now(), AnalyticsPeriod.DAILY))
-                },
-                onOnboardingClick = { navController.navigate(Screen.Onboarding.route) }
+                }
             )
         }
         composable(Screen.Onboarding.route) {
