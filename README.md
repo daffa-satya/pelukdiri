@@ -25,9 +25,9 @@ Aplikasi ini dibuat untuk menurunkan screen time pada aplikasi hiburan seperti s
 3. Hasil dari analisa tersebut akan diimplementasikan dalam bentuk soal matematika dan pola agar user tidak melebihi screen time yang telah ditentukan melalui analisa
 4. Semua data-data yang dikumpulkan akan dijadikan data penelitian untuk melihat seberapa efektif dan sering nya user dalam menggunakan aplikasi
 
-## Korespondensi
+## Responden
 
-Untuk yang berminat dan tertarik menjadi koresponden kami, silahkan untuk menghubungi:
+Untuk yang berminat dan tertarik menjadi responden kami, silahkan untuk menghubungi:
 - josuaku091010@gmail.com (Josh)
 - daffa.satya.alif@gmail.com (Daffa)
 
