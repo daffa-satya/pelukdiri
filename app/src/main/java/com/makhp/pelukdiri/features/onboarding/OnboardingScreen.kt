@@ -512,7 +512,7 @@ private fun PermissionsStepScreen(
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.common_back))
                 }
                 PelukDiriLogo(modifier = Modifier.align(Alignment.Center), size = 28.dp)
             }

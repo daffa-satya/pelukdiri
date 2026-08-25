@@ -133,10 +133,10 @@ fun InformedConsentScreen(
                             append("PELUKDIRI")
                         }
                         val remaining2 = parts2.getOrElse(1) { "" }
-                        val parts3 = remaining2.split("screen time")
+                        val parts3 = remaining2.split("waktu layar")
                         append(parts3[0])
                         withStyle(style = SpanStyle(fontStyle = FontStyle.Italic)) {
-                            append("screen time")
+                            append("waktu layar")
                         }
                         if (parts3.size > 1) append(parts3[1])
                     },
@@ -201,7 +201,7 @@ fun InformedConsentScreen(
                                 current = current.substring(index + target.length)
                             }
                         }
-                        appendStyled("screen time", SpanStyle(fontStyle = FontStyle.Italic))
+                        appendStyled("waktu layar", SpanStyle(fontStyle = FontStyle.Italic))
                         appendStyled("feedback", SpanStyle(fontStyle = FontStyle.Italic))
                         append(current)
                     },

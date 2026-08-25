@@ -281,7 +281,7 @@ class DashboardViewModel @Inject constructor(
                 onFailure = { error ->
                     _uiState.update { state ->
                         if (state is DashboardUiState.Success) {
-                            state.copy(isExporting = false, exportError = error.message ?: "Export failed")
+                            state.copy(isExporting = false, exportError = error.message ?: context.getString(R.string.export_failed))
                         } else {
                             state
                         }

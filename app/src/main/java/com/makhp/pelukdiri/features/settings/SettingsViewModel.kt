@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.core.database.export.CsvExporter
 import com.makhp.pelukdiri.core.domain.model.AggressivenessLevel
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.R
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -15,6 +18,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val csvExporter: CsvExporter,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val exportState = MutableStateFlow(ExportState())
@@ -87,7 +91,7 @@ class SettingsViewModel @Inject constructor(
                     exportState.value = ExportState(exportedFilePath = export.savedPath)
                 },
                 onFailure = { error ->
-                    exportState.value = ExportState(error = error.message ?: "Export failed")
+                    exportState.value = ExportState(error = error.message ?: context.getString(R.string.export_failed))
                 },
             )
         }

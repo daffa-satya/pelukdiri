@@ -99,7 +99,7 @@ private fun HeaderSection(onDismiss: () -> Unit) {
         }
         
         IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, "Close")
+            Icon(Icons.Default.Close, stringResource(R.string.common_close))
         }
     }
 }

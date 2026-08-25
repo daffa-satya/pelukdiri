@@ -159,7 +159,7 @@ fun SettingsScreen(
     state.exportError?.let { error ->
         AlertDialog(
             onDismissRequest = viewModel::clearExportResult,
-            title = { Text(stringResource(R.string.settings_export_error_title)) },
+            title = { Text(stringResource(R.string.export_failed)) },
             text = { Text(error) },
             confirmButton = {
                 Button(onClick = viewModel::clearExportResult) {
