@@ -18,6 +18,7 @@ val PatternGreen = Color(0xFF43B956)
 val PatternBlue = Color(0xFF2196E8)
 val PatternAmber = Color(0xFFFFB81C)
 val PatternPink = Color(0xFFF51B62)
+val InterventionScrim = Color(0xB3000000)
 
 // Dark Mode Tones
 val CharcoalDark = Color(0xFF121316)

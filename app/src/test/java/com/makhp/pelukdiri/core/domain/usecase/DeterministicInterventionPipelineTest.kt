@@ -166,6 +166,7 @@ class DeterministicInterventionPipelineTest {
             InterventionChallengeSelector { true },
             appUsageCollector,
             lockManager,
+            config,
             time,
         )
 
@@ -214,8 +215,8 @@ class DeterministicInterventionPipelineTest {
         )
         viewModel.startIntervention(
             monitoredUsageMinutes = triggered.monitoredUsageMinutes,
-            launchFrequency = 1,
-            ambientLightLux = triggered.ambientLux,
+            intervalMinutesAtLaunch = 1.0,
+            ambientLightLuxAtLaunch = triggered.ambientLux,
             deviation = requireNotNull(control.deviation),
             difficultyControlSignal = control.normalizedDifficultyControl,
             difficulty = control.nextDifficulty,

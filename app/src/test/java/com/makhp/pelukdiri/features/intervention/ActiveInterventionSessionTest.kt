@@ -32,8 +32,8 @@ class ActiveInterventionSessionTest {
             remainingBypasses = 4
         ),
         monitoredUsageMinutes = 81.5,
-        launchFrequency = 3,
-        ambientLightLux = 12f,
+        intervalMinutesAtLaunch = 3.0,
+        ambientLightLuxAtLaunch = 12f,
         deviation = 0.12,
         difficultyControlSignal = 0.3,
         difficulty = 1,

@@ -9,6 +9,7 @@ import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeSelector
 import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.model.ControlMode
+import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import com.makhp.pelukdiri.core.domain.model.ControlResult
 import com.makhp.pelukdiri.core.domain.model.DeviationResult
 import com.makhp.pelukdiri.core.domain.model.DeviationStatus
@@ -69,7 +70,8 @@ class EvaluateInterventionEligibilityUseCaseTest {
             interventionDecisionRepository,
             challengeSelector,
             appUsageCollector,
-            lockManager
+            lockManager,
+            ControlConfig.CANDIDATE_3,
         )
         every { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
     }
@@ -243,7 +245,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
     fun `performance uses same difficulty excludes bypasses and omits current response from baseline`() = runBlocking {
         val latest = performanceLog(id = 10L, responseTimeMs = 500L)
         val bypass = performanceLog(id = 9L, responseTimeMs = 0L, isBypassed = true)
-        val previous = (1L..5L).map { id -> performanceLog(id = id, responseTimeMs = 1_000L) }
+        val previous = (1L..2L).map { id -> performanceLog(id = id, responseTimeMs = 1_000L) }
         stubEligibleEvaluation(recentLogs = listOf(latest, bypass) + previous)
 
         useCase(targetPackage)
@@ -253,7 +255,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
             controlEngine.calculateNextIntervention(
                 any(),
                 match { it.difficulty == 2 && it.responseTimeMs == 500L },
-                match { it == List(5) { 1_000L } },
+                match { it == List(2) { 1_000L } },
                 any(),
                 any(),
                 any(),
@@ -261,10 +263,31 @@ class EvaluateInterventionEligibilityUseCaseTest {
                 any(),
                 any(),
                 match {
-                    it.map(DifficultyHistoryEntry::difficulty) == List(7) { 2 } &&
+                    it.map(DifficultyHistoryEntry::difficulty) == List(4) { 2 } &&
                         it.map(DifficultyHistoryEntry::isValidResponse) ==
-                        listOf(true, false, true, true, true, true, true)
+                        listOf(true, false, true, true)
                 },
+                0,
+            )
+        }
+    }
+
+    @Test
+    fun `performance failure resets consecutive upward evidence`() = runBlocking {
+        val latest = performanceLog(id = 10L, responseTimeMs = 500L)
+        val recentSuccess = performanceLog(id = 9L, responseTimeMs = 1_000L)
+        val failure = performanceLog(id = 8L, responseTimeMs = 1_200L, isSuccess = false)
+        val olderSuccesses = (1L..5L).map { id -> performanceLog(id, 900L) }.reversed()
+        stubEligibleEvaluation(recentLogs = listOf(latest, recentSuccess, failure) + olderSuccesses)
+
+        useCase(targetPackage)
+
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(),
+                match { it.isSuccess && it.responseTimeMs == 500L },
+                match { it == listOf(1_000L) },
+                any(), any(), any(), 2, any(), any(), any(), 0,
             )
         }
     }
@@ -289,6 +312,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
                     it.map(DifficultyHistoryEntry::difficulty) == listOf(3, 2, 2, 2, 2, 2, 2) &&
                         it.all(DifficultyHistoryEntry::isValidResponse)
                 },
+                0,
             )
         }
     }
@@ -316,6 +340,24 @@ class EvaluateInterventionEligibilityUseCaseTest {
                     it.map(DifficultyHistoryEntry::difficulty) == listOf(2, 2, 2) &&
                         it.all(DifficultyHistoryEntry::isValidResponse)
                 },
+                0,
+            )
+        }
+    }
+
+    @Test
+    fun `three same-type failures are required before difficulty may decrease`() = runBlocking {
+        val failures = (1L..3L).map { id ->
+            performanceLog(id, 1_000L, isSuccess = false)
+        }.reversed()
+        stubEligibleEvaluation(recentLogs = failures)
+
+        useCase(targetPackage)
+
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(), match { !it.isSuccess }, emptyList(), any(), any(), any(),
+                2, any(), any(), any(), 3,
             )
         }
     }
@@ -357,7 +399,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
         coEvery { interventionLogRepository.getRecentLogs(32) } returns recentLogs
         every {
             controlEngine.calculateNextIntervention(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
         } returns controlResult()
     }

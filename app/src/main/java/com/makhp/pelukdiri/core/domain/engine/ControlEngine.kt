@@ -31,10 +31,17 @@ class ControlEngine @Inject constructor(
         currentTime: LocalTime = LocalTime.now(),
         timestampMs: Long = System.currentTimeMillis(),
         difficultyHistory: List<DifficultyHistoryEntry> = emptyList(),
+        consecutiveFailures: Int = 0,
     ): ControlResult {
         // 1. Fallback for Deviation
         if (deviation == null) {
-            return safeDefault(currentLevel, timestampMs, difficultyHistory)
+            return safeDefault(
+                currentLevel,
+                timestampMs,
+                difficultyHistory,
+                consecutiveFailures,
+                lastPerformance?.isSuccess == false,
+            )
         }
 
         // 2. Sensitivity
@@ -51,7 +58,8 @@ class ControlEngine @Inject constructor(
             0.5 // Neutral performance
         }
 
-        val insufficientEvidence = performanceHistory.size < config.performanceEvidenceWindow
+        val insufficientEvidence = lastPerformance?.isSuccess != true ||
+            performanceHistory.size < config.performanceEvidenceWindow
         val mode = if (insufficientEvidence) {
             ControlMode.INSUFFICIENT_HISTORY
         } else {
@@ -66,6 +74,8 @@ class ControlEngine @Inject constructor(
             currentLevel,
             insufficientEvidence,
             difficultyHistory,
+            consecutiveFailures,
+            lastPerformance?.isSuccess == false,
         )
 
         // 5. Frequency
@@ -73,7 +83,7 @@ class ControlEngine @Inject constructor(
 
         val nextEligibleAt = timestampMs + (freqResult.intervalMinutes * 60 * 1000).toLong()
 
-        android.util.Log.d("ControlEngine", "Signals: D=$deviation, P=$p, Q_lux=$qLux, Q_time=$qTime, Q=$q, Target=${diffResult.target}, Next=${diffResult.nextLevel}, Interval=${freqResult.intervalMinutes}")
+        android.util.Log.d("ControlEngine", "Signals: D=$deviation, P=$p, Q_lux=$qLux, Q_time=$qTime, Q=$q, failures=$consecutiveFailures, Target=${diffResult.target}, Next=${diffResult.nextLevel}, Interval=${freqResult.intervalMinutes}")
 
         return ControlResult(
             deviation = deviation,
@@ -98,12 +108,17 @@ class ControlEngine @Inject constructor(
         currentLevel: Int,
         timestampMs: Long,
         difficultyHistory: List<DifficultyHistoryEntry>,
+        consecutiveFailures: Int,
+        latestResponseFailed: Boolean,
     ): ControlResult {
         val nextEligibleAt = timestampMs + (config.defaultFrequencyMinutes * 60 * 1000).toLong()
+        val proposedDifficulty = if (
+            config.defaultDifficulty < currentLevel &&
+            latestResponseFailed &&
+            consecutiveFailures < config.difficultyDecreaseEvidenceWindow
+        ) currentLevel else config.defaultDifficulty
         val nextDifficulty = difficultyController.applyReversalGuard(
-            currentLevel,
-            config.defaultDifficulty,
-            difficultyHistory,
+            currentLevel, proposedDifficulty, difficultyHistory
         )
         return ControlResult(
             deviation = null,

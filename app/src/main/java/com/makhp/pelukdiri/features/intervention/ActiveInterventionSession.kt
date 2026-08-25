@@ -16,8 +16,8 @@ import javax.inject.Singleton
 data class ActiveInterventionSnapshot(
     val uiState: InterventionUiState,
     val monitoredUsageMinutes: Double,
-    val launchFrequency: Int,
-    val ambientLightLux: Float,
+    val intervalMinutesAtLaunch: Double,
+    val ambientLightLuxAtLaunch: Float,
     val deviation: Double,
     val difficultyControlSignal: Double,
     val difficulty: Int,
@@ -50,8 +50,8 @@ object ActiveInterventionCodec {
         }
         val values = listOf(
             VERSION, state.javaClass.simpleName,
-            snapshot.monitoredUsageMinutes.toString(), snapshot.launchFrequency.toString(),
-            snapshot.ambientLightLux.toString(), snapshot.deviation.toString(),
+            snapshot.monitoredUsageMinutes.toString(), snapshot.intervalMinutesAtLaunch.toString(),
+            snapshot.ambientLightLuxAtLaunch.toString(), snapshot.deviation.toString(),
             snapshot.difficultyControlSignal.toString(), snapshot.difficulty.toString(),
             snapshot.questionStartTimeMs.toString(), snapshot.createdAtMs.toString(), snapshot.expiresAtMs.toString(),
             question?.expression.orEmpty(), question?.correctAnswer?.toString().orEmpty(), question?.level?.toString().orEmpty(),
@@ -137,8 +137,16 @@ object ActiveInterventionCodec {
             else -> error("Unknown intervention state")
         }
         ActiveInterventionSnapshot(
-            state, values[2].toDouble(), values[3].toInt(), values[4].toFloat(), values[5].toDouble(),
-            values[6].toDouble(), values[7].toInt(), values[8].toLong(), values[9].toLong(), values[10].toLong()
+            uiState = state,
+            monitoredUsageMinutes = values[2].toDouble(),
+            intervalMinutesAtLaunch = values[3].toDouble(),
+            ambientLightLuxAtLaunch = values[4].toFloat(),
+            deviation = values[5].toDouble(),
+            difficultyControlSignal = values[6].toDouble(),
+            difficulty = values[7].toInt(),
+            questionStartTimeMs = values[8].toLong(),
+            createdAtMs = values[9].toLong(),
+            expiresAtMs = values[10].toLong(),
         )
     }.getOrNull()
 

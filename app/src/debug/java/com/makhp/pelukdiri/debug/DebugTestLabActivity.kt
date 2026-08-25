@@ -4,8 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.room.withTransaction
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,13 +17,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -29,9 +34,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.makhp.pelukdiri.R
+import com.makhp.pelukdiri.collector.AppUsageCollector
+import com.makhp.pelukdiri.core.database.PelukDiriDatabase
 import com.makhp.pelukdiri.core.domain.engine.ControlEngine
 import com.makhp.pelukdiri.core.domain.engine.DeviationEngine
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeSelector
 import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
+import com.makhp.pelukdiri.core.domain.model.ControlConfig
+import com.makhp.pelukdiri.core.domain.model.ControlResult
+import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
@@ -46,7 +57,9 @@ import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -57,11 +70,17 @@ class DebugTestLabActivity : ComponentActivity() {
     @Inject lateinit var decisions: InterventionDecisionRepository
     @Inject lateinit var deviationEngine: DeviationEngine
     @Inject lateinit var controlEngine: ControlEngine
+    @Inject lateinit var controlConfig: ControlConfig
+    @Inject lateinit var challengeSelector: InterventionChallengeSelector
+    @Inject lateinit var appUsageCollector: AppUsageCollector
     @Inject lateinit var activeSession: ActiveInterventionSession
     @Inject lateinit var usageDao: UsageDao
     @Inject lateinit var lockManager: InterventionLockManager
+    @Inject lateinit var database: PelukDiriDatabase
 
     private var status by mutableStateOf("")
+    private var simulationStatus by mutableStateOf("")
+    private var pendingSimulation: SimulationSnapshot? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,7 +102,11 @@ class DebugTestLabActivity : ComponentActivity() {
             PELUKDIRITheme {
                 DebugTestLabScreen(
                     status = status,
+                    simulationStatus = simulationStatus,
                     onRefresh = ::refresh,
+                    onSimulate = { deviation -> simulateIntervention(deviation, launch = false) },
+                    onLaunchSimulation = { deviation -> simulateIntervention(deviation, launch = true) },
+                    onResetSimulation = ::resetSimulation,
                     onSystemTime = { controls.useSystemTime(); refresh() },
                     onBoundary = ::setBoundary,
                     onAdvanceTtl = { controls.advanceBy(ActiveInterventionSession.TTL_MS); refresh() },
@@ -103,6 +126,7 @@ class DebugTestLabActivity : ComponentActivity() {
                 )
             }
         }
+        simulateIntervention(DEFAULT_SIMULATION_DEVIATION, launch = false)
     }
 
     private fun refresh() {
@@ -184,6 +208,131 @@ class DebugTestLabActivity : ComponentActivity() {
         launchInterventionNow(preferences.currentDifficulty.first(), challengeType)
     }
 
+    private fun simulateIntervention(deviation: Double, launch: Boolean) {
+        lifecycleScope.launch {
+            val snapshot = pendingSimulation
+                ?.takeIf { launch && it.deviation == deviation }
+                ?: calculateSimulation(deviation)
+            pendingSimulation = if (launch) null else snapshot
+            simulationStatus = snapshot.displayText()
+            if (launch) {
+                controls.resetInterventionOverrides()
+                activeSession.clear()
+                lockManager.releaseLock()
+                preferences.setNextEligibleInterventionAt(0L)
+                preferences.setEmergencyBypassUntil(0L)
+                launchInterventionNow(
+                    level = snapshot.result.nextDifficulty,
+                    challengeType = snapshot.challengeType,
+                    difficultyControlSignal = snapshot.result.normalizedDifficultyControl,
+                    deviation = deviation,
+                    intervalMinutesAtLaunch = snapshot.result.intervalMinutes,
+                    ambientLux = snapshot.lux,
+                )
+            }
+        }
+    }
+
+    private suspend fun calculateSimulation(deviation: Double): SimulationSnapshot {
+        controls.useSystemTime()
+        val currentDifficulty = preferences.currentDifficulty.first()
+        val challengeType = challengeSelector.select()
+        val recentLogs = logs.getRecentLogs(PERFORMANCE_RUN_QUERY_LIMIT)
+        val currentRun = recentLogs
+            .takeWhile { it.difficultyLevel == currentDifficulty }
+            .filter { it.challengeType == challengeType }
+            .filter { !it.isBypassed && it.responseTimeMs > 0L }
+        val latest = currentRun.firstOrNull()
+        val performanceHistory = currentRun
+            .drop(1)
+            .take(controlConfig.performanceEvidenceWindow)
+            .takeWhile { it.isSuccess }
+            .map { it.responseTimeMs }
+        val consecutiveFailures = currentRun
+            .takeWhile { !it.isSuccess }
+            .take(controlConfig.difficultyDecreaseEvidenceWindow)
+            .count()
+        val now = controls.nowMillis()
+        val lux = appUsageCollector.getCurrentAmbientLightLux()
+        val result = controlEngine.calculateNextIntervention(
+            deviation = deviation,
+            lastPerformance = latest?.let {
+                PerformanceMetrics(it.responseTimeMs, it.isSuccess, it.difficultyLevel)
+            },
+            performanceHistory = performanceHistory,
+            lux = lux,
+            bedtime = preferences.bedtime.first().toLocalTimeOrNull(),
+            wakeTime = preferences.wakeTime.first().toLocalTimeOrNull(),
+            currentLevel = currentDifficulty,
+            currentTime = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalTime(),
+            timestampMs = now,
+            difficultyHistory = recentLogs.map {
+                DifficultyHistoryEntry(
+                    difficulty = it.difficultyLevel,
+                    isValidResponse = !it.isBypassed && it.responseTimeMs > 0L,
+                )
+            },
+            consecutiveFailures = consecutiveFailures,
+        )
+        return SimulationSnapshot(
+            deviation = deviation,
+            challengeType = challengeType,
+            lux = lux,
+            evidenceCount = if (latest?.isSuccess == true) performanceHistory.size + 1 else 0,
+            failureCount = consecutiveFailures,
+            latest = latest,
+            result = result,
+        )
+    }
+
+    private fun SimulationSnapshot.displayText() = getString(
+        R.string.test_lab_simulation_result,
+        challengeType.name,
+        deviation,
+        lux,
+        controlConfig.lambdaDifficulty,
+        controlConfig.lambdaFrequency,
+        result.performance,
+        result.qLux,
+        result.qTime,
+        result.sensitivity,
+        evidenceCount,
+        controlConfig.performanceEvidenceWindow + 1,
+        failureCount,
+        controlConfig.difficultyDecreaseEvidenceWindow,
+        latest?.let { if (it.isSuccess) "success" else "failed" } ?: "none",
+        result.currentDifficulty,
+        result.difficultyControl,
+        result.difficultyTarget,
+        result.nextDifficulty,
+        result.intervalMinutes,
+        result.mode.name,
+    )
+
+    private fun resetSimulation() = mutate {
+        resetInterventionState()
+        pendingSimulation = null
+        simulationStatus = getString(R.string.test_lab_reset_complete)
+        Toast.makeText(
+            this@DebugTestLabActivity,
+            simulationStatus,
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
+
+    private suspend fun resetInterventionState() {
+        controls.resetInterventionOverrides()
+        activeSession.clear()
+        lockManager.releaseLock()
+        preferences.setCurrentDifficulty(2)
+        preferences.setNextEligibleInterventionAt(0L)
+        preferences.setEmergencyBypassUntil(0L)
+        database.withTransaction {
+            database.openHelper.writableDatabase.execSQL("DELETE FROM intervention_logs")
+            database.openHelper.writableDatabase.execSQL("DELETE FROM intervention_decisions")
+        }
+    }
+
     private fun armWatchedAppIntervention(challengeType: InterventionChallengeType) = mutate {
         controls.useSystemTime()
         activeSession.clear()
@@ -193,25 +342,33 @@ class DebugTestLabActivity : ComponentActivity() {
         controls.armForcedChallenge(challengeType)
     }
 
-    private suspend fun launchInterventionNow(level: Int, challengeType: InterventionChallengeType) {
+    private suspend fun launchInterventionNow(
+        level: Int,
+        challengeType: InterventionChallengeType,
+        difficultyControlSignal: Double = 0.5,
+        deviation: Double = 0.4,
+        intervalMinutesAtLaunch: Double = TEST_LAUNCH_INTERVAL_MINUTES.toDouble(),
+        ambientLux: Float = 25f,
+    ) {
         val launchedAt = controls.nowMillis()
         preferences.setNextEligibleInterventionAt(
-            launchedAt + TEST_LAUNCH_INTERVAL_MINUTES * 60_000L
+            launchedAt + (intervalMinutesAtLaunch * 60_000L).toLong()
         )
         preferences.setCurrentDifficulty(level)
         lockManager.acquireLock()
         startActivity(Intent(this@DebugTestLabActivity, InterventionActivity::class.java).apply {
             putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 90.0)
-            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, TEST_LAUNCH_INTERVAL_MINUTES.toDouble())
-            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 25f)
-            putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
-            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
+            putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, intervalMinutesAtLaunch)
+            putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, ambientLux)
+            putExtra(InterventionActivity.EXTRA_DEVIATION, deviation)
+            putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, difficultyControlSignal)
             putExtra(InterventionActivity.EXTRA_DIFFICULTY, level)
             putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, challengeType.name)
         })
     }
 
     private fun mutate(block: suspend () -> Unit) {
+        pendingSimulation = null
         lifecycleScope.launch { block(); loadStatus() }
     }
 
@@ -223,13 +380,32 @@ class DebugTestLabActivity : ComponentActivity() {
         private const val DEFAULT_TARGET_PACKAGE = "com.google.android.youtube"
         private const val TARGET_SETTLE_DELAY_MS = 750L
         private const val TEST_LAUNCH_INTERVAL_MINUTES = 5L
+        private const val PERFORMANCE_RUN_QUERY_LIMIT = 32
+        private const val DEFAULT_SIMULATION_DEVIATION = 0.5
     }
 }
+
+private data class SimulationSnapshot(
+    val deviation: Double,
+    val challengeType: InterventionChallengeType,
+    val lux: Float,
+    val evidenceCount: Int,
+    val failureCount: Int,
+    val latest: InterventionLog?,
+    val result: ControlResult,
+)
+
+private fun String?.toLocalTimeOrNull(): LocalTime? =
+    this?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
 
 @Composable
 private fun DebugTestLabScreen(
     status: String,
+    simulationStatus: String,
     onRefresh: () -> Unit,
+    onSimulate: (Double) -> Unit,
+    onLaunchSimulation: (Double) -> Unit,
+    onResetSimulation: () -> Unit,
     onSystemTime: () -> Unit,
     onBoundary: (Long) -> Unit,
     onAdvanceTtl: () -> Unit,
@@ -245,6 +421,8 @@ private fun DebugTestLabScreen(
     onLaunch: (Int) -> Unit,
     onLaunchPattern: (Int) -> Unit,
 ) {
+    var deviation by remember { mutableStateOf(0.5f) }
+    var showResetDialog by remember { mutableStateOf(false) }
     Surface(Modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -254,6 +432,30 @@ private fun DebugTestLabScreen(
             Text(stringResource(R.string.test_lab_runtime), style = MaterialTheme.typography.titleMedium)
             Text(status, style = MaterialTheme.typography.bodySmall)
             Action(stringResource(R.string.test_lab_refresh), onRefresh)
+            Text(stringResource(R.string.test_lab_simulator), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.test_lab_simulator_description),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            SimulatorSlider(stringResource(R.string.test_lab_deviation, deviation), deviation, 0f..1f) {
+                deviation = it
+            }
+            if (simulationStatus.isNotEmpty()) {
+                Text(simulationStatus, style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Action(
+                    stringResource(R.string.test_lab_simulate),
+                    { onSimulate(deviation.toDouble()) },
+                    Modifier.weight(1f),
+                )
+                Action(
+                    stringResource(R.string.test_lab_launch_simulation),
+                    { onLaunchSimulation(deviation.toDouble()) },
+                    Modifier.weight(1f),
+                )
+            }
+            Action(stringResource(R.string.test_lab_reset_simulation), { showResetDialog = true })
             Text(stringResource(R.string.test_lab_engine), style = MaterialTheme.typography.titleMedium)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Action(stringResource(R.string.test_lab_low_deviation), { onScenario(false) }, Modifier.weight(1f))
@@ -291,6 +493,37 @@ private fun DebugTestLabScreen(
             }
         }
     }
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(stringResource(R.string.test_lab_reset_title)) },
+            text = { Text(stringResource(R.string.test_lab_reset_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetDialog = false
+                    deviation = 0.5f
+                    onResetSimulation()
+                }) { Text(stringResource(R.string.test_lab_reset_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SimulatorSlider(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    onValueChange: (Float) -> Unit,
+) {
+    Text(label, style = MaterialTheme.typography.bodyMedium)
+    Slider(value = value, onValueChange = onValueChange, valueRange = range, steps = steps)
 }
 
 @Composable private fun Action(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -298,10 +531,36 @@ private fun DebugTestLabScreen(
 }
 
 @Preview(showBackground = true) @Composable private fun LabLightPreview() {
-    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    PELUKDIRITheme { LabPreviewContent() }
 }
 
 @Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
 @Composable private fun LabDarkPreview() {
-    PELUKDIRITheme { DebugTestLabScreen("now=0", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) }
+    PELUKDIRITheme { LabPreviewContent() }
+}
+
+@Composable
+private fun LabPreviewContent() {
+    DebugTestLabScreen(
+        status = "now=0\ndifficulty=2",
+        simulationStatus = "Challenge: MATH\nD=0.50  lux=25.0  λD=0.20\nP=0.75  Q=0.90\nCurrent=2  target=2.80  next=3",
+        onRefresh = {},
+        onSimulate = {},
+        onLaunchSimulation = {},
+        onResetSimulation = {},
+        onSystemTime = {},
+        onBoundary = {},
+        onAdvanceTtl = {},
+        onFailLaunch = {},
+        onClearTiming = {},
+        onClearSession = {},
+        onSetDifficulty = {},
+        onPerformance = {},
+        onSeedHistory = {},
+        onScenario = {},
+        onNormalIntervention = {},
+        onWatchedAppIntervention = {},
+        onLaunch = {},
+        onLaunchPattern = {},
+    )
 }

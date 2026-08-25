@@ -57,8 +57,8 @@ class InterventionViewModel @Inject constructor(
     private var currentDeviation: Double = 0.0
     private var currentDifficultyControlSignal: Double = 0.0
     private var currentDifficulty: Int = 2
-    private var currentLaunchFrequency: Int = 0
-    private var currentAmbientLightLux: Float = 0f
+    private var currentIntervalMinutesAtLaunch: Double = 0.0
+    private var currentAmbientLightLuxAtLaunch: Float = 0f
     private var currentChallengeType = InterventionChallengeType.MATH
     private var isBypassProcessing: Boolean = false
     private var isBypassCommitted: Boolean = false
@@ -70,8 +70,8 @@ class InterventionViewModel @Inject constructor(
 
     fun startIntervention(
         monitoredUsageMinutes: Double,
-        launchFrequency: Int,
-        ambientLightLux: Float,
+        intervalMinutesAtLaunch: Double,
+        ambientLightLuxAtLaunch: Float,
         deviation: Double,
         difficultyControlSignal: Double,
         difficulty: Int,
@@ -85,8 +85,8 @@ class InterventionViewModel @Inject constructor(
         currentDeviation = deviation
         currentDifficultyControlSignal = difficultyControlSignal
         currentDifficulty = difficulty
-        currentLaunchFrequency = launchFrequency
-        currentAmbientLightLux = ambientLightLux
+        currentIntervalMinutesAtLaunch = intervalMinutesAtLaunch
+        currentAmbientLightLuxAtLaunch = ambientLightLuxAtLaunch
         currentChallengeType = challengeType.takeUnless { it == InterventionChallengeType.AUTO }
             ?: challengeSelector.select()
         sessionCreatedAtMs = timeProvider.nowMillis()
@@ -147,8 +147,8 @@ class InterventionViewModel @Inject constructor(
                 }
 
                 currentMonitoredUsageMinutes = snapshot.monitoredUsageMinutes
-                currentLaunchFrequency = snapshot.launchFrequency
-                currentAmbientLightLux = snapshot.ambientLightLux
+                currentIntervalMinutesAtLaunch = snapshot.intervalMinutesAtLaunch
+                currentAmbientLightLuxAtLaunch = snapshot.ambientLightLuxAtLaunch
                 currentDeviation = snapshot.deviation
                 currentDifficultyControlSignal = snapshot.difficultyControlSignal
                 currentDifficulty = snapshot.difficulty
@@ -164,8 +164,8 @@ class InterventionViewModel @Inject constructor(
                 when (val state = snapshot.uiState) {
                     InterventionUiState.Loading -> startIntervention(
                         monitoredUsageMinutes = snapshot.monitoredUsageMinutes,
-                        launchFrequency = snapshot.launchFrequency,
-                        ambientLightLux = snapshot.ambientLightLux,
+                        intervalMinutesAtLaunch = snapshot.intervalMinutesAtLaunch,
+                        ambientLightLuxAtLaunch = snapshot.ambientLightLuxAtLaunch,
                         deviation = snapshot.deviation,
                         difficultyControlSignal = snapshot.difficultyControlSignal,
                         difficulty = snapshot.difficulty,
@@ -496,8 +496,8 @@ class InterventionViewModel @Inject constructor(
         when (errorState.operation) {
             FailedInterventionOperation.START -> startIntervention(
                 currentMonitoredUsageMinutes,
-                currentLaunchFrequency,
-                currentAmbientLightLux,
+                currentIntervalMinutesAtLaunch,
+                currentAmbientLightLuxAtLaunch,
                 currentDeviation,
                 currentDifficultyControlSignal,
                 currentDifficulty,
@@ -538,8 +538,8 @@ class InterventionViewModel @Inject constructor(
         val snapshot = ActiveInterventionSnapshot(
                 uiState = state,
                 monitoredUsageMinutes = currentMonitoredUsageMinutes,
-                launchFrequency = currentLaunchFrequency,
-                ambientLightLux = currentAmbientLightLux,
+                intervalMinutesAtLaunch = currentIntervalMinutesAtLaunch,
+                ambientLightLuxAtLaunch = currentAmbientLightLuxAtLaunch,
                 deviation = currentDeviation,
                 difficultyControlSignal = currentDifficultyControlSignal,
                 difficulty = currentDifficulty,
@@ -556,10 +556,10 @@ class InterventionViewModel @Inject constructor(
         }
     }
 
-    private companion object {
+    internal companion object {
         const val TAG = "InterventionViewModel"
         const val PATTERN_PREPARATION_MS = 1_000L
-        const val PATTERN_HIGHLIGHT_MS = 700L
-        const val PATTERN_GAP_MS = 250L
+        const val PATTERN_HIGHLIGHT_MS = 500L
+        const val PATTERN_GAP_MS = 100L
     }
 }

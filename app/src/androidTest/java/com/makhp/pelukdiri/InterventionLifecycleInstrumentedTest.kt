@@ -61,7 +61,7 @@ class InterventionLifecycleInstrumentedTest {
                     answerInput = "9",
                     remainingBypasses = 4
                 ),
-                90.0, 5, 25f, 0.4, 0.5, 1, now, now,
+                90.0, 5.0, 25f, 0.4, 0.5, 1, now, now,
                 now + ActiveInterventionSession.TTL_MS
             )
         )
@@ -115,7 +115,7 @@ class InterventionLifecycleInstrumentedTest {
                     replaysRemaining = 0,
                     remainingBypasses = 4,
                 ),
-                90.0, 5, 25f, 0.4, 0.5, 1, now, now,
+                90.0, 5.0, 25f, 0.4, 0.5, 1, now, now,
                 now + ActiveInterventionSession.TTL_MS,
             )
         )
@@ -138,8 +138,8 @@ class InterventionLifecycleInstrumentedTest {
         val scenario = ActivityScenario.launch<InterventionActivity>(
             Intent(context, InterventionActivity::class.java)
                 .putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 90.0)
-                .putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, 5.0)
-                .putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 25f)
+                .putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 5.0)
+                .putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 25f)
                 .putExtra(InterventionActivity.EXTRA_DEVIATION, 0.4)
                 .putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.5)
                 .putExtra(InterventionActivity.EXTRA_DIFFICULTY, 1)

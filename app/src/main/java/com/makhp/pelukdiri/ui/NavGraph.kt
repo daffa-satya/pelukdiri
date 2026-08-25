@@ -30,7 +30,6 @@ sealed class Screen(val route: String) {
     object AppsIntervention : Screen("apps_intervention")
     object NotificationSettings : Screen("notification_settings")
     object Privacy : Screen("privacy")
-    object ExportCsv : Screen("export_csv")
     object About : Screen("about")
     object InformedConsent : Screen("informed_consent")
     object Terms : Screen("terms")
@@ -141,9 +140,6 @@ fun NavGraph(
         }
         composable(Screen.Privacy.route) {
             PrivacyScreen(onBackClick = { navController.popBackStack() })
-        }
-        composable(Screen.ExportCsv.route) {
-            ExportCsvScreen(onBackClick = { navController.popBackStack() })
         }
         composable(Screen.About.route) {
             AboutScreen(onBackClick = { navController.popBackStack() })

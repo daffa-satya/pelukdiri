@@ -44,7 +44,7 @@ fun ProfileSidebar(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val testLabIntent = remember(context) {
-        Intent().setClassName(context, "${context.packageName}.debug.DebugTestLabActivity")
+        Intent().setClassName(context.packageName, "com.makhp.pelukdiri.debug.DebugTestLabActivity")
     }
     val isTestLabAvailable = remember(testLabIntent) {
         testLabIntent.resolveActivity(context.packageManager) != null

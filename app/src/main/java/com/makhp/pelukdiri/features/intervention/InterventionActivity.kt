@@ -4,7 +4,6 @@ import android.app.ActivityManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.os.Build
 import android.os.Bundle
 import javax.inject.Inject
 import androidx.activity.ComponentActivity
@@ -45,10 +44,8 @@ class InterventionActivity : ComponentActivity() {
         window.setBackgroundDrawableResource(android.R.color.transparent)
 
         // Ensure activity shows over everything
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        }
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
 
         // An intervention must be answered or explicitly bypassed. System Back must not
         // silently dismiss it and leave the already-committed cooldown in place.
@@ -124,8 +121,8 @@ class InterventionActivity : ComponentActivity() {
         }
 
         val monitoredUsage = intent.getDoubleExtra(EXTRA_MONITORED_USAGE, -1.0)
-        val launchFreq = intent.getDoubleExtra(EXTRA_LAUNCH_FREQ, 0.0)
-        val ambientLux = intent.getFloatExtra(EXTRA_AMBIENT_LUX, 0f)
+        val intervalMinutesAtLaunch = intent.getDoubleExtra(EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 0.0)
+        val ambientLightLuxAtLaunch = intent.getFloatExtra(EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 0f)
         val deviation = intent.getDoubleExtra(EXTRA_DEVIATION, 0.0)
         val difficultyControlSignal = intent.getDoubleExtra(EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.0)
         val difficulty = intent.getIntExtra(EXTRA_DIFFICULTY, 2)
@@ -136,8 +133,8 @@ class InterventionActivity : ComponentActivity() {
         if (monitoredUsage >= 0.0) {
             viewModel.startIntervention(
                 monitoredUsageMinutes = monitoredUsage,
-                launchFrequency = launchFreq.toInt(),
-                ambientLightLux = ambientLux,
+                intervalMinutesAtLaunch = intervalMinutesAtLaunch,
+                ambientLightLuxAtLaunch = ambientLightLuxAtLaunch,
                 deviation = deviation,
                 difficultyControlSignal = difficultyControlSignal,
                 difficulty = difficulty,
@@ -173,27 +170,18 @@ class InterventionActivity : ComponentActivity() {
 
     private fun requestTransientAudioFocus() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                    .setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    )
-                    .setOnAudioFocusChangeListener(audioFocusListener)
-                    .setWillPauseWhenDucked(true)
-                    .build()
-                audioFocusRequest = request
-                audioManager.requestAudioFocus(request)
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.requestAudioFocus(
-                    audioFocusListener,
-                    AudioManager.STREAM_MUSIC,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT,
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
                 )
-            }
+                .setOnAudioFocusChangeListener(audioFocusListener)
+                .setWillPauseWhenDucked(true)
+                .build()
+            audioFocusRequest = request
+            audioManager.requestAudioFocus(request)
         } catch (error: RuntimeException) {
             android.util.Log.w("InterventionActivity", ">>> Unable to pause active media", error)
         }
@@ -201,13 +189,8 @@ class InterventionActivity : ComponentActivity() {
 
     private fun abandonTransientAudioFocus() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
-                audioFocusRequest = null
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.abandonAudioFocus(audioFocusListener)
-            }
+            audioFocusRequest?.let(audioManager::abandonAudioFocusRequest)
+            audioFocusRequest = null
         } catch (error: RuntimeException) {
             android.util.Log.w("InterventionActivity", ">>> Unable to release media pause", error)
         }
@@ -224,8 +207,9 @@ class InterventionActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PACKAGE_NAME = "EXTRA_PACKAGE_NAME"
         const val EXTRA_MONITORED_USAGE = "EXTRA_MONITORED_USAGE"
-        const val EXTRA_LAUNCH_FREQ = "EXTRA_LAUNCH_FREQ"
-        const val EXTRA_AMBIENT_LUX = "EXTRA_AMBIENT_LUX"
+        // Keep the serialized keys stable so an in-flight intent from an older build remains readable.
+        const val EXTRA_INTERVAL_MINUTES_AT_LAUNCH = "EXTRA_LAUNCH_FREQ"
+        const val EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH = "EXTRA_AMBIENT_LUX"
         const val EXTRA_DEVIATION = "EXTRA_DEVIATION"
         const val EXTRA_DIFFICULTY_CONTROL_SIGNAL = "EXTRA_DIFFICULTY_CONTROL_SIGNAL"
         const val EXTRA_DIFFICULTY = "EXTRA_DIFFICULTY"

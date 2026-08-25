@@ -110,4 +110,49 @@ class InterventionLogicTest {
 
         assertEquals(3, result.nextDifficulty)
     }
+
+    @Test
+    fun `candidate three increases after three total consecutive successes`() {
+        val candidate = ControlConfig.CANDIDATE_3
+        val engine = ControlEngine(
+            candidate,
+            SensitivityCalculator(candidate),
+            PerformanceCalculator(candidate),
+            DifficultyController(candidate),
+            FrequencyController(candidate),
+        )
+        val latest = PerformanceMetrics(500L, true, 2)
+        val afterTwoTotal = engine.calculateNextIntervention(
+            0.5, latest, listOf(1_000L), 500f, null, null, 2
+        )
+        val afterThreeTotal = engine.calculateNextIntervention(
+            0.5, latest, listOf(1_000L, 1_000L), 500f, null, null, 2
+        )
+
+        assertEquals(2, afterTwoTotal.nextDifficulty)
+        assertEquals(3, afterThreeTotal.nextDifficulty)
+    }
+
+    @Test
+    fun `candidate three safe default also requires three failures to decrease`() {
+        val candidate = ControlConfig.CANDIDATE_3
+        val engine = ControlEngine(
+            candidate,
+            SensitivityCalculator(candidate),
+            PerformanceCalculator(candidate),
+            DifficultyController(candidate),
+            FrequencyController(candidate),
+        )
+        val afterTwo = engine.calculateNextIntervention(
+            null, PerformanceMetrics(1_000L, false, 3), emptyList(), null, null, null,
+            3, consecutiveFailures = 2
+        )
+        val afterThree = engine.calculateNextIntervention(
+            null, PerformanceMetrics(1_000L, false, 3), emptyList(), null, null, null,
+            3, consecutiveFailures = 3
+        )
+
+        assertEquals(3, afterTwo.nextDifficulty)
+        assertEquals(2, afterThree.nextDifficulty)
+    }
 }

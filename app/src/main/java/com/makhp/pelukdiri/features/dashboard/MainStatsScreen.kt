@@ -79,8 +79,8 @@ fun MainStatsScreen(
                                     Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
                             putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
                             putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
-                            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, 20.0)
-                            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 100f)
+                            putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 20.0)
+                            putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 100f)
                             putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
@@ -99,8 +99,8 @@ fun MainStatsScreen(
                                     Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
                             putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
                             putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
-                            putExtra(InterventionActivity.EXTRA_LAUNCH_FREQ, 20.0)
-                            putExtra(InterventionActivity.EXTRA_AMBIENT_LUX, 100f)
+                            putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 20.0)
+                            putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 100f)
                             putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
                             putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)

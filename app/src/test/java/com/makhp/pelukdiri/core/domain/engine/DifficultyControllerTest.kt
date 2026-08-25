@@ -10,7 +10,8 @@ class DifficultyControllerTest {
 
     private val config = ControlConfig(
         lambdaDifficulty = 0.5,
-        maxDifficultyChangePerUpdate = 1
+        maxDifficultyChangePerUpdate = 1,
+        difficultyDecreaseEvidenceWindow = 3,
     )
     private val controller = DifficultyController(config)
 
@@ -33,7 +34,9 @@ class DifficultyControllerTest {
     @Test
     fun `calculate - stabilization prevents free fall`() {
         // D=0.0, P=0.0, Q=0.0 -> C_D = 0 -> Target = 1.0
-        val result = controller.calculate(0.0, 0.0, 0.0, 5, false)
+        val result = controller.calculate(
+            0.0, 0.0, 0.0, 5, false, consecutiveFailures = 3
+        )
         assertEquals(1.0, result.target, 0.001)
         assertEquals(4, result.nextLevel) // 5 - 1 = 4
     }
@@ -46,6 +49,47 @@ class DifficultyControllerTest {
         val res2 = controller.calculate(0.5, 1.0, 1.0, 3, false)
         
         assertTrue(res2.target > res1.target)
+    }
+
+    @Test
+    fun `perfect performance at deviation zero point five stays at least level three`() {
+        val candidate = DifficultyController(ControlConfig.CANDIDATE_3)
+        val bright = candidate.calculate(0.5, 1.0, 0.0, 3, false)
+        val dark = candidate.calculate(0.5, 1.0, 1.0, 3, false)
+
+        assertEquals(3.0, bright.target, 0.001)
+        assertEquals(3.4, dark.target, 0.001)
+        assertTrue(bright.nextLevel >= 3)
+        assertTrue(dark.nextLevel >= 3)
+    }
+
+    @Test
+    fun `difficulty decreases only after three consecutive failures`() {
+        val afterOne = controller.calculate(
+            0.0, 0.0, 0.0, 3, false,
+            consecutiveFailures = 1, latestResponseFailed = true,
+        )
+        val afterTwo = controller.calculate(
+            0.0, 0.0, 0.0, 3, false,
+            consecutiveFailures = 2, latestResponseFailed = true,
+        )
+        val afterThree = controller.calculate(
+            0.0, 0.0, 0.0, 3, false,
+            consecutiveFailures = 3, latestResponseFailed = true,
+        )
+
+        assertEquals(3, afterOne.nextLevel)
+        assertEquals(3, afterTwo.nextLevel)
+        assertEquals(2, afterThree.nextLevel)
+    }
+
+    @Test
+    fun `correct response follows the tuned target when it proposes a decrease`() {
+        val result = controller.calculate(
+            0.1, 1.0, 0.0, 3, false, latestResponseFailed = false
+        )
+
+        assertEquals(2, result.nextLevel)
     }
 
     @Test
@@ -83,8 +127,12 @@ class DifficultyControllerTest {
 
     @Test
     fun `calculate - reversal guard is symmetric and permits the new direction`() {
-        val blockedDown = controller.calculate(0.0, 0.0, 0.0, 3, false, history(3, 2, 3))
-        val continuedDown = controller.calculate(0.0, 0.0, 0.0, 2, false, history(2, 3, 2))
+        val blockedDown = controller.calculate(
+            0.0, 0.0, 0.0, 3, false, history(3, 2, 3), consecutiveFailures = 3
+        )
+        val continuedDown = controller.calculate(
+            0.0, 0.0, 0.0, 2, false, history(2, 3, 2), consecutiveFailures = 3
+        )
 
         assertEquals(3, blockedDown.nextLevel)
         assertEquals(1, continuedDown.nextLevel)
