@@ -201,11 +201,11 @@ private fun ExportCsvHeader(onBackClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBackClick) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali ke pengaturan")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Spacer(Modifier.width(DashboardTokens.SmallGap))
         Text(
-            text = "Export CSV / ZIP",
+            text = stringResource(R.string.export_button_text),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -225,7 +225,7 @@ private fun ExportNoticeBanner() {
         Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
         Spacer(Modifier.width(DashboardTokens.MediumGap))
         Text(
-            text = "File ekspor berisi log sensor, intervensi, batas adaptif, dan audit keputusan evaluasi lengkap dalam format CSV standar.",
+            text = stringResource(R.string.export_contents_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
             modifier = Modifier.weight(1f)

@@ -264,8 +264,8 @@ fun InformedConsentScreen(
                                 current = current.substring(index + target.length)
                             }
                         }
-                        appendStyled("researcher1@gmail.com", SpanStyle(fontWeight = FontWeight.Bold))
-                        appendStyled("researcher2@gmail.com", SpanStyle(fontWeight = FontWeight.Bold))
+                        appendStyled("josuaku091010@gmail.com", SpanStyle(fontWeight = FontWeight.Bold))
+                        appendStyled("daffa.satya.alif@gmail.com", SpanStyle(fontWeight = FontWeight.Bold))
                         append(current)
                     },
                     style = MaterialTheme.typography.bodyMedium,
