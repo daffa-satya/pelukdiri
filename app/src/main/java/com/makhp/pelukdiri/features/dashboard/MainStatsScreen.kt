@@ -273,7 +273,7 @@ private fun ScreenTimeCard(
                     Icon(
                         if (change <= 0) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward, 
                         null, 
-                        tint = if (change <= 0) Color(0xFF4CAF50) else Color(0xFFE53935), 
+                        tint = if (change <= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error, 
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(4.dp))

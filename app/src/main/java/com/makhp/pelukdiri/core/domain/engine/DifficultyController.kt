@@ -32,6 +32,8 @@ class DifficultyController @Inject constructor(
         difficultyHistory: List<DifficultyHistoryEntry> = emptyList(),
         consecutiveFailures: Int = 0,
         latestResponseFailed: Boolean = false,
+        latestResponseSucceeded: Boolean = false,
+        consecutiveSuccesses: Int = 0,
     ): DifficultyResult {
         // C_D = D * P * (1 + lambda_D * Q)
         val controlSignal = deviation * performance * (1.0 + (config.lambdaDifficulty * sensitivity))
@@ -57,15 +59,22 @@ class DifficultyController @Inject constructor(
             nextLevel = currentLevel
         }
 
-        if (
-            nextLevel < currentLevel &&
-            latestResponseFailed &&
-            consecutiveFailures < config.difficultyDecreaseEvidenceWindow
-        ) {
-            nextLevel = currentLevel
-        }
+        nextLevel = applyDecreaseEvidencePolicy(
+            currentLevel,
+            nextLevel,
+            consecutiveFailures,
+            latestResponseFailed,
+        )
 
         nextLevel = applyReversalGuard(currentLevel, nextLevel, difficultyHistory)
+        nextLevel = applyMinimumDifficultyPolicy(
+            currentLevel,
+            nextLevel,
+            consecutiveFailures,
+            latestResponseFailed,
+            latestResponseSucceeded,
+            consecutiveSuccesses,
+        )
         
         return DifficultyResult(
             controlSignal = controlSignal,
@@ -73,6 +82,45 @@ class DifficultyController @Inject constructor(
             target = target,
             nextLevel = nextLevel
         )
+    }
+
+    internal fun applyMinimumDifficultyPolicy(
+        currentLevel: Int,
+        proposedLevel: Int,
+        consecutiveFailures: Int,
+        latestResponseFailed: Boolean,
+        latestResponseSucceeded: Boolean,
+        consecutiveSuccesses: Int,
+    ): Int {
+        if (config.normalMinimumDifficulty < 2) return proposedLevel
+        if (currentLevel == 1) {
+            return if (
+                latestResponseSucceeded && consecutiveSuccesses >= config.recoverySuccessWindow
+            ) 2 else 1
+        }
+
+        val levelOneAllowed = currentLevel == 2 &&
+            proposedLevel < 2 &&
+            latestResponseFailed &&
+            consecutiveFailures >= config.difficultyDecreaseEvidenceWindow
+        return if (levelOneAllowed) 1 else proposedLevel.coerceAtLeast(2)
+    }
+
+    internal fun applyDecreaseEvidencePolicy(
+        currentLevel: Int,
+        proposedLevel: Int,
+        consecutiveFailures: Int,
+        latestResponseFailed: Boolean,
+    ): Int {
+        if (proposedLevel >= currentLevel) return proposedLevel
+        if (config.ordinaryDecreaseFailureWindow > 0 && currentLevel > config.normalMinimumDifficulty) {
+            return if (
+                !latestResponseFailed || consecutiveFailures < config.ordinaryDecreaseFailureWindow
+            ) currentLevel else proposedLevel
+        }
+        return if (
+            latestResponseFailed && consecutiveFailures < config.difficultyDecreaseEvidenceWindow
+        ) currentLevel else proposedLevel
     }
 
     internal fun applyReversalGuard(

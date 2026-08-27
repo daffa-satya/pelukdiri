@@ -19,6 +19,12 @@ data class ControlConfig(
 
     // Consecutive failed responses required before decreasing difficulty
     val difficultyDecreaseEvidenceWindow: Int = 0,
+
+    // Consecutive failures required for an ordinary decrease above the recovery floor.
+    val ordinaryDecreaseFailureWindow: Int = 0,
+
+    // Consecutive valid successes required to leave Level-1 recovery.
+    val recoverySuccessWindow: Int = 1,
     
     // Sleep Sensitivity Ramp (minutes before bedtime)
     val sleepSensitivityRampMinutes: Int = 90,
@@ -31,9 +37,15 @@ data class ControlConfig(
     val minFrequencyMinutes: Double = 3.0,
     val maxFrequencyMinutes: Double = 30.0,
     val defaultFrequencyMinutes: Double = 15.0,
+
+    // Slow interventions while monitored usage is still well below today's adaptive limit.
+    val useAdaptiveLimitFrequencyFloor: Boolean = false,
     
     // Default Difficulty
     val defaultDifficulty: Int = 2,
+
+    // Normal floor; level 1 remains an explicit performance-recovery state when set to 2.
+    val normalMinimumDifficulty: Int = 1,
     
     // Maximum Difficulty Change per update
     val maxDifficultyChangePerUpdate: Int = 1,
@@ -42,7 +54,7 @@ data class ControlConfig(
     val reversalGuardInterventions: Int = 3,
 ) {
     companion object {
-        const val POLICY_VERSION = "v1.1-failure-streak-decrease"
+        const val POLICY_VERSION = "v1.6-two-success-recovery"
 
         /** Pre-tuning control constants, retained as a safe comparison baseline. */
         val LEGACY_DEFAULT = ControlConfig(
@@ -59,6 +71,10 @@ data class ControlConfig(
             lambdaFrequency = 1.0,
             performanceEvidenceWindow = 2,
             difficultyDecreaseEvidenceWindow = 3,
+            ordinaryDecreaseFailureWindow = 2,
+            recoverySuccessWindow = 2,
+            normalMinimumDifficulty = 2,
+            useAdaptiveLimitFrequencyFloor = true,
         )
     }
 }

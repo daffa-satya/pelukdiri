@@ -13,6 +13,7 @@ import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.Instant
@@ -40,6 +42,7 @@ class AnalyticsViewModel @Inject constructor(
     private val interventionDecisionRepository: InterventionDecisionRepository,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val usageEventCollector: UsageEventCollector,
+    private val timeProvider: TimeProvider,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AnalyticsUiState>(AnalyticsUiState.Loading)
@@ -48,7 +51,7 @@ class AnalyticsViewModel @Inject constructor(
     private var graphJob: Job? = null
 
     init { 
-        load(LocalDate.now(), AnalyticsPeriod.DAILY) 
+        load(timeProvider.today(), AnalyticsPeriod.DAILY)
         startFunFactRotation()
     }
 
@@ -88,7 +91,7 @@ class AnalyticsViewModel @Inject constructor(
         loadJob?.cancel()
         graphJob?.cancel()
         loadJob = viewModelScope.launch(Dispatchers.IO) {
-        val today = LocalDate.now()
+        val today = timeProvider.today()
         val cappedDate = if (date.isAfter(today)) today else date
 
         val currentState = _uiState.value
@@ -189,6 +192,7 @@ class AnalyticsViewModel @Inject constructor(
             val successState = AnalyticsUiState.Success(
                 selectedDate = cappedDate,
                 selectedPeriod = period,
+                canEditUsage = period == AnalyticsPeriod.DAILY && cappedDate.isBefore(today),
                 summary = aggregatedSummary,
                 comparisonSummary = comparisonSummary,
                 topApps = topApps,
@@ -222,7 +226,7 @@ class AnalyticsViewModel @Inject constructor(
         graphJob?.cancel()
         graphJob = viewModelScope.launch(Dispatchers.IO) {
             try {
-                val today = LocalDate.now()
+                val today = timeProvider.today()
                 val (startDate, endDate) = when (selectedPeriod) {
                     AnalyticsPeriod.DAILY -> selectedDate to selectedDate
                     AnalyticsPeriod.WEEKLY -> selectedDate.minusDays(6) to selectedDate
@@ -341,19 +345,102 @@ class AnalyticsViewModel @Inject constructor(
         return totals.map { it / divisor }
     }
 
-    fun updateAppUsage(packageName: String, durationMillis: Long) {
+    fun updateAppUsage(packageName: String, appName: String, durationMillis: Long) {
         val state = _uiState.value as? AnalyticsUiState.Success ?: return
-        if (state.selectedPeriod != AnalyticsPeriod.DAILY) return
+        if (!state.canEditUsage) return
+        _uiState.value = state.copy(editUsageError = null)
 
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
-                usageRepository.updateAppScreenTime(packageName, state.selectedDate, durationMillis)
+                usageRepository.updateAppScreenTime(
+                    packageName,
+                    appName,
+                    state.selectedDate,
+                    durationMillis
+                )
             }.onSuccess {
                 load(state.selectedDate, AnalyticsPeriod.DAILY)
-            }.onFailure {
-                _uiState.value = AnalyticsUiState.Error(
-                    context.getString(R.string.analytics_edit_usage_failed)
-                )
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                _uiState.update { current ->
+                    if (current is AnalyticsUiState.Success) {
+                        current.copy(
+                            editUsageError = context.getString(
+                                if (error is IllegalArgumentException) {
+                                    R.string.analytics_edit_usage_daily_limit
+                                } else {
+                                    R.string.analytics_edit_usage_failed
+                                }
+                            )
+                        )
+                    } else current
+                }
+            }
+        }
+    }
+
+    fun clearEditUsageError() {
+        _uiState.update { current ->
+            if (current is AnalyticsUiState.Success) current.copy(editUsageError = null) else current
+        }
+    }
+
+    fun loadInstalledApps() {
+        val state = _uiState.value as? AnalyticsUiState.Success ?: return
+        _uiState.value = state.copy(isInstalledAppsLoading = true, installedAppsError = null)
+        val selectedDate = state.selectedDate
+        val selectedPeriod = state.selectedPeriod
+
+        viewModelScope.launch {
+            try {
+                val installed = withContext(Dispatchers.IO) {
+                    val pm = context.packageManager
+                    val intent = android.content.Intent(android.content.Intent.ACTION_MAIN, null)
+                    intent.addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+
+                    pm.queryIntentActivities(intent, 0).map { resolveInfo ->
+                        val packageName = resolveInfo.activityInfo.packageName
+                        val appName = resolveInfo.loadLabel(pm).toString()
+                        UiAppUsage(
+                            domain = AppUsage(
+                                packageName = packageName,
+                                appName = appName,
+                                usageDurationMillis = 0,
+                                lastUsedTimestamp = 0
+                            )
+                        )
+                    }.distinctBy { it.packageName }.sortedBy { it.appName }
+                }
+
+                _uiState.update { current ->
+                    if (current is AnalyticsUiState.Success &&
+                        current.selectedDate == selectedDate &&
+                        current.selectedPeriod == selectedPeriod
+                    ) {
+                        val usedPackageNames = current.topApps.map { it.packageName }.toSet()
+                        current.copy(
+                            allInstalledApps = installed
+                                .filter { it.packageName !in usedPackageNames }
+                                .toImmutableList(),
+                            isInstalledAppsLoading = false,
+                            installedAppsError = null,
+                        )
+                    } else current
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                _uiState.update { current ->
+                    if (current is AnalyticsUiState.Success &&
+                        current.selectedDate == selectedDate &&
+                        current.selectedPeriod == selectedPeriod
+                    ) {
+                        current.copy(
+                            isInstalledAppsLoading = false,
+                            installedAppsError = context.getString(R.string.all_apps_load_installed_failed),
+                        )
+                    } else current
+                }
             }
         }
     }

@@ -299,11 +299,11 @@ class AppUsageCollector @Inject constructor(
             val humanTime = timeFormatter.format(Date(event.timeStamp))
 
             when (event.eventType) {
-                UsageEvents.Event.ACTIVITY_RESUMED -> {
+                UsageEventReconstructor.ACTIVITY_RESUMED -> {
                     stringBuilder.append("[$humanTime] OPENED: $appPackage\n")
                     eventCount++
                 }
-                UsageEvents.Event.ACTIVITY_PAUSED -> {
+                UsageEventReconstructor.ACTIVITY_PAUSED -> {
                     stringBuilder.append("[$humanTime] CLOSED: $appPackage\n")
                     eventCount++
                 }

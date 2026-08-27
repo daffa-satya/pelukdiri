@@ -5,13 +5,12 @@ import com.makhp.pelukdiri.core.database.entity.AppUsageEntity
 import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import kotlinx.coroutines.flow.Flow
 
+private const val MAX_DAILY_USAGE_MILLIS = 24L * 60L * 60L * 1000L
+
 @Dao
 interface UsageDao {
     @Query("SELECT * FROM app_usage WHERE date = :date")
     fun getAppUsageByDate(date: String): Flow<List<AppUsageEntity>>
-
-    @Query("UPDATE app_usage SET usageDurationMillis = :newDuration WHERE date = :date AND packageName = :packageName")
-    suspend fun updateAppUsageDuration(date: String, packageName: String, newDuration: Long)
 
     @Query("SELECT * FROM app_usage WHERE date = :date")
     suspend fun getAppUsageByDateList(date: String): List<AppUsageEntity>
@@ -45,31 +44,59 @@ interface UsageDao {
     suspend fun updateAppUsageAndSummary(
         date: String,
         packageName: String,
+        appName: String,
         newDuration: Long,
         monitoredPackages: Set<String>,
+        screenOnMillisForNewSummary: Long,
     ) {
-        val currentUsage = getAppUsageByDateList(date)
-        require(currentUsage.any { it.packageName == packageName }) { "Usage row not found" }
-        val updatedUsage = currentUsage.map {
-            if (it.packageName == packageName) it.copy(usageDurationMillis = newDuration) else it
-        }
-        require(updatedUsage.sumOf { it.usageDurationMillis } <= 24L * 60L * 60L * 1000L) {
-            "Daily usage cannot exceed 24 hours"
-        }
+        val currentUsage = getAppUsageByDateList(date).toMutableList()
+        val existingIndex = currentUsage.indexOfFirst { it.packageName == packageName }
 
-        updateAppUsageDuration(date, packageName, newDuration)
-        val existingSummary = getDailySummaryOnce(date)
-        if (existingSummary != null) {
-            insertDailySummary(
-                existingSummary.copy(
-                    totalScreenTimeMillis = updatedUsage.sumOf { it.usageDurationMillis },
-                    monitoredUsageMillis = updatedUsage
-                        .filter { it.packageName in monitoredPackages }
-                        .sumOf { it.usageDurationMillis },
-                    mostUsedApp = updatedUsage.maxByOrNull { it.usageDurationMillis }?.appName,
+        if (existingIndex != -1) {
+            currentUsage[existingIndex] = currentUsage[existingIndex].copy(usageDurationMillis = newDuration)
+        } else {
+            currentUsage.add(
+                AppUsageEntity(
+                    packageName = packageName,
+                    appName = appName,
+                    usageDurationMillis = newDuration,
+                    // A manual duration does not provide an authoritative last-used instant.
+                    lastUsedTimestamp = 0L,
+                    date = date
                 )
             )
         }
+
+        val totalScreenTime = currentUsage.sumOf { it.usageDurationMillis }
+        require(totalScreenTime <= MAX_DAILY_USAGE_MILLIS) {
+            "Daily usage cannot exceed 24 hours"
+        }
+        val monitoredUsage = currentUsage
+            .filter { it.packageName in monitoredPackages }
+            .sumOf { it.usageDurationMillis }
+        val mostUsed = currentUsage.maxByOrNull { it.usageDurationMillis }?.appName
+
+        val existingSummary = getDailySummaryOnce(date)
+        val newSummary = if (existingSummary != null) {
+            existingSummary.copy(
+                totalScreenTimeMillis = totalScreenTime,
+                monitoredUsageMillis = monitoredUsage,
+                mostUsedApp = mostUsed,
+            )
+        } else {
+            DailySummaryEntity(
+                date = date,
+                totalScreenTimeMillis = totalScreenTime,
+                totalScreenOnMillis = screenOnMillisForNewSummary,
+                monitoredUsageMillis = monitoredUsage,
+                unlockCount = 0,
+                mostUsedApp = mostUsed,
+                wellbeingScore = null
+            )
+        }
+
+        insertAppUsage(currentUsage)
+        insertDailySummary(newSummary)
     }
 
     @Query("SELECT * FROM app_usage ORDER BY date DESC")

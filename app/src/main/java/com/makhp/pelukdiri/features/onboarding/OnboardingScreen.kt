@@ -126,7 +126,7 @@ private fun IntroPager(
                     onClick = onSkip,
                     modifier = Modifier.align(Alignment.CenterEnd),
                     shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF4CAF50))
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(stringResource(R.string.onboarding_skip), fontWeight = FontWeight.Bold)
                 }
@@ -153,7 +153,7 @@ private fun IntroPager(
                                 .width(if (isSelected) 24.dp else 8.dp)
                                 .clip(RoundedCornerShape(4.dp))
                                 .background(
-                                    if (isSelected) Color(0xFF4CAF50) 
+                                    if (isSelected) MaterialTheme.colorScheme.primary 
                                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
                                 )
                         )
@@ -170,7 +170,7 @@ private fun IntroPager(
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -209,7 +209,7 @@ private fun WelcomePage() {
         Surface(
             modifier = Modifier.size(240.dp),
             shape = RoundedCornerShape(40.dp),
-            color = Color(0xFFE8F5E9)
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 PelukDiriLogo(size = 180.dp)
@@ -226,7 +226,7 @@ private fun WelcomePage() {
         Text(
             stringResource(R.string.onboarding_welcome_brand),
             style = MaterialTheme.typography.displayMedium,
-            color = Color(0xFF4CAF50),
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
@@ -252,7 +252,7 @@ private fun FactsPage() {
         Text(
             stringResource(R.string.onboarding_facts_label),
             style = MaterialTheme.typography.labelLarge,
-            color = Color(0xFF4CAF50),
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
         Text(
@@ -300,8 +300,8 @@ private fun FactCard(
     title: String,
     desc: String,
     icon: ImageVector,
-    titleColor: Color = Color(0xFF4CAF50),
-    iconColor: Color = Color(0xFF4CAF50),
+    titleColor: Color = MaterialTheme.colorScheme.primary,
+    iconColor: Color = MaterialTheme.colorScheme.primary,
     iconContainerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     descColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
@@ -335,7 +335,7 @@ private fun HowItWorksPage() {
         Text(
             stringResource(R.string.onboarding_how_label),
             style = MaterialTheme.typography.labelLarge,
-            color = Color(0xFF4CAF50),
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
         Text(
@@ -381,12 +381,12 @@ private fun HowStepItem(num: Int, text: String) {
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF4CAF50)),
+                .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = num.toString(),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
@@ -463,7 +463,7 @@ private fun PermissionsStepScreen(
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(if (step == 1) Icons.Default.VerifiedUser else Icons.Default.CheckCircle, null)
@@ -481,7 +481,7 @@ private fun PermissionsStepScreen(
                 Text(
                     stringResource(R.string.onboarding_perm_privacy),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(top = 12.dp)
                 )
             }
@@ -490,9 +490,9 @@ private fun PermissionsStepScreen(
         Column(Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 PermissionStepIndicator(1, step >= 1)
-                Box(Modifier.width(24.dp).height(2.dp).clip(CircleShape).background(if (step >= 2) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outlineVariant))
+                Box(Modifier.width(24.dp).height(2.dp).clip(CircleShape).background(if (step >= 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant))
                 PermissionStepIndicator(2, step >= 2)
-                Box(Modifier.width(24.dp).height(2.dp).clip(CircleShape).background(if (step >= 3) Color(0xFF4CAF50) else MaterialTheme.colorScheme.outlineVariant))
+                Box(Modifier.width(24.dp).height(2.dp).clip(CircleShape).background(if (step >= 3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant))
                 PermissionStepIndicator(3, step >= 3)
             }
 
@@ -502,7 +502,7 @@ private fun PermissionsStepScreen(
                 title,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF4CAF50),
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
             Text(
@@ -563,10 +563,10 @@ private fun PermissionsStepScreen(
 private fun PermissionStepIndicator(num: Int, active: Boolean) {
     Box(
         Modifier.size(32.dp).clip(CircleShape)
-            .background(if (active) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant),
+            .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        Text(num.toString(), color = if (active) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+        Text(num.toString(), color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
     }
 }
 

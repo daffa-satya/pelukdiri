@@ -61,4 +61,35 @@ class FrequencyControllerTest {
         assertEquals(25.0, configured.calculate(0.5, 0.0).intervalMinutes, 0.001)
         assertEquals(5.0, configured.calculate(1.0, 0.0).intervalMinutes, 0.001)
     }
+
+    @Test
+    fun `production floor is 15 minutes below half of adaptive limit`() {
+        val production = FrequencyController(ControlConfig.CANDIDATE_3)
+
+        assertEquals(15.0, production.calculate(1.0, 1.0, 0.499).intervalMinutes, 0.001)
+    }
+
+    @Test
+    fun `production floor is 10 minutes from half until 80 percent`() {
+        val production = FrequencyController(ControlConfig.CANDIDATE_3)
+
+        assertEquals(10.0, production.calculate(1.0, 1.0, 0.5).intervalMinutes, 0.001)
+        assertEquals(10.0, production.calculate(1.0, 1.0, 0.799).intervalMinutes, 0.001)
+    }
+
+    @Test
+    fun `production allows full range at 80 percent or above`() {
+        val production = FrequencyController(ControlConfig.CANDIDATE_3)
+
+        assertEquals(3.0, production.calculate(1.0, 1.0, 0.8).intervalMinutes, 0.001)
+        assertEquals(3.0, production.calculate(1.0, 1.0, 1.2).intervalMinutes, 0.001)
+    }
+
+    @Test
+    fun `missing progress and historical policy preserve original mapping`() {
+        val production = FrequencyController(ControlConfig.CANDIDATE_3)
+
+        assertEquals(3.0, production.calculate(1.0, 1.0, null).intervalMinutes, 0.001)
+        assertEquals(3.0, controller.calculate(1.0, 1.0, 0.1).intervalMinutes, 0.001)
+    }
 }

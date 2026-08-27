@@ -68,14 +68,17 @@ fun AppDetailBottomSheet(
                 onClick = onViewFullAnalytics,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.onSurface,
+                    contentColor = MaterialTheme.colorScheme.surface
+                )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.TrendingUp, null, modifier = Modifier.size(20.dp), tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.TrendingUp, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.app_detail_view_full_analytics), color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.app_detail_view_full_analytics), fontWeight = FontWeight.Bold)
                     Spacer(Modifier.weight(1f))
-                    Icon(Icons.AutoMirrored.Filled.OpenInNew, null, modifier = Modifier.size(20.dp), tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, null, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -166,11 +169,11 @@ private fun InsightTitleSection(app: UiAppUsage) {
                     .padding(4.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = if (isPositive) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                    contentDescription = null,
-                    tint = Color.White
-                )
+                    Icon(
+                        imageVector = if (isPositive) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
             }
         }
     }

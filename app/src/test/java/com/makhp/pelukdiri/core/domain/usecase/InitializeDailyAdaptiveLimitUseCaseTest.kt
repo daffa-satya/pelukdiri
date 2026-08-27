@@ -186,6 +186,7 @@ class InitializeDailyAdaptiveLimitUseCaseTest {
         override suspend fun executeFullBackfill(daysHistory: Int, force: Boolean) {}
         override suspend fun updateAppScreenTime(
             packageName: String,
+            appName: String,
             date: LocalDate,
             newScreenTimeMillis: Long,
         ) {}

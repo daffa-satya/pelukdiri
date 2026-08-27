@@ -13,6 +13,7 @@ import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import com.makhp.pelukdiri.core.domain.model.ControlResult
 import com.makhp.pelukdiri.core.domain.model.DeviationResult
 import com.makhp.pelukdiri.core.domain.model.DeviationStatus
+import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.InterventionDecision
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionAudit
@@ -21,6 +22,7 @@ import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
+import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -49,6 +51,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
     private val controlEngine: ControlEngine = mockk()
     private val interventionLogRepository: InterventionLogRepository = mockk()
     private val interventionDecisionRepository: InterventionDecisionRepository = mockk()
+    private val adaptiveLimitRepository: AdaptiveLimitRepository = mockk()
     private val challengeSelector: InterventionChallengeSelector = mockk()
     private val appUsageCollector: AppUsageCollector = mockk()
     private val lockManager = InterventionLockManager()
@@ -59,6 +62,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
         every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
         coEvery { userPreferencesRepository.setNextEligibleInterventionAt(any()) } returns Unit
         coEvery { interventionDecisionRepository.insert(any()) } returns Unit
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
         every { challengeSelector.select() } returns InterventionChallengeType.MATH
         useCase = EvaluateInterventionEligibilityUseCase(
             usageEventCollector,
@@ -68,6 +72,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
             controlEngine,
             interventionLogRepository,
             interventionDecisionRepository,
+            adaptiveLimitRepository,
             challengeSelector,
             appUsageCollector,
             lockManager,
@@ -108,6 +113,45 @@ class EvaluateInterventionEligibilityUseCaseTest {
         assertEquals(15.0, result.totalUsageMinutes, 0.0001)
         assertTrue(result.shouldTrigger)
         verify { deviationEngine.calculate(10.0, List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 10.0 }) }
+    }
+
+    @Test
+    fun `control receives monitored usage progress against todays adaptive limit`() = runBlocking {
+        stubEligibleEvaluation()
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns DailyAdaptiveLimit(
+            dateString = "2026-08-27",
+            calculatedLimitMinutes = 40,
+            actualScreenTimeMinutes = 0,
+            reclaimedTimeMinutes = 0,
+        )
+
+        useCase(targetPackage)
+
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                match { it == 0.25 },
+            )
+        }
+    }
+
+    @Test
+    fun `zero adaptive limit preserves frequency behavior`() = runBlocking {
+        stubEligibleEvaluation()
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns DailyAdaptiveLimit(
+            dateString = "2026-08-27",
+            calculatedLimitMinutes = 0,
+            actualScreenTimeMinutes = 0,
+            reclaimedTimeMinutes = 0,
+        )
+
+        useCase(targetPackage)
+
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), null,
+            )
+        }
     }
 
     @Test
@@ -399,7 +443,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
         coEvery { interventionLogRepository.getRecentLogs(32) } returns recentLogs
         every {
             controlEngine.calculateNextIntervention(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
         } returns controlResult()
     }

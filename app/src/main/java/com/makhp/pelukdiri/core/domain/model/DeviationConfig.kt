@@ -30,10 +30,10 @@ data class DeviationConfig(
         /** First synthetic tuning result; also represented by constructor defaults. */
         val CANDIDATE_1 = DeviationConfig()
 
-        /** Selected v0.6 production deviation constants. */
+        /** Selected production deviation constants. */
         val CANDIDATE_3 = DeviationConfig(
-            k = 0.1,
-            s0 = 3.0,
+            k = 0.3,
+            s0 = 2.0,
             minimumMadMinutes = 1.0,
             minimumMadFractionOfBaseline = 0.5,
         )

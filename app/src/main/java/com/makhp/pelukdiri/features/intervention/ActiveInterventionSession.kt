@@ -192,5 +192,5 @@ class ActiveInterventionSession @Inject constructor(
         lockManager.releaseLock()
     }
 
-    companion object { const val TTL_MS = 20L * 60L * 1000L }
+    companion object { const val TTL_MS = 10L * 60L * 1000L }
 }

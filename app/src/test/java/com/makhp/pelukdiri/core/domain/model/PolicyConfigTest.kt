@@ -9,7 +9,7 @@ class PolicyConfigTest {
     fun `production uses candidate 3`() {
         assertEquals(ControlConfig.CANDIDATE_3, EngineModule.provideControlConfig())
         assertEquals(DeviationConfig.CANDIDATE_3, EngineModule.provideDeviationConfig())
-        assertEquals("v1.1-failure-streak-decrease", ControlConfig.POLICY_VERSION)
+        assertEquals("v1.6-two-success-recovery", ControlConfig.POLICY_VERSION)
     }
 
     @Test
@@ -28,9 +28,23 @@ class PolicyConfigTest {
         assertEquals(1.0, ControlConfig.CANDIDATE_3.lambdaFrequency, 0.0)
         assertEquals(2, ControlConfig.CANDIDATE_3.performanceEvidenceWindow)
         assertEquals(3, ControlConfig.CANDIDATE_3.difficultyDecreaseEvidenceWindow)
-        assertEquals(0.1, DeviationConfig.CANDIDATE_3.k, 0.0)
+        assertEquals(2, ControlConfig.CANDIDATE_3.ordinaryDecreaseFailureWindow)
+        assertEquals(2, ControlConfig.CANDIDATE_3.recoverySuccessWindow)
+        assertEquals(2, ControlConfig.CANDIDATE_3.normalMinimumDifficulty)
+        assertEquals(true, ControlConfig.CANDIDATE_3.useAdaptiveLimitFrequencyFloor)
+        assertEquals(0.3, DeviationConfig.CANDIDATE_3.k, 0.0)
+        assertEquals(2.0, DeviationConfig.CANDIDATE_3.s0, 0.0)
         assertEquals(0.5, DeviationConfig.CANDIDATE_3.minimumMadFractionOfBaseline, 0.0)
 
+        listOf(
+            ControlConfig.LEGACY_DEFAULT,
+            ControlConfig.CANDIDATE_1,
+        ).forEach { config ->
+            assertEquals(1, config.normalMinimumDifficulty)
+            assertEquals(false, config.useAdaptiveLimitFrequencyFloor)
+            assertEquals(0, config.ordinaryDecreaseFailureWindow)
+            assertEquals(1, config.recoverySuccessWindow)
+        }
         listOf(
             ControlConfig.LEGACY_DEFAULT,
             ControlConfig.CANDIDATE_1,

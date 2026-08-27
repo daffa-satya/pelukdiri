@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">PELUKDIRI</string>
-    <string name="accessibility_service_description">Memantau penggunaan aplikasi dan mencegah screen time berlebih</string>
+    <string name="accessibility_service_description">Memantau penggunaan aplikasi dan mencegah waktu layar berlebih</string>
 
     <!-- Dashboard -->
     <string name="dashboard_header_title">PELUKDIRI</string>
@@ -10,9 +10,9 @@
     <string name="dashboard_recalculate_limit_failed">Batas adaptif tidak dapat dihitung ulang.</string>
     <string name="dashboard_from_yesterday">%1$d%% dari kemarin</string>
     <string name="dashboard_more_than_yesterday">%1$d%% lebih lama dari kemarin</string>
-    <string name="dashboard_backfill_14_days">Tarik data</string>
-    <string name="settings_backfill_desc">Ambil penggunaan 14 hari terakhir</string>
-    <string name="settings_backfill_error_title">Tarik data gagal</string>
+    <string name="dashboard_backfill_14_days">Ambil data</string>
+    <string name="settings_backfill_desc">Ambil semua penggunaan yang tersedia hingga 14 hari terakhir</string>
+    <string name="settings_backfill_error_title">Ambil data gagal</string>
     <string name="settings_backfill_error_msg">Riwayat penggunaan tidak dapat diambil. Periksa izin akses penggunaan, lalu coba lagi.</string>
     <string name="dashboard_usage_access_needed">Akses penggunaan diperlukan agar waktu layar bisa dihitung.</string>
     <string name="dashboard_open_permission">Buka izin</string>
@@ -38,8 +38,9 @@
     <string name="analytics_edit_usage_minutes">Menit</string>
     <string name="analytics_edit_usage_save">Simpan</string>
     <string name="analytics_edit_usage_cancel">Batal</string>
-    <string name="analytics_edit_usage_notice">Perubahan data akan memperbarui ringkasan hari terpilih serta dapat memengaruhi perhitungan batas adaptif. Sinkronisasi ulang maupun tarik data dapat mengganti data yang diubah.</string>
+    <string name="analytics_edit_usage_notice">Perubahan data akan memperbarui ringkasan hari terpilih serta mempengaruhi perhitungan batas adaptif. <b>Ambil data dapat mengganti data yang diubah.</b></string>
     <string name="analytics_edit_usage_failed">Waktu penggunaan tidak dapat diubah. Ketuk untuk memuat ulang.</string>
+    <string name="analytics_edit_usage_daily_limit">Total penggunaan aplikasi dalam satu hari tidak dapat melebihi 24 jam.</string>
     <string name="analytics_title">Analitik</string>
     <string name="analytics_period_daily">Harian</string>
     <string name="analytics_period_weekly">Mingguan</string>
@@ -75,7 +76,7 @@
     <string name="analytics_insight_sub_positive">Waktu layar harian kamu %1$s di bawah batas adaptif.</string>
     <string name="analytics_insight_sub_negative">Waktu layar harian kamu %1$s di atas batas adaptif.</string>
 
-    <string name="analytics_fun_fact_guitar">Waktu %1$s di sosial media setiap hari bisa dipakai bermain gitar dan memainkan lagu favoritmu.</string>
+    <string name="analytics_fun_fact_guitar">Waktu %1$s setiap hari bisa dipakai bermain gitar.</string>
     <string name="analytics_fun_fact_reading">Durasi %1$s ini cukup untuk membaca sekitar %2$d halaman buku.</string>
     <string name="analytics_fun_fact_meditation">Daripada %1$s di layar, kamu bisa melakukan %2$d sesi meditasi.</string>
     <string name="analytics_fun_fact_workout">Waktu %1$s yang terbuang bisa diubah menjadi sesi lari.</string>
@@ -104,8 +105,8 @@
     <string name="settings_about_header">Tentang</string>
 
     <string name="profile_test_notification">Tes Notifikasi</string>
-    <string name="profile_test_lab">PelukDiri Test Lab</string>
-    <string name="common_logo_desc">PelukDiri Logo</string>
+    <string name="profile_test_lab">PELUKDIRI Test Lab</string>
+    <string name="common_logo_desc">PELUKDIRI Logo</string>
     <string name="common_back">Kembali</string>
     <string name="common_close">Tutup</string>
     <string name="common_cancel">Batal</string>
@@ -132,13 +133,14 @@
     <string name="settings_logout_title">Keluar</string>
     <string name="settings_logout_desc">Keluar dari aplikasi PELUKDIRI.</string>
     <string name="settings_export_confirm_title">Ekspor Data</string>
-    <string name="settings_export_confirm_msg">Semua data yang tersedia akan dikemas dalam ZIP berisi file CSV. Lanjutkan ekspor?</string>
+    <string name="settings_export_confirm_msg">Semua data PELUKDIRI akan dikemas dalam ZIP berisi file CSV. Ekspor?</string>
     <string name="settings_export_button">Ekspor</string>
     <string name="settings_export_progress_title">Mengekspor data</string>
     <string name="settings_export_progress_msg">Sedang menyiapkan file ZIP…</string>
     <string name="settings_export_success_title">Ekspor selesai</string>
     <string name="settings_export_success_msg">File tersimpan di:\n%1$s</string>
     <string name="export_failed">Ekspor gagal</string>
+    <string name="export_storage_permission_required">Izin penyimpanan diperlukan untuk menyimpan ekspor ke folder Download pada Android 9.</string>
     <string name="settings_export_close">Tutup</string>
 
     <string name="settings_sleep_time_title">Jam Tidur</string>
@@ -170,7 +172,7 @@
 
     <!-- Apps Intervention -->
     <string name="apps_intervention_title">Aplikasi Terpantau</string>
-    <string name="apps_intervention_desc">Pilih aplikasi yang ingin kamu batasi.\nIntervensi akan muncul saat kamu membuka aplikasi ini.</string>
+    <string name="apps_intervention_desc">Pilih aplikasi yang ingin dipantau.\nIntervensi akan muncul saat aplikasi ini dibuka.</string>
     <string name="apps_intervention_loading">Memuat aplikasi</string>
 
     <string name="apps_intervention_per_day_format">%1$s per hari</string>
@@ -205,7 +207,7 @@
     <string name="privacy_item_local_storage_desc">Data kamu disimpan secara aman di perangkatmu dan tidak dikirim ke server eksternal.</string>
     <string name="privacy_item_local_badge">Lokal</string>
     <string name="privacy_questions_title">Punya pertanyaan tentang privasi?</string>
-    <string name="privacy_questions_desc">Hubungi kami di pelukdiri.support@gmail.com</string>
+    <string name="privacy_questions_desc">Hubungi kami di https://github.com/daffa-satya/pelukdiri</string>
     <string name="privacy_delete_data_title">Hapus Data Saya</string>
     <string name="privacy_delete_data_desc">Hapus semua data yang dikumpulkan oleh PELUKDIRI dari perangkat ini.</string>
 
@@ -230,7 +232,12 @@
     <string name="profile_test_intervention_pattern">Tes Intervensi Pola</string>
 
     <!-- All Apps -->
-    <string name="all_apps_title">Semua Aplikasi Hari Ini</string>
+    <string name="all_apps_title">Aplikasi %1$s</string>
+    <string name="all_apps_add_app">Tambah Aplikasi</string>
+    <string name="all_apps_installed_not_used">Aplikasi Belum Digunakan</string>
+    <string name="all_apps_load_installed_failed">Daftar aplikasi tidak dapat dimuat.</string>
+    <string name="all_apps_no_apps_available">Tidak ada aplikasi lain yang dapat ditambahkan.</string>
+    <string name="common_retry">Coba lagi</string>
 
     <!-- App Detail Insights -->
     <string name="app_detail_great_job">Kerja bagus!</string>
@@ -260,15 +267,15 @@
     <string name="intervention_continue">Lanjutkan</string>
     <string name="intervention_cancel">Batal</string>
     <string name="intervention_retry">Coba Lagi</string>
-    <string name="intervention_error_title">PelukDiri mengalami kendala</string>
+    <string name="intervention_error_title">PELUKDIRI mengalami kendala</string>
     <string name="intervention_error_start">Tantangan belum dapat disiapkan. Pertanyaan dan status intervensi tetap aman.</string>
     <string name="intervention_error_restore">Intervensi yang aktif belum dapat dipulihkan. Coba lagi untuk melanjutkan pertanyaan yang sama.</string>
     <string name="intervention_error_submit">Jawaban belum dapat disimpan. Coba lagi tanpa mengubah jawaban Anda.</string>
     <string name="intervention_error_bypass">Mode darurat belum dapat diselesaikan. Coba lagi; kuota tidak akan digunakan dua kali.</string>
     <string name="intervention_error_complete">Intervensi belum dapat ditutup dengan aman. Coba lagi untuk menyelesaikannya.</string>
     <string name="intervention_emergency_button">Mode Darurat (3 Menit)</string>
-    <string name="intervention_pattern_title">Lengkapi pola ini</string>
-    <string name="intervention_pattern_hint">Ingat urutan bangun yang menyala</string>
+    <string name="intervention_pattern_title">Jeda Sebentar</string>
+    <string name="intervention_pattern_hint">Ingat urutan pola</string>
     <string name="intervention_replay_pattern">Ulangi Pola</string>
     <string name="intervention_playing_pattern">Memutar pola...</string>
     <string name="intervention_pattern_correct">Urutan pola berhasil diingat.</string>
@@ -280,8 +287,9 @@
     <string name="intervention_shape_triangle">Segitiga</string>
     <string name="intervention_shape_pentagon">Pentagon</string>
     <string name="intervention_pattern_progress">%1$d dari %2$d bentuk dipilih</string>
-    <string name="intervention_mindful_pause_title">Ambil Jeda Sejenak</string>
-    <string name="intervention_difficulty_level">Tingkat Kesulitan: %1$d</string>
+    <string name="intervention_mindful_pause_title">Jeda Sebentar</string>
+    <string name="intervention_difficulty_level">Kesulitan: %1$d</string>
+    <string name="intervention_timer"><i>Timer</i>: %1$s</string>
     <string name="intervention_max_penalty">Penalti Maksimum Diterapkan</string>
     <string name="intervention_emergency_remaining">Sisa Darurat: %1$d</string>
     <string name="intervention_emergency_button_short">Darurat</string>
@@ -289,7 +297,8 @@
     <string name="intervention_result_success">Berhasil!</string>
     <string name="intervention_result_failed">Belum Tepat</string>
     <string name="intervention_result_finish">Selesai</string>
-    <string name="intervention_result_close">Tutup</string>
+    <string name="intervention_result_retry">Coba Lagi</string>
+    <string name="intervention_error_retry_challenge">Soal berikutnya tidak dapat disiapkan. Coba lagi.</string>
     <string name="intervention_result_user_answer">Jawaban Kamu: %1$s</string>
     <string name="intervention_result_correct_answer">Jawaban Benar: %1$s</string>
 
@@ -355,16 +364,18 @@
 
     <!-- Daily Usage Notification -->
     <string name="notification_daily_usage_channel_name">Status Penggunaan Harian</string>
-    <string name="notification_daily_usage_channel_description">Menampilkan penggunaan saat ini dan batas adaptif sepanjang harimu.</string>
+    <string name="notification_daily_usage_channel_description">Menampilkan penggunaan dan batas adaptif hari ini.</string>
+    <string name="notification_reminder_channel_name">Pengingat PELUKDIRI</string>
+    <string name="notification_reminder_channel_description">Ringkasan dan pengingat penggunaan aplikasi.</string>
     <string name="notification_usage_label">Kamu sudah menggunakan %1$s hari ini</string>
     <string name="notification_limit_label">Batas adaptifmu: %1$s</string>
     <string name="notification_insufficient_data">Data tidak mencukupi</string>
 
     <!-- Notification Templates -->
-    <string name="notification_daily_summary_title_1">Sekilas hari kamu</string>
-    <string name="notification_daily_summary_title_2">Ini ringkasan waktu layar kamu.</string>
-    <string name="notification_daily_summary_title_3">Luangkan waktu sejenak untuk cek waktu layar.</string>
-    <string name="notification_daily_summary_title_4">Lihat bagaimana hari kamu berjalan.</string>
+    <string name="notification_daily_summary_title_1">Sekilas harimu</string>
+    <string name="notification_daily_summary_title_2">Ini ringkasan waktu layarmu.</string>
+    <string name="notification_daily_summary_title_3">Luangkan waktu sebentar untuk cek waktu layar.</string>
+    <string name="notification_daily_summary_title_4">Lihat bagaimana hari ini berjalan.</string>
 
     <string name="notification_weekly_reflection_title_1">Saatnya refleksi mingguan.</string>
     <string name="notification_weekly_reflection_title_2">Lihat bagaimana kebiasaan waktu layar kamu berubah minggu ini.</string>
@@ -372,26 +383,22 @@
     <string name="notification_weekly_reflection_title_4">Lihat progres kamu minggu ini.</string>
     <string name="notification_weekly_reflection_content">Ketuk untuk meninjau progres kesejahteraan digital mingguan kamu.</string>
 
-    <string name="notification_limit_reminder_title_1">Kamu hampir mencapai batas waktu layarmu.</string>
-    <string name="notification_limit_reminder_title_2">Kamu mendekati batas adaptif hari ini.</string>
-    <string name="notification_limit_reminder_title_3">Batas waktu layarmu semakin dekat.</string>
-    <string name="notification_limit_reminder_title_4">Ambil jeda singkat dan cek waktu layar kamu.</string>
-    <string name="notification_limit_reminder_content">Penggunaan yang bijak adalah kunci. Istirahat sejenak jika perlu.</string>
+    <string name="notification_limit_reminder_title_1">Hati-hati ama batas waktu layar.</string>
+    <string name="notification_limit_reminder_title_2">Kamu mendekati batas adaptif.</string>
+    <string name="notification_limit_reminder_title_3">Lihat batas waktu layarmu.</string>
+    <string name="notification_limit_reminder_title_4">Jangan lupa jeda sebentar.</string>
+    <string name="notification_limit_reminder_content">Gunakanlah HP dengan bijak ^_^.</string>
 
-    <string name="notification_intervention_title_1">Tantangan kognitif berikutnya sudah siap.</string>
-    <string name="notification_intervention_title_2">Luangkan waktu sejenak untuk intervensi.</string>
-    <string name="notification_intervention_title_3">Siap untuk intervensi?</string>
+    <string name="notification_intervention_title_1">Kerjain ya biar pintar.</string>
+    <string name="notification_intervention_title_2">Intervensi sebentar ya.</string>
+    <string name="notification_intervention_title_3">Intervensi atau diparani?</string>
     <string name="notification_intervention_title_4">Hati-hati main HP mulu nanti datang intervensi.</string>
-    <string name="notification_intervention_content">Intervensi agar tetap fokus.</string>
+    <string name="notification_intervention_content">Intervensi biar fokus.</string>
 
     <string name="onboarding_grant_usage_access">Berikan Akses Penggunaan</string>
     <!-- Export -->
 
     <!-- Worker -->
-    <string name="notification_sync_channel_name">Layanan Sinkronisasi Penggunaan</string>
-    <string name="notification_sync_channel_description">Mengumpulkan data penelitian di latar belakang</string>
-    <string name="notification_sync_active_title">PELUKDIRI sedang aktif</string>
-    <string name="notification_sync_collecting">Mengumpulkan data penggunaan…</string>
 
     <!-- Errors -->
 

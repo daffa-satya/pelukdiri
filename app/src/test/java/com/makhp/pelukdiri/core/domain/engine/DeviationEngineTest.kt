@@ -22,6 +22,16 @@ class DeviationEngineTest {
         assertEquals(7, config.minimumHistory)
     }
 
+    @Test
+    fun `candidate three aggressive anchored logistic matches reference points`() {
+        val engine = DeviationEngine(DeviationConfig.CANDIDATE_3)
+
+        assertEquals(0.0, engine.anchoredLogistic(0.0), 0.0001)
+        assertEquals(0.2256, engine.anchoredLogistic(2.0), 0.0001)
+        assertEquals(0.5523, engine.anchoredLogistic(5.0), 0.0001)
+        assertEquals(0.8712, engine.anchoredLogistic(10.0), 0.0001)
+    }
+
     // 2. Exactly 7 observations produce a valid result
     @Test
     fun `exactly 7 observations produces valid result`() {

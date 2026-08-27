@@ -11,8 +11,9 @@ import com.makhp.pelukdiri.core.domain.model.AppUsage
 data class AppsInterventionUiState(
     val searchQuery: String = "",
     val apps: ImmutableList<AppUsage> = persistentListOf(),
+    val installedPackageNames: ImmutableSet<String> = persistentSetOf(),
     val selectedPackageNames: ImmutableSet<String> = persistentSetOf(),
     val isLoading: Boolean = true
 ) {
-    val selectedCount: Int get() = selectedPackageNames.size
+    val selectedCount: Int get() = selectedPackageNames.count { it in installedPackageNames }
 }

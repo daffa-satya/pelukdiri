@@ -73,9 +73,40 @@ import kotlin.math.sin
 internal fun formatResponseTimeSeconds(responseTimeMs: Long): String =
     String.format(Locale.ROOT, "%.1f", responseTimeMs / 1_000.0)
 
+internal fun formatInterventionTimer(elapsedTimeMs: Long): String {
+    val totalSeconds = elapsedTimeMs.coerceAtLeast(0L) / 1_000L
+    return String.format(Locale.ROOT, "%02d.%02d", totalSeconds / 60L, totalSeconds % 60L)
+}
+
+@Composable
+private fun DifficultyTimerRow(level: Int, elapsedTimeMs: Long) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.intervention_difficulty_level, level),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = stringResource(
+                R.string.intervention_timer,
+                formatInterventionTimer(elapsedTimeMs),
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
 @Composable
 fun MindfulPauseScreen(
     state: InterventionUiState,
+    elapsedResponseTimeMs: Long = 0L,
     onAnswerChanged: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
     onEmergencyClick: () -> Unit,
@@ -83,6 +114,7 @@ fun MindfulPauseScreen(
     onRetry: () -> Unit,
     onPatternSelected: (PatternShape) -> Unit,
     onReplayPattern: () -> Unit,
+    onRetryIncorrect: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
@@ -142,12 +174,13 @@ fun MindfulPauseScreen(
                     is InterventionUiState.Loading -> LoadingContent()
                     is InterventionUiState.Error -> ErrorContent(state.operation, onRetry)
                     is InterventionUiState.QuestionActive -> if (isLandscape) {
-                        LandscapeQuestionContent(state, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
+                        LandscapeQuestionContent(state, elapsedResponseTimeMs, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
                     } else {
-                        QuestionContent(state, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
+                        QuestionContent(state, elapsedResponseTimeMs, onAnswerChanged, onSubmitAnswer, onEmergencyClick)
                     }
                     is InterventionUiState.PatternActive -> PatternContent(
                         state = state,
+                        elapsedResponseTimeMs = elapsedResponseTimeMs,
                         isLandscape = isLandscape,
                         onPatternSelected = onPatternSelected,
                         onReplayPattern = onReplayPattern,
@@ -163,20 +196,20 @@ fun MindfulPauseScreen(
                         )
                         if (isLandscape) {
                             LandscapeQuestionContent(
-                                questionState, onAnswerChanged, onSubmitAnswer,
+                                questionState, elapsedResponseTimeMs, onAnswerChanged, onSubmitAnswer,
                                 onEmergencyClick, isMaxPenalized = true
                             )
                         } else {
                             QuestionContent(
-                                questionState, onAnswerChanged, onSubmitAnswer,
+                                questionState, elapsedResponseTimeMs, onAnswerChanged, onSubmitAnswer,
                                 onEmergencyClick, isMaxPenalized = true
                             )
                         }
                     }
-                    is InterventionUiState.CorrectAnswer -> ResultContent(isSuccess = true, state = state, onReset = onReset)
-                    is InterventionUiState.IncorrectAnswer -> ResultContent(isSuccess = false, state = state, onReset = onReset)
-                    is InterventionUiState.PatternCorrectAnswer -> ResultContent(isSuccess = true, state = state, onReset = onReset)
-                    is InterventionUiState.PatternIncorrectAnswer -> ResultContent(isSuccess = false, state = state, onReset = onReset)
+                    is InterventionUiState.CorrectAnswer -> ResultContent(true, state, onReset)
+                    is InterventionUiState.IncorrectAnswer -> ResultContent(false, state, onRetryIncorrect)
+                    is InterventionUiState.PatternCorrectAnswer -> ResultContent(true, state, onReset)
+                    is InterventionUiState.PatternIncorrectAnswer -> ResultContent(false, state, onRetryIncorrect)
                     }
                 }
             }
@@ -203,6 +236,7 @@ private fun ErrorContent(
                 FailedInterventionOperation.START -> R.string.intervention_error_start
                 FailedInterventionOperation.RESTORE -> R.string.intervention_error_restore
                 FailedInterventionOperation.SUBMIT_ANSWER -> R.string.intervention_error_submit
+                FailedInterventionOperation.RETRY_CHALLENGE -> R.string.intervention_error_retry_challenge
                 FailedInterventionOperation.EMERGENCY_BYPASS -> R.string.intervention_error_bypass
                 FailedInterventionOperation.COMPLETE -> R.string.intervention_error_complete
             }
@@ -228,6 +262,7 @@ private fun LoadingContent() {
 @Composable
 private fun LandscapeQuestionContent(
     state: InterventionUiState.QuestionActive,
+    elapsedResponseTimeMs: Long,
     onAnswerChanged: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
     onEmergencyClick: () -> Unit,
@@ -261,12 +296,7 @@ private fun LandscapeQuestionContent(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            Text(
-                text = stringResource(R.string.intervention_difficulty_level, state.assessment.level),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
+            DifficultyTimerRow(state.assessment.level, elapsedResponseTimeMs)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = displayExpr,
@@ -320,6 +350,10 @@ private fun LandscapeQuestionContent(
                     onClick = onSubmitAnswer,
                     modifier = Modifier.weight(1f).height(Dimens.minTouchTarget),
                     enabled = state.answerInput.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PatternGreen,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) { Text(stringResource(R.string.intervention_submit_button_short)) }
             }
         }
@@ -338,6 +372,7 @@ private fun LandscapeQuestionContent(
 @Composable
 private fun QuestionContent(
     state: InterventionUiState.QuestionActive,
+    elapsedResponseTimeMs: Long,
     onAnswerChanged: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
     onEmergencyClick: () -> Unit,
@@ -373,12 +408,7 @@ private fun QuestionContent(
         )
     }
 
-    Text(
-        text = stringResource(R.string.intervention_difficulty_level, state.assessment.level),
-        color = MaterialTheme.colorScheme.primary,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-    )
+    DifficultyTimerRow(state.assessment.level, elapsedResponseTimeMs)
 
     Spacer(Modifier.height(Dimens.spaceMedium))
 
@@ -464,7 +494,10 @@ private fun QuestionContent(
             modifier = Modifier.weight(1f).height(Dimens.buttonHeight),
             enabled = state.answerInput.isNotEmpty(),
             shape = RoundedCornerShape(InterventionDimens.compactGap),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = PatternGreen,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
         ) {
             Text(
                 stringResource(R.string.intervention_submit_button_short),
@@ -477,13 +510,14 @@ private fun QuestionContent(
 @Composable
 private fun PatternContent(
     state: InterventionUiState.PatternActive,
+    elapsedResponseTimeMs: Long,
     isLandscape: Boolean,
     onPatternSelected: (PatternShape) -> Unit,
     onReplayPattern: () -> Unit,
     onEmergencyClick: () -> Unit,
 ) {
     if (isLandscape) {
-        LandscapePatternContent(state, onPatternSelected, onReplayPattern, onEmergencyClick)
+        LandscapePatternContent(state, elapsedResponseTimeMs, onPatternSelected, onReplayPattern, onEmergencyClick)
         return
     }
     val highlightedShape = state.playbackIndex?.let(state.question.sequence::getOrNull)
@@ -508,6 +542,8 @@ private fun PatternContent(
         fontWeight = FontWeight.SemiBold,
         textAlign = TextAlign.Center,
     )
+    Spacer(Modifier.height(Dimens.spaceSmall))
+    DifficultyTimerRow(state.assessment.level, elapsedResponseTimeMs)
     Spacer(Modifier.height(Dimens.spaceLarge))
 
     PatternGrid(
@@ -543,28 +579,51 @@ private fun PatternContent(
         }
     }
 
-    Spacer(Modifier.height(Dimens.iconSizeSmall))
-    OutlinedButton(
-        onClick = onReplayPattern,
-        enabled = !state.isPlaying,
-    ) {
-        Text(
-            text = if (state.isPlaying) {
-                stringResource(R.string.intervention_playing_pattern)
-            } else {
-                stringResource(R.string.intervention_replay_pattern)
-            }
-        )
-    }
-
     Spacer(Modifier.height(Dimens.spaceSmall))
-    OutlinedButton(
-        onClick = onEmergencyClick,
-        enabled = state.remainingBypasses > 0,
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-        border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
+    Spacer(Modifier.height(Dimens.spaceSmall))
+    Text(
+        text = stringResource(R.string.intervention_emergency_remaining, state.remainingBypasses),
+        color = if (state.remainingBypasses > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+    )
+
+    Spacer(Modifier.height(InterventionDimens.sectionGap))
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(InterventionDimens.contentGap)
     ) {
-        Text(stringResource(R.string.intervention_emergency_button))
+        OutlinedButton(
+            onClick = onEmergencyClick,
+            modifier = Modifier.weight(1f).height(Dimens.buttonHeight),
+            enabled = state.remainingBypasses > 0,
+            shape = RoundedCornerShape(InterventionDimens.compactGap),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
+        ) {
+            Text(
+                stringResource(R.string.intervention_emergency_button_short),
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+
+        OutlinedButton(
+            onClick = onReplayPattern,
+            modifier = Modifier.weight(1f).height(Dimens.buttonHeight),
+            enabled = !state.isPlaying,
+            shape = RoundedCornerShape(InterventionDimens.compactGap),
+        ) {
+            Text(
+                text = if (state.isPlaying) {
+                    stringResource(R.string.intervention_playing_pattern)
+                } else {
+                    stringResource(R.string.intervention_replay_pattern)
+                },
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
+            )
+        }
     }
     if (state.bypassDenied) {
         Text(
@@ -578,6 +637,7 @@ private fun PatternContent(
 @Composable
 private fun LandscapePatternContent(
     state: InterventionUiState.PatternActive,
+    elapsedResponseTimeMs: Long,
     onPatternSelected: (PatternShape) -> Unit,
     onReplayPattern: () -> Unit,
     onEmergencyClick: () -> Unit,
@@ -610,6 +670,7 @@ private fun LandscapePatternContent(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
+            DifficultyTimerRow(state.assessment.level, elapsedResponseTimeMs)
             Row(
                 modifier = Modifier.semantics { contentDescription = progressDescription },
                 horizontalArrangement = Arrangement.spacedBy(Dimens.spaceSmall),
@@ -626,22 +687,40 @@ private fun LandscapePatternContent(
                     )
                 }
             }
-            OutlinedButton(
-                onClick = onReplayPattern,
-                enabled = !state.isPlaying,
+            Text(
+                text = stringResource(R.string.intervention_emergency_remaining, state.remainingBypasses),
+                color = if (state.remainingBypasses > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(InterventionDimens.compactGap)
             ) {
-                Text(
-                    if (state.isPlaying) stringResource(R.string.intervention_playing_pattern)
-                    else stringResource(R.string.intervention_replay_pattern)
-                )
-            }
-            OutlinedButton(
-                onClick = onEmergencyClick,
-                enabled = state.remainingBypasses > 0,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
-            ) {
-                Text(stringResource(R.string.intervention_emergency_button))
+                OutlinedButton(
+                    onClick = onEmergencyClick,
+                    modifier = Modifier.weight(1f).height(Dimens.minTouchTarget),
+                    enabled = state.remainingBypasses > 0,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = BorderStroke(InterventionDimens.thinBorder, MaterialTheme.colorScheme.error),
+                ) {
+                    Text(
+                        stringResource(R.string.intervention_emergency_button_short),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                OutlinedButton(
+                    onClick = onReplayPattern,
+                    modifier = Modifier.weight(1f).height(Dimens.minTouchTarget),
+                    enabled = !state.isPlaying,
+                ) {
+                    Text(
+                        if (state.isPlaying) stringResource(R.string.intervention_playing_pattern)
+                        else stringResource(R.string.intervention_replay_pattern),
+                        style = MaterialTheme.typography.labelSmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
         PatternGrid(
@@ -791,7 +870,7 @@ private fun ResultContent(
     onReset: () -> Unit
 ) {
     val title = if (isSuccess) stringResource(R.string.intervention_result_success) else stringResource(R.string.intervention_result_failed)
-    val color = if (isSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    val color = if (isSuccess) PatternGreen else MaterialTheme.colorScheme.error
     
     Text(
         text = title,
@@ -853,7 +932,7 @@ private fun ResultContent(
         colors = ButtonDefaults.buttonColors(containerColor = color)
     ) {
         Text(
-            if (isSuccess) stringResource(R.string.intervention_result_finish) else stringResource(R.string.intervention_result_close),
+            if (isSuccess) stringResource(R.string.intervention_result_finish) else stringResource(R.string.intervention_result_retry),
             style = MaterialTheme.typography.titleMedium,
         )
     }

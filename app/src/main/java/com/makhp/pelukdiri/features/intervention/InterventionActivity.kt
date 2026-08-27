@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.os.Build
 import android.os.Bundle
 import javax.inject.Inject
 import androidx.activity.ComponentActivity
@@ -101,7 +102,15 @@ class InterventionActivity : ComponentActivity() {
     private fun excludeCurrentTaskFromRecents() {
         val activityManager = getSystemService(ActivityManager::class.java)
         activityManager.appTasks
-            .firstOrNull { it.taskInfo?.taskId == taskId }
+            .firstOrNull {
+                val appTaskId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    it.taskInfo?.taskId
+                } else {
+                    @Suppress("DEPRECATION")
+                    it.taskInfo?.id
+                }
+                appTaskId == taskId
+            }
             ?.setExcludeFromRecents(true)
     }
 

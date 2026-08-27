@@ -44,6 +44,7 @@ class AppsInterventionViewModel @Inject constructor(
         AppsInterventionUiState(
             searchQuery = query,
             apps = filtered.sortedByDescending { it.packageName in monitored }.toImmutableList(),
+            installedPackageNames = allApps.mapTo(mutableSetOf()) { it.packageName }.toImmutableSet(),
             selectedPackageNames = monitored.toImmutableSet(),
             isLoading = isLoading
         )

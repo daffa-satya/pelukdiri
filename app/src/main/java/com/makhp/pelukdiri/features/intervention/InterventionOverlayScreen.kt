@@ -8,8 +8,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -27,6 +29,7 @@ fun InterventionOverlayScreen(
     onDismiss: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var elapsedResponseTimeMs by remember { mutableLongStateOf(0L) }
     val hapticFeedback = LocalHapticFeedback.current
     var showBypassDialog by remember { mutableStateOf(false) }
     var hasStarted by remember { mutableStateOf(false) }
@@ -37,7 +40,7 @@ fun InterventionOverlayScreen(
             hasStarted = true
         }
 
-        if (uiState is InterventionUiState.IncorrectAnswer) {
+        if (uiState is InterventionUiState.IncorrectAnswer || uiState is InterventionUiState.PatternIncorrectAnswer) {
             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
         }
         
@@ -45,6 +48,19 @@ fun InterventionOverlayScreen(
         if (hasStarted && uiState is InterventionUiState.Idle && !showBypassDialog && !dismissRequested) {
             dismissRequested = true
             onDismiss()
+        }
+    }
+
+    LaunchedEffect(uiState) {
+        while (
+            uiState is InterventionUiState.QuestionActive ||
+            uiState is InterventionUiState.MaxPenalized ||
+            uiState is InterventionUiState.PatternActive
+        ) {
+            elapsedResponseTimeMs = if (
+                (uiState as? InterventionUiState.PatternActive)?.isPlaying == true
+            ) 0L else viewModel.currentResponseTimeMs()
+            delay(RESPONSE_TIMER_TICK_MS)
         }
     }
 
@@ -74,6 +90,7 @@ fun InterventionOverlayScreen(
     val onBypassClick = remember { { showBypassDialog = true } }
     val onReset = remember(viewModel) { { viewModel.resetToIdle() } }
     val onRetry = remember(viewModel) { { viewModel.retryLastOperation() } }
+    val onRetryIncorrect = remember(viewModel) { { viewModel.retryAfterIncorrectAnswer() } }
     val onPatternSelected = remember(viewModel) { { shape: com.makhp.pelukdiri.core.domain.model.PatternShape ->
         viewModel.onPatternSelected(shape)
     } }
@@ -81,15 +98,19 @@ fun InterventionOverlayScreen(
 
     MindfulPauseScreen(
         state = uiState,
+        elapsedResponseTimeMs = elapsedResponseTimeMs,
         onAnswerChanged = onAnswerChanged,
         onSubmitAnswer = onSubmitAnswer,
         onEmergencyClick = onBypassClick,
         onReset = onReset,
         onRetry = onRetry,
+        onRetryIncorrect = onRetryIncorrect,
         onPatternSelected = onPatternSelected,
         onReplayPattern = onReplayPattern,
     )
 }
+
+private const val RESPONSE_TIMER_TICK_MS = 100L
 
 @Preview(name = "Intervention Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Preview(name = "Intervention Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)

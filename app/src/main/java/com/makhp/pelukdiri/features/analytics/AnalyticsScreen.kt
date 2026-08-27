@@ -50,8 +50,17 @@ fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val editUsageError = (state as? AnalyticsUiState.Success)?.editUsageError
+    LaunchedEffect(editUsageError) {
+        editUsageError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearEditUsageError()
+        }
+    }
     AnalyticsLayout(
         state = state,
+        snackbarHostState = snackbarHostState,
         onHomeClick = onHomeClick,
         onSettingsClick = onSettingsClick,
         onViewAllClick = onViewAllClick,
@@ -71,16 +80,18 @@ fun AnalyticsScreen(
 @Composable
 private fun AnalyticsLayout(
     state: AnalyticsUiState,
+    snackbarHostState: SnackbarHostState,
     onHomeClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onViewAllClick: (LocalDate, AnalyticsPeriod) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onPeriodSelected: (AnalyticsPeriod) -> Unit,
-    onUpdateAppUsage: (String, Long) -> Unit,
+    onUpdateAppUsage: (String, String, Long) -> Unit,
     onCalculateGraph: () -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { AnalyticsNavigation(onHomeClick, onSettingsClick) }
     ) { padding ->
         when (state) {
@@ -112,7 +123,7 @@ private fun AnalyticsContent(
     onViewAllClick: (LocalDate, AnalyticsPeriod) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onPeriodSelected: (AnalyticsPeriod) -> Unit,
-    onUpdateAppUsage: (String, Long) -> Unit,
+    onUpdateAppUsage: (String, String, Long) -> Unit,
     onCalculateGraph: () -> Unit,
 ) {
     var selectedApp by remember { mutableStateOf<UiAppUsage?>(null) }
@@ -150,7 +161,7 @@ private fun AnalyticsContent(
                     onViewAllClick(state.selectedDate, state.selectedPeriod)
                 },
                 onAppClick = { selectedApp = it },
-                onEditApp = if (state.selectedPeriod == AnalyticsPeriod.DAILY) {
+                onEditApp = if (state.canEditUsage) {
                     { appBeingEdited = it }
                 } else null,
             ) 
@@ -171,7 +182,7 @@ private fun AnalyticsContent(
             app = app,
             onDismiss = { appBeingEdited = null },
             onSave = { durationMillis ->
-                onUpdateAppUsage(app.packageName, durationMillis)
+                onUpdateAppUsage(app.packageName, app.appName, durationMillis)
                 appBeingEdited = null
             },
         )
@@ -813,7 +824,7 @@ private fun AppUsageItem(app: UiAppUsage, onClick: () -> Unit, onEdit: (() -> Un
 }
 
 @Composable
-private fun EditAppUsageDialog(
+internal fun EditAppUsageDialog(
     app: UiAppUsage,
     onDismiss: () -> Unit,
     onSave: (Long) -> Unit,

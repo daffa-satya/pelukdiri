@@ -111,6 +111,10 @@ class SettingsViewModel @Inject constructor(
         exportState.value = ExportState()
     }
 
+    fun reportExportPermissionDenied() {
+        exportState.value = ExportState(error = context.getString(R.string.export_storage_permission_required))
+    }
+
     fun backfillHistory() {
         if (backfillState.value.isRunning) return
         backfillState.value = BackfillState(isRunning = true)

@@ -66,12 +66,12 @@ class SyntheticPolicyTuningTest {
     }
 
     @Test
-    fun `candidate 3 three-streak policy remains bounded near fifteen minutes`() {
+    fun `candidate 3 aggressive policy preserves safety bounds`() {
         val candidate3 = ensemble(DeviationConfig.CANDIDATE_3, ControlConfig.CANDIDATE_3)
 
         println("candidate3=${candidate3.summary()}")
         assertTrue(candidate3.meanOf { it.successRate } in CANDIDATE_3_MINIMUM_SUCCESS..CANDIDATE_3_MAXIMUM_SUCCESS)
-        assertTrue(candidate3.meanOf { it.averageIntervalMinutes } in 14.0..16.0)
+        assertTrue(candidate3.meanOf { it.averageIntervalMinutes } in 13.0..15.0)
         assertTrue(candidate3.all { it.minimumIntervalMinutes >= 3.0 })
         assertTrue(candidate3.all { it.maximumIntervalMinutes <= 30.0 })
         assertTrue(candidate3.all { it.maximumDifficultyMove <= 1 })
@@ -335,8 +335,8 @@ class SyntheticPolicyTuningTest {
         const val ABILITY_SWEEP_STEP = 0.05
         const val CANDIDATE_1_TARGET_SUCCESS = 0.7
         const val CANDIDATE_2_TARGET_SUCCESS = 0.85
-        const val CANDIDATE_3_MINIMUM_SUCCESS = 0.68
-        const val CANDIDATE_3_MAXIMUM_SUCCESS = 0.72
+        const val CANDIDATE_3_MINIMUM_SUCCESS = 0.46
+        const val CANDIDATE_3_MAXIMUM_SUCCESS = 0.51
         val SEEDS = listOf(11L, 29L, 47L, 71L, 101L, 137L, 173L, 211L, 257L, 307L)
         val SENSITIVITY_VALUES = listOf(0.0, 0.25, 0.5, 0.75, 1.0)
         val CURRENT_USAGE_FACTORS = listOf(1.0, 1.15, 1.5, 2.0, 3.0)

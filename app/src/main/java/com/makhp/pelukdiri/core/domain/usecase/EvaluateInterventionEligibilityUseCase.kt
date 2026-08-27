@@ -15,6 +15,7 @@ import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
+import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.time.SystemTimeProvider
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
@@ -32,6 +33,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
     private val controlEngine: ControlEngine,
     private val interventionLogRepository: InterventionLogRepository,
     private val interventionDecisionRepository: InterventionDecisionRepository,
+    private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val challengeSelector: InterventionChallengeSelector,
     private val appUsageCollector: AppUsageCollector,
     private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
@@ -100,7 +102,6 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             
         val currentMonitoredUsageMinutes = monitoredUsageMillis / 1000.0 / 60.0
         val currentTotalUsageMinutes = totalUsageMillis / 1000.0 / 60.0
-
         if (packageName !in monitoredPackages) {
             return audit(
                 decision = InterventionDecision(
@@ -185,6 +186,11 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         val wakeTime = userPreferencesRepository.wakeTime.first()?.let { 
             try { LocalTime.parse(it) } catch (_: Exception) { null }
         }
+        val adaptiveLimitProgress = adaptiveLimitRepository
+            .getLimitForDate(today.toString())
+            ?.calculatedLimitMinutes
+            ?.takeIf { it > 0 }
+            ?.let { currentMonitoredUsageMinutes / it }
         
         // 5. Control Decision
         val controlResult = controlEngine.calculateNextIntervention(
@@ -198,6 +204,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             timestampMs = currentTimeMs,
             difficultyHistory = difficultyHistory,
             consecutiveFailures = consecutiveFailures,
+            adaptiveLimitProgress = adaptiveLimitProgress,
         )
         
         val shouldSchedule = nextEligible <= 0L

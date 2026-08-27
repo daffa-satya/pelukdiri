@@ -10,6 +10,7 @@ import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -23,7 +24,8 @@ class UsageRepositoryImpl @Inject constructor(
     private val dao: UsageDao,
     private val appUsageCollector: AppUsageCollector,
     private val usageEventCollector: UsageEventCollector,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val timeProvider: TimeProvider,
 ) : UsageRepository {
     override fun getDailyUsage(date: LocalDate): Flow<List<AppUsage>> {
         return dao.getAppUsageByDate(date.toString()).map { entities ->
@@ -99,16 +101,26 @@ class UsageRepositoryImpl @Inject constructor(
         // Bulk insert with transaction
         dao.saveUsageDataWithSummary(entities, newSummary)
     }
-    override suspend fun updateAppScreenTime(packageName: String, date: LocalDate, newScreenTimeMillis: Long) {
-        require(!date.isAfter(LocalDate.now())) { "Future usage cannot be edited" }
+    override suspend fun updateAppScreenTime(
+        packageName: String,
+        appName: String,
+        date: LocalDate,
+        newScreenTimeMillis: Long
+    ) {
+        require(date.isBefore(timeProvider.today())) { "Current and future usage cannot be edited" }
         require(newScreenTimeMillis in 0L..24L * 60L * 60L * 1000L) {
             "Usage must be between 0 and 24 hours"
         }
+        val dateString = date.toString()
+        val screenOnMillis = dao.getDailySummaryOnce(dateString)?.totalScreenOnMillis
+            ?: usageEventCollector.getScreenOnMillisForDay(date)
         dao.updateAppUsageAndSummary(
-            date = date.toString(),
+            date = dateString,
             packageName = packageName,
+            appName = appName,
             newDuration = newScreenTimeMillis,
             monitoredPackages = userPreferencesRepository.monitoredPackages.first(),
+            screenOnMillisForNewSummary = screenOnMillis,
         )
     }
 }

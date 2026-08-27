@@ -133,7 +133,67 @@ class InterventionLogicTest {
     }
 
     @Test
-    fun `candidate three safe default also requires three failures to decrease`() {
+    fun `candidate three exits recovery after two successes despite insufficient history`() {
+        val candidate = ControlConfig.CANDIDATE_3
+        val engine = ControlEngine(
+            candidate,
+            SensitivityCalculator(candidate),
+            PerformanceCalculator(candidate),
+            DifficultyController(candidate),
+            FrequencyController(candidate),
+        )
+
+        val afterOne = engine.calculateNextIntervention(
+            deviation = 0.0,
+            lastPerformance = PerformanceMetrics(1_000L, true, 1),
+            performanceHistory = emptyList(),
+            lux = null,
+            bedtime = null,
+            wakeTime = null,
+            currentLevel = 1,
+        )
+        val afterTwo = engine.calculateNextIntervention(
+            deviation = 0.0,
+            lastPerformance = PerformanceMetrics(1_000L, true, 1),
+            performanceHistory = listOf(1_000L),
+            lux = null,
+            bedtime = null,
+            wakeTime = null,
+            currentLevel = 1,
+        )
+
+        assertEquals(ControlMode.INSUFFICIENT_HISTORY, afterOne.mode)
+        assertEquals(ControlMode.INSUFFICIENT_HISTORY, afterTwo.mode)
+        assertEquals(1, afterOne.nextDifficulty)
+        assertEquals(2, afterTwo.nextDifficulty)
+    }
+
+    @Test
+    fun `candidate three response time cannot lower a newly raised difficulty after success`() {
+        val candidate = ControlConfig.CANDIDATE_3
+        val engine = ControlEngine(
+            candidate,
+            SensitivityCalculator(candidate),
+            PerformanceCalculator(candidate),
+            DifficultyController(candidate),
+            FrequencyController(candidate),
+        )
+        fun evaluate(responseTimeMs: Long) = engine.calculateNextIntervention(
+            deviation = 0.5,
+            lastPerformance = PerformanceMetrics(responseTimeMs, true, 3),
+            performanceHistory = listOf(1_000L, 1_000L),
+            lux = 500f,
+            bedtime = null,
+            wakeTime = null,
+            currentLevel = 3,
+        )
+
+        assertEquals(3, evaluate(100L).nextDifficulty)
+        assertEquals(3, evaluate(100_000L).nextDifficulty)
+    }
+
+    @Test
+    fun `candidate three safe default requires two failures for an ordinary decrease`() {
         val candidate = ControlConfig.CANDIDATE_3
         val engine = ControlEngine(
             candidate,
@@ -151,7 +211,7 @@ class InterventionLogicTest {
             3, consecutiveFailures = 3
         )
 
-        assertEquals(3, afterTwo.nextDifficulty)
+        assertEquals(2, afterTwo.nextDifficulty)
         assertEquals(2, afterThree.nextDifficulty)
     }
 }

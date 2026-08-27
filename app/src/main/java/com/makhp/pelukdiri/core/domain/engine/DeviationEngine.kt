@@ -93,14 +93,7 @@ class DeviationEngine @Inject constructor(
         // 7. Final deviation D = (L(S) - L(0)) / (1 - L(0))
         // where L(S) = 1 / (1 + exp(-k(S - s0)))
         // This anchors the logistic so that D(0) = 0 exactly and smoothly.
-        val deviation = when (signal) {
-            Double.POSITIVE_INFINITY -> 1.0
-            else -> {
-                val lS = 1.0 / (1.0 + exp(-config.k * (signal - config.s0)))
-                val l0 = 1.0 / (1.0 + exp(config.k * config.s0))
-                (lS - l0) / (1.0 - l0)
-            }
-        }
+        val deviation = anchoredLogistic(signal)
 
         return DeviationResult(
             deviation = deviation,
@@ -111,6 +104,13 @@ class DeviationEngine @Inject constructor(
             relativeMagnitude = relativeMagnitude,
             status = DeviationStatus.Success
         )
+    }
+
+    internal fun anchoredLogistic(signal: Double): Double {
+        if (signal == Double.POSITIVE_INFINITY) return 1.0
+        val lS = 1.0 / (1.0 + exp(-config.k * (signal - config.s0)))
+        val l0 = 1.0 / (1.0 + exp(config.k * config.s0))
+        return (lS - l0) / (1.0 - l0)
     }
 
     /**

@@ -1,31 +1,35 @@
 package com.makhp.pelukdiri.features.dashboard
 
+import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.makhp.pelukdiri.R
+import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
+import com.makhp.pelukdiri.features.intervention.InterventionActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,8 +55,17 @@ fun ProfileSidebar(
         drawerContainerColor = MaterialTheme.colorScheme.surface,
         drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
     ) {
+        val scrollState = rememberScrollState()
+        val context = LocalContext.current
+        val isDebug = remember {
+            context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+        }
+
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -62,7 +75,7 @@ fun ProfileSidebar(
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            // Profile Image
+            // ... (Profile Image box remains same)
             Box(contentAlignment = Alignment.BottomEnd) {
                 Surface(
                     modifier = Modifier.size(100.dp),
@@ -93,9 +106,10 @@ fun ProfileSidebar(
                     onClick = { showImageSourcePicker = true },
                     modifier = Modifier.size(32.dp),
                     shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
                 }
             }
 
@@ -114,6 +128,92 @@ fun ProfileSidebar(
                 value = uiState.username.ifEmpty { "@username" },
                 onClick = { showEditUserDialog = true }
             )
+
+            if (isDebug) {
+                Spacer(Modifier.height(32.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Debug Tools",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+                Spacer(Modifier.height(12.dp))
+                
+                DebugActionItem(
+                    label = stringResource(R.string.profile_test_lab),
+                    icon = Icons.Default.Science,
+                    onClick = {
+                        try {
+                            val intent = Intent().setClassName(
+                                context.packageName,
+                                "com.makhp.pelukdiri.debug.DebugTestLabActivity"
+                            )
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback if component name changed
+                        }
+                    }
+                )
+                
+                DebugActionItem(
+                    label = stringResource(R.string.profile_test_notification),
+                    icon = Icons.Default.Notifications,
+                    onClick = { viewModel.triggerTestNotification() }
+                )
+                
+                DebugActionItem(
+                    label = stringResource(R.string.profile_test_intervention),
+                    icon = Icons.Default.Calculate,
+                    onClick = {
+                        if (viewModel.tryAcquireInterventionLock()) {
+                            onClose()
+                            val intent = Intent(context, InterventionActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                                putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
+                                putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
+                                putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 10.0)
+                                putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 100f)
+                                putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
+                                putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
+                                putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
+                                putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, InterventionChallengeType.MATH.name)
+                            }
+                            context.startActivity(intent)
+                        }
+                    }
+                )
+                
+                DebugActionItem(
+                    label = stringResource(R.string.profile_test_intervention_pattern),
+                    icon = Icons.Default.Grid4x4,
+                    onClick = {
+                        if (viewModel.tryAcquireInterventionLock()) {
+                            onClose()
+                            val intent = Intent(context, InterventionActivity::class.java).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                        Intent.FLAG_ACTIVITY_SINGLE_TOP or 
+                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                                putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, context.packageName)
+                                putExtra(InterventionActivity.EXTRA_MONITORED_USAGE, 120.0)
+                                putExtra(InterventionActivity.EXTRA_INTERVAL_MINUTES_AT_LAUNCH, 10.0)
+                                putExtra(InterventionActivity.EXTRA_AMBIENT_LIGHT_LUX_AT_LAUNCH, 100f)
+                                putExtra(InterventionActivity.EXTRA_DEVIATION, 0.5)
+                                putExtra(InterventionActivity.EXTRA_DIFFICULTY_CONTROL_SIGNAL, 0.7)
+                                putExtra(InterventionActivity.EXTRA_DIFFICULTY, 3)
+                                putExtra(InterventionActivity.EXTRA_CHALLENGE_TYPE, InterventionChallengeType.PATTERN.name)
+                            }
+                            context.startActivity(intent)
+                        }
+                    }
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -178,6 +278,36 @@ fun ProfileSidebar(
             },
             confirmButton = {}
         )
+    }
+}
+
+@Composable
+private fun DebugActionItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        }
     }
 }
 

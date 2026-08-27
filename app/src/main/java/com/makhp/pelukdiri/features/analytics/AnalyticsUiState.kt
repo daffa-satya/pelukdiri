@@ -2,6 +2,7 @@ package com.makhp.pelukdiri.features.analytics
 
 import androidx.compose.runtime.Immutable
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import com.makhp.pelukdiri.features.dashboard.UiAppUsage
 import com.makhp.pelukdiri.core.domain.model.DailySummary
 import java.time.LocalDate
@@ -17,6 +18,7 @@ sealed interface AnalyticsUiState {
     data class Success(
         val selectedDate: LocalDate,
         val selectedPeriod: AnalyticsPeriod = AnalyticsPeriod.DAILY,
+        val canEditUsage: Boolean = false,
         val summary: DailySummary?,
         val comparisonSummary: DailySummary? = null,
         val topApps: ImmutableList<UiAppUsage>,
@@ -31,7 +33,11 @@ sealed interface AnalyticsUiState {
         val longestSessionMillis: Long = 0L,
         val comparisonLongestSessionMillis: Long = 0L,
         val adaptiveLimitMinutes: Int? = null,
-        val funFact: String = ""
+        val funFact: String = "",
+        val allInstalledApps: ImmutableList<UiAppUsage> = persistentListOf(),
+        val isInstalledAppsLoading: Boolean = false,
+        val installedAppsError: String? = null,
+        val editUsageError: String? = null,
     ) : AnalyticsUiState
     data class Error(val message: String) : AnalyticsUiState
 }

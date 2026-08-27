@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.makhp.pelukdiri.core.database.PelukDiriDatabase
 import com.makhp.pelukdiri.core.database.entity.AppUsageEntity
+import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import com.makhp.pelukdiri.core.database.entity.InterventionDecisionEntity
 import com.makhp.pelukdiri.core.database.entity.InterventionLogEntity
 import com.makhp.pelukdiri.core.database.export.CsvExporter
@@ -71,6 +72,121 @@ class DecisionAuditAndBypassInstrumentedTest {
         assertEquals(5, results.count { it != null })
         assertEquals(5, dao.getBypassCountInInterval(0L, 10_000L))
         assertEquals(5, dao.getAllLogsList().size)
+    }
+
+    @Test
+    fun manualUsageUpsertUpdatesAppAndExistingSummary() = runBlocking {
+        val dao = database.usageDao()
+        val date = "2026-08-26"
+        dao.insertAppUsage(
+            listOf(
+                AppUsageEntity(
+                    packageName = "com.example.existing",
+                    appName = "Existing",
+                    usageDurationMillis = 2L * 60L * 60L * 1000L,
+                    lastUsedTimestamp = 1_000L,
+                    date = date,
+                )
+            )
+        )
+        dao.insertDailySummary(
+            DailySummaryEntity(
+                date = date,
+                totalScreenTimeMillis = 2L * 60L * 60L * 1000L,
+                totalScreenOnMillis = 4L * 60L * 60L * 1000L,
+                monitoredUsageMillis = 2L * 60L * 60L * 1000L,
+                unlockCount = 7,
+                mostUsedApp = "Existing",
+                wellbeingScore = 80,
+            )
+        )
+
+        dao.updateAppUsageAndSummary(
+            date = date,
+            packageName = "com.example.added",
+            appName = "Added",
+            newDuration = 5L * 60L * 60L * 1000L,
+            monitoredPackages = setOf("com.example.existing", "com.example.added"),
+            screenOnMillisForNewSummary = 99L,
+        )
+
+        val rows = dao.getAppUsageByDateList(date).associateBy { it.packageName }
+        assertEquals(2, rows.size)
+        assertEquals("Added", rows.getValue("com.example.added").appName)
+        assertEquals(0L, rows.getValue("com.example.added").lastUsedTimestamp)
+        val summary = requireNotNull(dao.getDailySummaryOnce(date))
+        assertEquals(7L * 60L * 60L * 1000L, summary.totalScreenTimeMillis)
+        assertEquals(4L * 60L * 60L * 1000L, summary.totalScreenOnMillis)
+        assertEquals(7L * 60L * 60L * 1000L, summary.monitoredUsageMillis)
+        assertEquals(7, summary.unlockCount)
+        assertEquals("Added", summary.mostUsedApp)
+        assertEquals(80, summary.wellbeingScore)
+    }
+
+    @Test
+    fun manualUsageCreatesMissingSummaryWithReconstructedScreenOnTime() = runBlocking {
+        val dao = database.usageDao()
+        val date = "2026-08-25"
+
+        dao.updateAppUsageAndSummary(
+            date = date,
+            packageName = "com.example.added",
+            appName = "Added",
+            newDuration = 60L * 60L * 1000L,
+            monitoredPackages = emptySet(),
+            screenOnMillisForNewSummary = 90L * 60L * 1000L,
+        )
+
+        val summary = requireNotNull(dao.getDailySummaryOnce(date))
+        assertEquals(60L * 60L * 1000L, summary.totalScreenTimeMillis)
+        assertEquals(90L * 60L * 1000L, summary.totalScreenOnMillis)
+        assertEquals(0L, summary.monitoredUsageMillis)
+    }
+
+    @Test
+    fun manualUsageRejectsCombinedDailyTotalOver24Hours() = runBlocking {
+        val dao = database.usageDao()
+        val date = "2026-08-24"
+        dao.insertAppUsage(
+            listOf(
+                AppUsageEntity(
+                    packageName = "com.example.existing",
+                    appName = "Existing",
+                    usageDurationMillis = 23L * 60L * 60L * 1000L,
+                    lastUsedTimestamp = 1_000L,
+                    date = date,
+                )
+            )
+        )
+        dao.insertDailySummary(
+            DailySummaryEntity(
+                date = date,
+                totalScreenTimeMillis = 23L * 60L * 60L * 1000L,
+                totalScreenOnMillis = 24L * 60L * 60L * 1000L,
+                monitoredUsageMillis = 0L,
+                unlockCount = 0,
+                mostUsedApp = "Existing",
+                wellbeingScore = null,
+            )
+        )
+
+        val error = runCatching {
+            dao.updateAppUsageAndSummary(
+                date = date,
+                packageName = "com.example.added",
+                appName = "Added",
+                newDuration = 2L * 60L * 60L * 1000L,
+                monitoredPackages = emptySet(),
+                screenOnMillisForNewSummary = 0L,
+            )
+        }.exceptionOrNull()
+
+        assertTrue(error is IllegalArgumentException)
+        assertEquals(1, dao.getAppUsageByDateList(date).size)
+        assertEquals(
+            23L * 60L * 60L * 1000L,
+            requireNotNull(dao.getDailySummaryOnce(date)).totalScreenTimeMillis,
+        )
     }
 
     @Test

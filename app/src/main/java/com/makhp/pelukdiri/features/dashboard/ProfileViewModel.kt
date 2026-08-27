@@ -2,8 +2,11 @@ package com.makhp.pelukdiri.features.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.makhp.pelukdiri.core.domain.InterventionLockManager
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.util.NotificationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -16,8 +19,14 @@ data class ProfileUiState(
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val lockManager: InterventionLockManager,
+    private val notificationHelper: NotificationHelper
 ) : ViewModel() {
+
+    fun tryAcquireInterventionLock(): Boolean {
+        return lockManager.acquireLock()
+    }
 
     val uiState: StateFlow<ProfileUiState> = combine(
         userPreferencesRepository.userNickname,
@@ -46,6 +55,21 @@ class ProfileViewModel @Inject constructor(
     fun updateProfileImage(path: String?) {
         viewModelScope.launch {
             userPreferencesRepository.setProfileImagePath(path)
+        }
+    }
+
+    fun triggerTestNotification() {
+        viewModelScope.launch {
+            // 1. Tes Daily Summary
+            notificationHelper.showDailySummaryNotification(3600000L) 
+            delay(2000)
+            
+            // 2. Tes Weekly Reflection
+            notificationHelper.showWeeklyReflectionNotification()
+            delay(2000)
+            
+            // 3. Tes Limit Reminder
+            notificationHelper.showLimitReminderNotification()
         }
     }
 

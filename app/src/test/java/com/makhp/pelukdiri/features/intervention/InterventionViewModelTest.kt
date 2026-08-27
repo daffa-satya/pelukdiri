@@ -210,6 +210,72 @@ class InterventionViewModelTest {
     }
 
     @Test
+    fun `incorrect math answer cannot complete until a retry is correct`() = runTest {
+        coEvery { cognitiveQuestionGenerator.generateQuestion(1) } returns
+            MathQuestion("1+1", 2, 1) andThen MathQuestion("2+2", 4, 1)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+        coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
+        coEvery { interventionLogRepository.insertLog(any()) } returns Unit
+
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 1)
+        advanceUntilIdle()
+        viewModel.onAnswerChanged("1")
+        viewModel.submitAnswer()
+        viewModel.uiState.filterIsInstance<InterventionUiState.IncorrectAnswer>().first()
+
+        assertTrue(viewModel.uiState.value.toString(), viewModel.uiState.value is InterventionUiState.IncorrectAnswer)
+        viewModel.resetToIdle()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is InterventionUiState.IncorrectAnswer)
+
+        viewModel.retryAfterIncorrectAnswer()
+        advanceUntilIdle()
+        val retry = viewModel.uiState.value as InterventionUiState.QuestionActive
+        assertEquals("2+2", retry.question.expression)
+        viewModel.onAnswerChanged("4")
+        viewModel.submitAnswer()
+        viewModel.uiState.filterIsInstance<InterventionUiState.CorrectAnswer>().first()
+
+        assertTrue(viewModel.uiState.value is InterventionUiState.CorrectAnswer)
+        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { !it.isSuccess }) }
+        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { it.isSuccess }) }
+    }
+
+    @Test
+    fun `incorrect pattern cannot complete until a retry is correct`() = runTest {
+        val first = listOf(PatternShape.CIRCLE, PatternShape.SQUARE, PatternShape.TRIANGLE)
+        val second = listOf(PatternShape.PENTAGON, PatternShape.CIRCLE, PatternShape.SQUARE)
+        coEvery { patternQuestionGenerator.generateQuestion(1) } returns
+            PatternQuestion(first, 1) andThen PatternQuestion(second, 1)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+        coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
+        coEvery { interventionLogRepository.insertLog(any()) } returns Unit
+
+        viewModel.startIntervention(
+            10.0, 1.0, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
+        )
+        advanceUntilIdle()
+        repeat(first.size) { viewModel.onPatternSelected(PatternShape.PENTAGON) }
+        viewModel.uiState.filterIsInstance<InterventionUiState.PatternIncorrectAnswer>().first()
+
+        assertTrue(viewModel.uiState.value.toString(), viewModel.uiState.value is InterventionUiState.PatternIncorrectAnswer)
+        viewModel.resetToIdle()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value is InterventionUiState.PatternIncorrectAnswer)
+
+        viewModel.retryAfterIncorrectAnswer()
+        advanceUntilIdle()
+        val retry = viewModel.uiState.value as InterventionUiState.PatternActive
+        assertEquals(second, retry.question.sequence)
+        second.forEach(viewModel::onPatternSelected)
+        viewModel.uiState.filterIsInstance<InterventionUiState.PatternCorrectAnswer>().first()
+
+        assertTrue(viewModel.uiState.value is InterventionUiState.PatternCorrectAnswer)
+        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { !it.isSuccess }) }
+        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { it.isSuccess }) }
+    }
+
+    @Test
     fun `forced pattern plays sequence and exact recall succeeds`() = runTest {
         val sequence = listOf(PatternShape.CIRCLE, PatternShape.PENTAGON, PatternShape.SQUARE)
         coEvery { patternQuestionGenerator.generateQuestion(1) } returns PatternQuestion(sequence, 1)

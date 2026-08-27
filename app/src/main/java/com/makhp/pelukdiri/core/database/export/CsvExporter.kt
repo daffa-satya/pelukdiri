@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.app.ActivityManager
 import android.app.NotificationManager
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -12,6 +14,9 @@ import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.Settings
+import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import com.makhp.pelukdiri.collector.isUsageStatsPermissionGranted
 import com.makhp.pelukdiri.core.database.dao.AdaptiveLimitDao
 import com.makhp.pelukdiri.core.database.dao.InterventionDao
@@ -103,7 +108,14 @@ class CsvExporter @Inject constructor(
         }
     }
 
-    private fun saveToDownloads(source: File): Uri {
+    private fun saveToDownloads(source: File): Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        saveToScopedDownloads(source)
+    } else {
+        saveToLegacyDownloads(source)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun saveToScopedDownloads(source: File): Uri {
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, source.name)
             put(MediaStore.Downloads.MIME_TYPE, "application/zip")
@@ -126,6 +138,24 @@ class CsvExporter @Inject constructor(
             resolver.delete(uri, null, null)
             throw error
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun saveToLegacyDownloads(source: File): Uri {
+        check(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                PackageManager.PERMISSION_GRANTED
+        ) { context.getString(com.makhp.pelukdiri.R.string.export_storage_permission_required) }
+
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        check(downloadsDir.exists() || downloadsDir.mkdirs()) { "Unable to access Downloads" }
+        val destination = File(downloadsDir, source.name)
+        source.copyTo(destination, overwrite = true)
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            destination,
+        )
     }
 
     private suspend fun exportAppUsage(): File {

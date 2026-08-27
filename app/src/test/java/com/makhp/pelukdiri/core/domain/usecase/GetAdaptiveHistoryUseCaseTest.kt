@@ -83,6 +83,7 @@ class GetAdaptiveHistoryUseCaseTest {
         override suspend fun executeFullBackfill(daysHistory: Int, force: Boolean) = Unit
         override suspend fun updateAppScreenTime(
             packageName: String,
+            appName: String,
             date: LocalDate,
             newScreenTimeMillis: Long,
         ) = Unit

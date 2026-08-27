@@ -75,6 +75,7 @@ enum class FailedInterventionOperation {
     START,
     RESTORE,
     SUBMIT_ANSWER,
+    RETRY_CHALLENGE,
     EMERGENCY_BYPASS,
     COMPLETE,
 }

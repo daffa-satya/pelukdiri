@@ -1,16 +1,9 @@
 package com.makhp.pelukdiri.worker
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
-import android.content.pm.ServiceInfo
-import android.os.Build
-import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
-import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.collector.AppUsageCollector
 import com.makhp.pelukdiri.core.domain.model.UsageSensorLog
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
@@ -42,9 +35,6 @@ class UsageSyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            // Set as foreground service to prevent being killed
-            setForeground(createForegroundInfo())
-
             // 1. Refresh general usage data (AppUsage & DailySummary)
             usageRepository.refreshUsageData()
 
@@ -144,42 +134,6 @@ class UsageSyncWorker @AssistedInject constructor(
                     userPreferencesRepository.setLastLimitReminderTimestamp(System.currentTimeMillis())
                 }
             }
-        }
-
-        // 4. Update the persistent daily status notification
-        notificationHelper.updateDailyUsageNotification(
-            totalUsageMillis = monitoredUsageMillis,
-            adaptiveLimitMinutes = limitMinutes
-        )
-    }
-
-    private fun createForegroundInfo(): ForegroundInfo {
-        val channelId = "usage_sync_channel"
-        val notificationId = 1
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = applicationContext.getString(R.string.notification_sync_channel_name)
-            val descriptionText = applicationContext.getString(R.string.notification_sync_channel_description)
-            val importance = NotificationManager.IMPORTANCE_LOW
-            val channel = NotificationChannel(channelId, name, importance).apply {
-                description = descriptionText
-            }
-            val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val notification = NotificationCompat.Builder(applicationContext, channelId)
-            .setContentTitle(applicationContext.getString(R.string.notification_sync_active_title))
-            .setContentText(applicationContext.getString(R.string.notification_sync_collecting))
-            .setSmallIcon(R.drawable.ic_notification)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .build()
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            ForegroundInfo(notificationId, notification)
         }
     }
 }

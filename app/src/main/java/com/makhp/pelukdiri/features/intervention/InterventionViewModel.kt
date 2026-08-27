@@ -464,6 +464,10 @@ class InterventionViewModel @Inject constructor(
     }
 
     fun resetToIdle() {
+        if (
+            _uiState.value !is InterventionUiState.CorrectAnswer &&
+            _uiState.value !is InterventionUiState.PatternCorrectAnswer
+        ) return
         if (isCompletionProcessing) return
         isCompletionProcessing = true
         viewModelScope.launch {
@@ -488,6 +492,46 @@ class InterventionViewModel @Inject constructor(
         }
     }
 
+    fun retryAfterIncorrectAnswer() {
+        if (isAnswerProcessing) return
+        val incorrectState = _uiState.value
+        if (
+            incorrectState !is InterventionUiState.IncorrectAnswer &&
+            incorrectState !is InterventionUiState.PatternIncorrectAnswer
+        ) return
+
+        isAnswerProcessing = true
+        questionJob = viewModelScope.launch {
+            try {
+                when (incorrectState) {
+                    is InterventionUiState.IncorrectAnswer -> {
+                        questionStartTimeMs = timeProvider.nowMillis()
+                        publishState(
+                            InterventionUiState.QuestionActive(
+                                question = cognitiveQuestionGenerator.generateQuestion(currentDifficulty),
+                                assessment = incorrectState.assessment,
+                                remainingBypasses = incorrectState.remainingBypasses,
+                            )
+                        )
+                    }
+                    is InterventionUiState.PatternIncorrectAnswer -> startPatternPlayback(
+                        InterventionUiState.PatternActive(
+                            question = patternQuestionGenerator.generateQuestion(currentDifficulty),
+                            assessment = incorrectState.assessment,
+                            remainingBypasses = incorrectState.remainingBypasses,
+                        ),
+                        resetResponseTimer = true,
+                    )
+                    else -> Unit
+                }
+            } catch (_: Exception) {
+                showOperationError(FailedInterventionOperation.RETRY_CHALLENGE)
+            } finally {
+                isAnswerProcessing = false
+            }
+        }
+    }
+
     fun retryLastOperation() {
         val errorState = _uiState.value as? InterventionUiState.Error ?: return
         val previousState = stateBeforeError
@@ -508,6 +552,7 @@ class InterventionViewModel @Inject constructor(
                 is InterventionUiState.PatternActive -> submitPatternAnswer(state)
                 else -> submitAnswer()
             }
+            FailedInterventionOperation.RETRY_CHALLENGE -> retryAfterIncorrectAnswer()
             FailedInterventionOperation.EMERGENCY_BYPASS -> emergencyBypass()
             FailedInterventionOperation.COMPLETE -> resetToIdle()
         }
@@ -555,6 +600,9 @@ class InterventionViewModel @Inject constructor(
             }
         }
     }
+
+    fun currentResponseTimeMs(): Long =
+        (timeProvider.nowMillis() - questionStartTimeMs).coerceAtLeast(0L)
 
     internal companion object {
         const val TAG = "InterventionViewModel"

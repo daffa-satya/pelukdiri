@@ -3,7 +3,7 @@ package com.makhp.pelukdiri.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val PelukBackground = Color(0xFFF8F9FA) // Soft off-white
-val PelukSurface = Color(0xFFFFFFFF)
+val PelukSurface = Color(0xFFFCFCFC) // Off-white surface
 val PelukPrimary = Color(0xFF4CAF50)
 val PelukPrimaryDark = Color(0xFF2E7D32)
 val PelukPrimaryLight = Color(0xFFE8F5E9)

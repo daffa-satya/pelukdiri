@@ -7,7 +7,12 @@ import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 
 interface UsageRepository {
-    suspend fun updateAppScreenTime(packageName: String, date: LocalDate, newScreenTimeMillis: Long)
+    suspend fun updateAppScreenTime(
+        packageName: String,
+        appName: String,
+        date: LocalDate,
+        newScreenTimeMillis: Long
+    )
     fun getDailyUsage(date: LocalDate): Flow<List<AppUsage>>
     fun getDailySummary(date: LocalDate): Flow<DailySummary?>
     fun getUsageHistory(startDate: LocalDate, endDate: LocalDate): Flow<List<DailySummary>>

@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri.core.domain.engine
 
 import com.makhp.pelukdiri.core.domain.model.ControlConfig
+import com.makhp.pelukdiri.core.domain.model.DeviationConfig
 import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -81,6 +82,113 @@ class DifficultyControllerTest {
         assertEquals(3, afterOne.nextLevel)
         assertEquals(3, afterTwo.nextLevel)
         assertEquals(2, afterThree.nextLevel)
+    }
+
+    @Test
+    fun `candidate three exits level one after two valid successes`() {
+        val candidate = DifficultyController(ControlConfig.CANDIDATE_3)
+
+        val afterOne = candidate.calculate(
+            deviation = 0.0,
+            performance = 0.5,
+            sensitivity = 0.0,
+            currentLevel = 1,
+            insufficientEvidence = true,
+            latestResponseSucceeded = true,
+            consecutiveSuccesses = 1,
+        )
+        val afterTwo = candidate.calculate(
+            deviation = 0.0,
+            performance = 0.5,
+            sensitivity = 0.0,
+            currentLevel = 1,
+            insufficientEvidence = true,
+            latestResponseSucceeded = true,
+            consecutiveSuccesses = 2,
+        )
+
+        assertEquals(1.0, afterTwo.target, 0.001)
+        assertEquals(1, afterOne.nextLevel)
+        assertEquals(2, afterTwo.nextLevel)
+    }
+
+    @Test
+    fun `candidate three keeps level two when formula target is one`() {
+        val candidate = DifficultyController(ControlConfig.CANDIDATE_3)
+
+        val result = candidate.calculate(
+            deviation = 0.0,
+            performance = 0.0,
+            sensitivity = 0.0,
+            currentLevel = 2,
+            insufficientEvidence = false,
+        )
+
+        assertEquals(1.0, result.target, 0.001)
+        assertEquals(2, result.nextLevel)
+    }
+
+    @Test
+    fun `candidate three aggressive deviation points map to expected targets`() {
+        val deviation = DeviationEngine(DeviationConfig.CANDIDATE_3)
+        val candidate = DifficultyController(ControlConfig.CANDIDATE_3)
+
+        val midpoint = candidate.calculate(
+            deviation.anchoredLogistic(2.0), 1.0, 0.0, 2, false,
+        )
+        val elevated = candidate.calculate(
+            deviation.anchoredLogistic(5.0), 1.0, 0.0, 2, false,
+        )
+        val high = candidate.calculate(
+            deviation.anchoredLogistic(10.0), 1.0, 0.0, 3, false,
+        )
+
+        assertEquals(1.9024, midpoint.target, 0.0001)
+        assertEquals(2, midpoint.nextLevel)
+        assertEquals(3.2093, elevated.target, 0.0001)
+        assertEquals(3, elevated.nextLevel)
+        assertEquals(4.4847, high.target, 0.0001)
+        assertEquals(4, high.nextLevel)
+    }
+
+    @Test
+    fun `candidate three allows level one after three failures`() {
+        val candidate = DifficultyController(ControlConfig.CANDIDATE_3)
+
+        val result = candidate.calculate(
+            deviation = 0.0,
+            performance = 0.0,
+            sensitivity = 0.0,
+            currentLevel = 2,
+            insufficientEvidence = true,
+            consecutiveFailures = 3,
+            latestResponseFailed = true,
+        )
+
+        assertEquals(1, result.nextLevel)
+    }
+
+    @Test
+    fun `candidate three ordinary decrease requires two failures`() {
+        val candidate = DifficultyController(ControlConfig.CANDIDATE_3)
+        val correct = candidate.calculate(
+            0.0, 0.0, 0.0, 3, false,
+            latestResponseSucceeded = true,
+        )
+        val afterOneFailure = candidate.calculate(
+            0.0, 0.0, 0.0, 3, true,
+            consecutiveFailures = 1,
+            latestResponseFailed = true,
+        )
+        val afterTwoFailures = candidate.calculate(
+            0.0, 0.0, 0.0, 3, true,
+            consecutiveFailures = 2,
+            latestResponseFailed = true,
+        )
+
+        assertEquals(3, correct.nextLevel)
+        assertEquals(3, afterOneFailure.nextLevel)
+        assertEquals(2, afterTwoFailures.nextLevel)
     }
 
     @Test

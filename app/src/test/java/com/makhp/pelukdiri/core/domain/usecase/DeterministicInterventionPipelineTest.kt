@@ -155,6 +155,8 @@ class DeterministicInterventionPipelineTest {
             FrequencyController(config),
         )
         val lockManager = InterventionLockManager()
+        val eligibilityAdaptiveLimitRepository = mockk<AdaptiveLimitRepository>()
+        coEvery { eligibilityAdaptiveLimitRepository.getLimitForDate(any()) } returns null
         val eligibility = EvaluateInterventionEligibilityUseCase(
             usageCollector,
             preferences,
@@ -163,6 +165,7 @@ class DeterministicInterventionPipelineTest {
             controlEngine,
             logRepository,
             decisionRepository,
+            eligibilityAdaptiveLimitRepository,
             InterventionChallengeSelector { true },
             appUsageCollector,
             lockManager,

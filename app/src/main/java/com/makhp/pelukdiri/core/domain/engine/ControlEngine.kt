@@ -32,7 +32,13 @@ class ControlEngine @Inject constructor(
         timestampMs: Long = System.currentTimeMillis(),
         difficultyHistory: List<DifficultyHistoryEntry> = emptyList(),
         consecutiveFailures: Int = 0,
+        adaptiveLimitProgress: Double? = null,
     ): ControlResult {
+        val consecutiveSuccesses = if (lastPerformance?.isSuccess == true) {
+            1 + performanceHistory.size
+        } else {
+            0
+        }
         // 1. Fallback for Deviation
         if (deviation == null) {
             return safeDefault(
@@ -41,6 +47,8 @@ class ControlEngine @Inject constructor(
                 difficultyHistory,
                 consecutiveFailures,
                 lastPerformance?.isSuccess == false,
+                lastPerformance?.isSuccess == true,
+                consecutiveSuccesses,
             )
         }
 
@@ -76,10 +84,12 @@ class ControlEngine @Inject constructor(
             difficultyHistory,
             consecutiveFailures,
             lastPerformance?.isSuccess == false,
+            lastPerformance?.isSuccess == true,
+            consecutiveSuccesses,
         )
 
         // 5. Frequency
-        val freqResult = frequencyController.calculate(deviation, q)
+        val freqResult = frequencyController.calculate(deviation, q, adaptiveLimitProgress)
 
         val nextEligibleAt = timestampMs + (freqResult.intervalMinutes * 60 * 1000).toLong()
 
@@ -108,15 +118,26 @@ class ControlEngine @Inject constructor(
         difficultyHistory: List<DifficultyHistoryEntry>,
         consecutiveFailures: Int,
         latestResponseFailed: Boolean,
+        latestResponseSucceeded: Boolean,
+        consecutiveSuccesses: Int,
     ): ControlResult {
         val nextEligibleAt = timestampMs + (config.defaultFrequencyMinutes * 60 * 1000).toLong()
-        val proposedDifficulty = if (
-            config.defaultDifficulty < currentLevel &&
-            latestResponseFailed &&
-            consecutiveFailures < config.difficultyDecreaseEvidenceWindow
-        ) currentLevel else config.defaultDifficulty
-        val nextDifficulty = difficultyController.applyReversalGuard(
-            currentLevel, proposedDifficulty, difficultyHistory
+        var nextDifficulty = difficultyController.applyDecreaseEvidencePolicy(
+            currentLevel,
+            config.defaultDifficulty,
+            consecutiveFailures,
+            latestResponseFailed,
+        )
+        nextDifficulty = difficultyController.applyReversalGuard(
+            currentLevel, nextDifficulty, difficultyHistory
+        )
+        nextDifficulty = difficultyController.applyMinimumDifficultyPolicy(
+            currentLevel,
+            nextDifficulty,
+            consecutiveFailures,
+            latestResponseFailed,
+            latestResponseSucceeded,
+            consecutiveSuccesses,
         )
         return ControlResult(
             deviation = null,
