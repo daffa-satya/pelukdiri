@@ -3,7 +3,35 @@ package com.makhp.pelukdiri.core.domain.repository
 import com.makhp.pelukdiri.core.domain.model.AggressivenessLevel
 import kotlinx.coroutines.flow.Flow
 
+data class UserPreferencesSnapshot(
+    val isHistoryBackfilled: Boolean = false,
+    val lastSyncedTimestamp: Long = 0L,
+    val emergencyBypassUntil: Long = 0L,
+    val monitoredPackages: Set<String> = emptySet(),
+    val aggressivenessLevel: AggressivenessLevel = AggressivenessLevel.BALANCED,
+    val isFixedLimitEnabled: Boolean = false,
+    val fixedDailyLimitMinutes: Int = 60,
+    val bedtime: String? = null,
+    val wakeTime: String? = null,
+    val currentDifficulty: Int = 2,
+    val nextEligibleInterventionAt: Long = 0L,
+    val activeInterventionSession: String? = null,
+    val userNickname: String = "User",
+    val username: String = "@user",
+    val profileImagePath: String? = null,
+    val isOnboardingCompleted: Boolean = false,
+    val isDailySummaryEnabled: Boolean = true,
+    val isWeeklyReflectionEnabled: Boolean = true,
+    val isLimitReminderEnabled: Boolean = true,
+    val isInterventionReminderEnabled: Boolean = true,
+    val isDndEnabled: Boolean = false,
+    val lastDailySummaryDate: String? = null,
+    val lastWeeklyReflectionDate: String? = null,
+    val lastLimitReminderTimestamp: Long = 0L,
+)
+
 interface UserPreferencesRepository {
+    val snapshot: Flow<UserPreferencesSnapshot>
     val isHistoryBackfilled: Flow<Boolean>
     val lastSyncedTimestamp: Flow<Long>
     val emergencyBypassUntil: Flow<Long>

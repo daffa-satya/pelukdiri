@@ -4,31 +4,42 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import com.makhp.pelukdiri.core.domain.model.AppUsage
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.math.min
 
 @Singleton
 class UsageEventCollector @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val appUsageCollector: AppUsageCollector,
     private val reconstructor: UsageEventReconstructor,
-    private val screenReconstructor: ScreenInteractiveReconstructor
+    private val screenReconstructor: ScreenInteractiveReconstructor,
+    private val timeProvider: TimeProvider,
 ) {
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
+    data class DailyUsageAndScreenOn(
+        val usageList: List<AppUsage>,
+        val screenOnMillis: Long
+    )
+
+    data class DailySessionMetrics(
+        val appInsights: Map<String, AppUsageInsight>,
+        val longestSessionMillis: Long,
+        val hourlyUsage: List<Long>,
+    )
+
     /**
-     * Reconstructs usage for a specific local date.
-     * Uses a context window before the day start to ensure session continuity.
+     * Reconstructs usage and screen-on time for a specific local date in a single event pass.
      */
-    fun getUsageForDay(date: LocalDate): List<AppUsage> {
+    fun getUsageAndScreenOnForDay(date: LocalDate): DailyUsageAndScreenOn {
         val day = reconstructDay(date)
         val usageMap = reconstructor.aggregateUsage(day.sessions, day.startMillis, day.endMillis)
 
-        return usageMap.filter { it.value.duration > 0 }
+        val usageList = usageMap.filter { it.value.duration > 0 }
             .map { (pkg, stats) ->
                 AppUsage(
                     packageName = pkg,
@@ -37,11 +48,44 @@ class UsageEventCollector @Inject constructor(
                     lastUsedTimestamp = stats.lastTimestamp
                 )
             }
+
+        val initialStartTime = findScreenStateAtTimestamp(day.contextEvents)
+        val screenOnMillis = screenReconstructor.calculateTotalScreenOn(day.events, day.startMillis, day.endMillis, initialStartTime)
+
+        return DailyUsageAndScreenOn(usageList, screenOnMillis)
     }
 
-    fun getLongestSessionForDay(date: LocalDate): Long {
+    /**
+     * Reconstructs usage for a specific local date.
+     * Uses a context window before the day start to ensure session continuity.
+     */
+    fun getUsageForDay(date: LocalDate): List<AppUsage> {
+        return getUsageAndScreenOnForDay(date).usageList
+    }
+
+    /** Reuses one UsageEvents reconstruction for all session-based analytics. */
+    fun getSessionMetricsForDay(date: LocalDate): DailySessionMetrics {
         val day = reconstructDay(date)
-        return reconstructor.longestSessionDuration(day.sessions, day.startMillis, day.endMillis)
+        return DailySessionMetrics(
+            appInsights = reconstructor.appInsights(
+                events = day.events,
+                sessions = day.sessions,
+                rangeStart = day.startMillis,
+                rangeEnd = day.endMillis,
+                interstitialPackages = setOf(context.packageName),
+            ),
+            longestSessionMillis = reconstructor.longestSessionDuration(
+                sessions = day.sessions,
+                rangeStart = day.startMillis,
+                rangeEnd = day.endMillis,
+            ),
+            hourlyUsage = reconstructor.aggregateHourlyUsage(
+                sessions = day.sessions,
+                rangeStart = day.startMillis,
+                rangeEnd = day.endMillis,
+                zoneId = day.zoneId,
+            ),
+        )
     }
 
     /**
@@ -60,64 +104,49 @@ class UsageEventCollector @Inject constructor(
         )
     }
 
-    fun getHourlyUsageForDay(date: LocalDate): List<Long> {
-        val day = reconstructDay(date)
-        return reconstructor.aggregateHourlyUsage(
-            sessions = day.sessions,
-            rangeStart = day.startMillis,
-            rangeEnd = day.endMillis,
-            zoneId = ZoneId.systemDefault(),
-        )
-    }
-
     private fun reconstructDay(date: LocalDate): ReconstructedDay {
-        val zoneId = ZoneId.systemDefault()
-        val dayStart = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val dayEnd = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val now = System.currentTimeMillis()
-        val queryEnd = min(dayEnd, now)
+        val zoneId = timeProvider.zoneId()
+        val bounds = usageDayBounds(date, zoneId)
+        val queryEnd = bounds.queryEnd(timeProvider.nowMillis())
 
         // 1. Establish state at dayStart by looking back up to 24 hours
-        val contextStart = dayStart - (24 * 60 * 60 * 1000)
-        val contextEvents = fetchEvents(contextStart, dayStart)
+        val contextStart = bounds.startMillis - (24 * 60 * 60 * 1000)
+        val contextEvents = fetchEvents(contextStart, bounds.startMillis)
         val initialState = findStateAtTimestamp(contextEvents)
 
         // 2. Query today's events
-        val events = fetchEvents(dayStart, queryEnd)
+        val events = fetchEvents(bounds.startMillis, queryEnd)
 
         // 3. Reconstruct
         val sessions = reconstructor.reconstructSessions(
             events = events,
             queryEnd = queryEnd,
             initialPackage = initialState?.packageName,
-            initialStartTime = initialState?.timestamp ?: dayStart
+            initialStartTime = initialState?.timestamp ?: bounds.startMillis
         )
-        return ReconstructedDay(sessions, events, dayStart, queryEnd)
+        return ReconstructedDay(
+            sessions = sessions,
+            events = events,
+            contextEvents = contextEvents,
+            startMillis = bounds.startMillis,
+            endMillis = queryEnd,
+            zoneId = zoneId,
+        )
     }
 
     private data class ReconstructedDay(
         val sessions: List<UsageSession>,
         val events: List<UsageEvent>,
+        val contextEvents: List<UsageEvent>,
         val startMillis: Long,
         val endMillis: Long,
+        val zoneId: ZoneId,
     )
 
     fun getScreenOnMillisForDay(date: LocalDate): Long {
-        val zoneId = ZoneId.systemDefault()
-        val dayStart = date.atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val dayEnd = date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-        val now = System.currentTimeMillis()
-        val queryEnd = min(dayEnd, now)
-
-        // 1. Establish screen state at dayStart by looking back up to 24 hours
-        val contextStart = dayStart - (24 * 60 * 60 * 1000)
-        val contextEvents = fetchEvents(contextStart, dayStart)
-        val initialStartTime = findScreenStateAtTimestamp(contextEvents)
-
-        // 2. Query today's events
-        val events = fetchEvents(dayStart, queryEnd)
-        
-        return screenReconstructor.calculateTotalScreenOn(events, dayStart, queryEnd, initialStartTime)
+        val day = reconstructDay(date)
+        val initialStartTime = findScreenStateAtTimestamp(day.contextEvents)
+        return screenReconstructor.calculateTotalScreenOn(day.events, day.startMillis, day.endMillis, initialStartTime)
     }
 
     private fun findScreenStateAtTimestamp(events: List<UsageEvent>): Long? {

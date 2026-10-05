@@ -17,16 +17,16 @@ class SensitivityCalculatorTest {
     @Test
     fun `lux sensitivity - log normalized behavior`() {
         // At or below dark reference -> 1.0
-        assertEquals(1.0, calculator.calculate(0f, null, null), 0.001)
-        assertEquals(1.0, calculator.calculate(10f, null, null), 0.001)
+        assertEquals(1.0, calculator.calculate(0f, null, null, LocalTime.NOON), 0.001)
+        assertEquals(1.0, calculator.calculate(10f, null, null, LocalTime.NOON), 0.001)
         
         // At or above bright reference -> 0.0
-        assertEquals(0.0, calculator.calculate(500f, null, null), 0.001)
-        assertEquals(0.0, calculator.calculate(1000f, null, null), 0.001)
+        assertEquals(0.0, calculator.calculate(500f, null, null, LocalTime.NOON), 0.001)
+        assertEquals(0.0, calculator.calculate(1000f, null, null, LocalTime.NOON), 0.001)
         
         // Intermediate value
         // L=100 -> Q = 1 - (ln(101)-ln(11))/(ln(501)-ln(11)) approx 0.418
-        assertEquals(0.418, calculator.calculate(100f, null, null), 0.01)
+        assertEquals(0.418, calculator.calculate(100f, null, null, LocalTime.NOON), 0.01)
     }
 
     @Test

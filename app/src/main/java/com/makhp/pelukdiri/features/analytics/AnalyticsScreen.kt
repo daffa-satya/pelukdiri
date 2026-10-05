@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -354,25 +355,26 @@ private fun DateSelector(
             )
             Spacer(Modifier.width(8.dp))
             
-            val localeID = remember { Locale.forLanguageTag("id-ID") }
+            val locale = Locale.forLanguageTag(LocalConfiguration.current.locales[0].toLanguageTag())
             if (period == AnalyticsPeriod.DAILY) {
                 Text(
-                    text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", localeID)),
+                    text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", locale)),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.clickable { showEndPicker = true }
                 )
             } else {
                 val start = when(period) {
+                    AnalyticsPeriod.DAILY -> date
                     AnalyticsPeriod.WEEKLY -> date.minusDays(6)
                     AnalyticsPeriod.MONTHLY -> date.withDayOfMonth(1)
-                    else -> date
                 }
                 val end = when(period) {
                     AnalyticsPeriod.MONTHLY -> date.withDayOfMonth(date.lengthOfMonth())
-                    else -> date
+                    AnalyticsPeriod.DAILY,
+                    AnalyticsPeriod.WEEKLY -> date
                 }
-                val formatter = DateTimeFormatter.ofPattern("d MMM", localeID)
-                val yearFormatter = DateTimeFormatter.ofPattern("yyyy", localeID)
+                val formatter = DateTimeFormatter.ofPattern("d MMM", locale)
+                val yearFormatter = DateTimeFormatter.ofPattern("yyyy", locale)
                 
                 Surface(
                     onClick = { showStartPicker = true },
@@ -394,7 +396,7 @@ private fun DateSelector(
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     val endText = if (period == AnalyticsPeriod.MONTHLY) {
-                        end.format(DateTimeFormatter.ofPattern("MMMM yyyy", localeID))
+                        end.format(DateTimeFormatter.ofPattern("MMMM yyyy", locale))
                     } else {
                         "${end.format(formatter)} ${end.format(yearFormatter)}"
                     }

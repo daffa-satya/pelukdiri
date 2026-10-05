@@ -4,6 +4,7 @@ import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import com.makhp.pelukdiri.core.domain.model.DeviationConfig
 import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import com.makhp.pelukdiri.core.domain.model.PerformanceMetrics
+import java.time.LocalTime
 import java.util.Random
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -129,6 +130,7 @@ class SyntheticPolicyTuningTest {
         val intervals = mutableListOf<Double>()
         val moves = mutableListOf<Int>()
         val reversals = mutableListOf<Int>()
+        val difficultyCounts = IntArray(6)
         var difficulty = 2
         var validResponses = 0
         var mathResponses = 0
@@ -165,6 +167,7 @@ class SyntheticPolicyTuningTest {
                 bedtime = null,
                 wakeTime = null,
                 currentLevel = difficulty,
+                currentTime = LocalTime.NOON,
                 timestampMs = index.toLong(),
                 difficultyHistory = difficultyHistory,
                 consecutiveFailures = consecutiveFailures,
@@ -176,6 +179,7 @@ class SyntheticPolicyTuningTest {
                 reversals += index
             }
             difficulty = result.nextDifficulty
+            difficultyCounts[difficulty]++
             intervals += result.intervalMinutes
 
             if (step.nonResponseSample < nonResponseRate) {
@@ -216,6 +220,7 @@ class SyntheticPolicyTuningTest {
             immediateReversalRate = reversals.size / (trace.size - 1.0),
             hasClusteredReversals = reversals.zipWithNext().any { (first, second) -> second - first <= 3 },
             maximumDifficultyMove = moves.maxOf { abs(it) },
+            difficultyCounts = difficultyCounts.toList(),
         )
     }
 
@@ -280,6 +285,7 @@ class SyntheticPolicyTuningTest {
     private fun List<Metrics>.summary() = "success=${meanOf { it.successRate }}, " +
         "math=${meanOf { it.mathSuccessRate }}, pattern=${meanOf { it.patternSuccessRate }}, " +
         "response=${meanOf { it.responseRate }}, interval=${meanOf { it.averageIntervalMinutes }}, " +
+        "levels=${(1..5).associateWith { level -> sumOf { it.difficultyCounts[level] } }}, " +
         "reversal=${meanOf { it.immediateReversalRate }}, " +
         "clusteredSeeds=${count { it.hasClusteredReversals }}/${size}"
 
@@ -323,6 +329,7 @@ class SyntheticPolicyTuningTest {
         val immediateReversalRate: Double,
         val hasClusteredReversals: Boolean,
         val maximumDifficultyMove: Int,
+        val difficultyCounts: List<Int>,
     )
 
     private companion object {

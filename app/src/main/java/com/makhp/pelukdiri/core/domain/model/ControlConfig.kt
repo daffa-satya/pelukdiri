@@ -46,6 +46,9 @@ data class ControlConfig(
 
     // Normal floor; level 1 remains an explicit performance-recovery state when set to 2.
     val normalMinimumDifficulty: Int = 1,
+
+    // Exponent applied only to the normalized difficulty signal before level mapping.
+    val difficultyCurveExponent: Double = 1.0,
     
     // Maximum Difficulty Change per update
     val maxDifficultyChangePerUpdate: Int = 1,
@@ -54,7 +57,7 @@ data class ControlConfig(
     val reversalGuardInterventions: Int = 3,
 ) {
     companion object {
-        const val POLICY_VERSION = "v1.6-two-success-recovery"
+        const val POLICY_VERSION = "v1.9-acknowledged-launch"
 
         /** Pre-tuning control constants, retained as a safe comparison baseline. */
         val LEGACY_DEFAULT = ControlConfig(
@@ -74,6 +77,7 @@ data class ControlConfig(
             ordinaryDecreaseFailureWindow = 2,
             recoverySuccessWindow = 2,
             normalMinimumDifficulty = 2,
+            difficultyCurveExponent = 0.5,
             useAdaptiveLimitFrequencyFloor = true,
         )
     }

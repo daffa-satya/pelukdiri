@@ -4,6 +4,7 @@ import com.makhp.pelukdiri.core.domain.model.ControlConfig
 import com.makhp.pelukdiri.core.domain.model.DifficultyHistoryEntry
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 @Singleton
@@ -41,8 +42,11 @@ class DifficultyController @Inject constructor(
         // Normalize
         val normalizedSignal = controlSignal.coerceIn(0.0, 1.0)
         
-        // difficultyTarget = 1 + 4 * C_D_norm
-        val target = 1.0 + (4.0 * normalizedSignal)
+        // Candidate 3 anchors ordinary adaptation at its normal Level-2 floor.
+        // Policies whose normal minimum is Level 1 retain the historical mapping.
+        val targetFloor = config.normalMinimumDifficulty.toDouble()
+        val curvedSignal = normalizedSignal.pow(config.difficultyCurveExponent)
+        val target = targetFloor + ((5.0 - targetFloor) * curvedSignal)
         
         // Stabilization: clamp change to +/- 1
         val roundedTarget = target.roundToInt().coerceIn(1, 5)
@@ -100,7 +104,6 @@ class DifficultyController @Inject constructor(
         }
 
         val levelOneAllowed = currentLevel == 2 &&
-            proposedLevel < 2 &&
             latestResponseFailed &&
             consecutiveFailures >= config.difficultyDecreaseEvidenceWindow
         return if (levelOneAllowed) 1 else proposedLevel.coerceAtLeast(2)

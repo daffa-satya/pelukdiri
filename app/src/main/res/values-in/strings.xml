@@ -1,0 +1,440 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">PELUKDIRI</string>
+    <plurals name="duration_hours">
+        <item quantity="one">%1$dj</item>
+        <item quantity="other">%1$dj</item>
+    </plurals>
+    <plurals name="duration_minutes">
+        <item quantity="one">%1$dm</item>
+        <item quantity="other">%1$dm</item>
+    </plurals>
+    <string name="accessibility_service_description">Memantau penggunaan aplikasi dan mencegah waktu layar berlebih</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_header_title">PELUKDIRI</string>
+    <string name="dashboard_screen_time_today">WAKTU LAYAR PANTAUAN</string>
+    <string name="dashboard_adaptive_limit">Batas Adaptif</string>
+    <string name="dashboard_recalculate_limit">Hitung ulang</string>
+    <string name="dashboard_recalculate_limit_failed">Batas adaptif tidak dapat dihitung ulang.</string>
+    <string name="dashboard_load_failed">Dashboard tidak dapat dimuat.</string>
+    <string name="dashboard_refresh_failed">Data dashboard tidak dapat diperbarui.</string>
+    <string name="dashboard_from_yesterday">%1$d%% dari kemarin</string>
+    <string name="dashboard_more_than_yesterday">%1$d%% lebih lama dari kemarin</string>
+    <string name="dashboard_backfill_14_days">Ambil data</string>
+    <string name="settings_backfill_desc">Ambil semua penggunaan yang tersedia hingga 14 hari terakhir</string>
+    <string name="settings_backfill_error_title">Ambil data gagal</string>
+    <string name="settings_backfill_error_msg">Riwayat penggunaan tidak dapat diambil. Periksa izin akses penggunaan, lalu coba lagi.</string>
+    <string name="dashboard_usage_access_needed">Akses penggunaan diperlukan agar waktu layar bisa dihitung.</string>
+    <string name="dashboard_open_permission">Buka izin</string>
+    <string name="dashboard_accessibility_needed">Aktifkan layanan aksesibilitas untuk menjalankan intervensi.</string>
+    <string name="dashboard_enable">Aktifkan</string>
+    <string name="dashboard_battery_optimization_needed">Izinkan aplikasi berjalan tanpa optimasi baterai agar pemantauan tetap aktif.</string>
+    <string name="dashboard_allow">Izinkan</string>
+    <string name="dashboard_top_apps_today">APLIKASI TERATAS HARI INI</string>
+    <string name="dashboard_view_all">Lihat semua</string>
+    <string name="dashboard_no_usage_data">Tidak ada data penggunaan hari ini.</string>
+    <string name="dashboard_insufficient_data">Data tidak mencukupi</string>
+    <string name="dashboard_home">Beranda</string>
+    <string name="dashboard_progress">Analitik</string>
+    <string name="dashboard_settings">Pengaturan</string>
+    <string name="dashboard_tap_to_retry">%1$s\nKetuk untuk mencoba lagi</string>
+    <string name="dashboard_insight_title">WAWASAN HARI INI</string>
+    <string name="dashboard_encouragement">Jeda singkat, untuk dirimu.\nKamu sedang menjadi lebih baik.</string>
+
+    <!-- Analytics / Progress -->
+    <string name="analytics_edit_usage">Ubah waktu penggunaan</string>
+    <string name="analytics_edit_usage_title">Ubah penggunaan %1$s</string>
+    <string name="analytics_edit_usage_hours">Jam</string>
+    <string name="analytics_edit_usage_minutes">Menit</string>
+    <string name="analytics_edit_usage_save">Simpan</string>
+    <string name="analytics_edit_usage_cancel">Batal</string>
+    <string name="analytics_edit_usage_notice">Perubahan data akan memperbarui ringkasan hari terpilih serta mempengaruhi perhitungan batas adaptif. <b>Ambil data dapat mengganti data yang diubah.</b></string>
+    <string name="analytics_edit_usage_failed">Waktu penggunaan tidak dapat diubah. Ketuk untuk memuat ulang.</string>
+    <string name="analytics_edit_usage_daily_limit">Total penggunaan aplikasi dalam satu hari tidak dapat melebihi 24 jam.</string>
+    <string name="analytics_title">Analitik</string>
+    <string name="analytics_period_daily">Harian</string>
+    <string name="analytics_period_weekly">Mingguan</string>
+    <string name="analytics_period_monthly">Bulanan</string>
+    <string name="analytics_metric_total_screentime">Total Waktu Layar</string>
+    <string name="analytics_metric_social_media_screentime">Waktu Layar Pantauan</string>
+    <string name="analytics_avg_screentime">Rerata Waktu Layar</string>
+    <string name="analytics_metric_longest_session">Sesi Terlama</string>
+    <string name="analytics_metric_interventions">Intervensi</string>
+    <string name="analytics_vs_period">%1$s vs %2$s</string>
+    <string name="analytics_comparison_yesterday">kemarin</string>
+    <string name="analytics_comparison_previous_week">minggu sebelumnya</string>
+    <string name="analytics_comparison_previous_month">bulan sebelumnya</string>
+    <string name="analytics_comparison_new">baru</string>
+    <string name="analytics_minutes_short">%1$d m</string>
+    <string name="analytics_x_axis_explanation">Sumbu X menunjukkan jam dalam sehari (00.00–24.00).</string>
+    <string name="analytics_graph_calculate">Hitung grafik</string>
+    <string name="analytics_graph_calculating">Menghitung grafik…</string>
+    <string name="analytics_graph_failed">Grafik tidak dapat dihitung. Coba lagi.</string>
+    <string name="analytics_screen_time_over_time">GRAFIK WAKTU LAYAR</string>
+    <string name="analytics_top_apps">APLIKASI TERATAS</string>
+    <string name="analytics_fun_fact_empty">Mulai kelola waktu layarmu untuk melihat fakta menarik di sini!</string>
+    <string name="analytics_no_usage_data">Belum ada data penggunaan.</string>
+    <string name="analytics_insufficient_data">Data tidak mencukupi</string>
+    <string name="analytics_insight_positive_1">Kerja bagus!</string>
+    <string name="analytics_insight_positive_2">Mantap!</string>
+    <string name="analytics_insight_positive_3">Kelas!</string>
+    <string name="analytics_insight_positive_4">Hebat!</string>
+    <string name="analytics_insight_negative_1">Waspada!</string>
+    <string name="analytics_insight_negative_2">Gawat!</string>
+    <string name="analytics_insight_negative_3">Perbaiki polamu!</string>
+    <string name="analytics_insight_negative_4">Hati-hati!</string>
+    <string name="analytics_insight_sub_positive">Waktu layar harian kamu %1$s di bawah batas adaptif.</string>
+    <string name="analytics_insight_sub_negative">Waktu layar harian kamu %1$s di atas batas adaptif.</string>
+
+    <string name="analytics_fun_fact_guitar">Waktu %1$s setiap hari bisa dipakai bermain gitar.</string>
+    <string name="analytics_fun_fact_reading" tools:ignore="PluralsCandidate">Durasi %1$s ini cukup untuk membaca sekitar %2$d halaman buku.</string>
+    <string name="analytics_fun_fact_meditation" tools:ignore="PluralsCandidate">Daripada %1$s di layar, kamu bisa melakukan %2$d sesi meditasi.</string>
+    <string name="analytics_fun_fact_workout">Waktu %1$s yang terbuang bisa diubah menjadi sesi lari.</string>
+    <string name="analytics_fun_fact_language">Dalam %1$s, kamu bisa mempelajari puluhan kata baru dalam bahasa asing.</string>
+    <string name="analytics_prev">Sebelumnya</string>
+    <string name="analytics_next">Selanjutnya</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_language_title">Bahasa aplikasi</string>
+    <string name="settings_language_desc">Pilih bahasa yang digunakan di PelukDiri.</string>
+    <string name="settings_language_system">Ikuti sistem</string>
+    <string name="settings_language_indonesian">Bahasa Indonesia</string>
+    <string name="settings_language_english">Bahasa Inggris</string>
+    <string name="settings_preferences_section">Preferensi</string>
+    <string name="settings_monitored_apps_title">Aplikasi Terpantau</string>
+    <string name="settings_monitored_apps_desc">Kelola aplikasi yang diawasi.</string>
+    <string name="settings_notifications_title">Notifikasi</string>
+    <string name="settings_export_csv_title">Ekspor CSV</string>
+    <string name="settings_export_csv_desc">Ekspor data penggunaan aplikasi dan intervensi.</string>
+    <string name="settings_info_section">Informasi</string>
+    <string name="settings_about_title">Tentang</string>
+    <string name="settings_informed_consent_title">Informed Consent</string>
+    <string name="settings_informed_consent_desc">Persetujuan penelitian.</string>
+    <string name="settings_about_desc">Github PELUKDIRI.</string>
+    <string name="settings_notifications_section_title">Daftar Notifikasi</string>
+    <string name="settings_notifications_auto_info">Aplikasi akan mengirimkan notifikasi secara otomatis untuk membantumu tetap sadar akan penggunaan layar.</string>
+    <string name="settings_notifications_mandatory_note">Kamu akan tetap menerima notifikasi penting ini secara rutin.</string>
+    <string name="settings_notifications_auto_banner_title">Notifikasi Otomatis</string>
+    <string name="settings_notifications_auto_banner_desc">PELUKDIRI memastikan kamu tetap terhubung dengan progres digitalmu.</string>
+    <string name="settings_about_header">Tentang</string>
+
+    <string name="profile_test_notification">Tes Notifikasi</string>
+    <string name="profile_test_onboarding">Tes Onboarding</string>
+    <string name="profile_test_lab">PELUKDIRI Test Lab</string>
+    <string name="common_logo_desc">PELUKDIRI Logo</string>
+    <string name="common_back">Kembali</string>
+    <string name="common_close">Tutup</string>
+    <string name="common_cancel">Batal</string>
+    <string name="common_search_hint">Cari aplikasi…</string>
+
+    <string name="apps_intervention_installed_title">Aplikasi Terpasang</string>
+    <string name="apps_intervention_selected_count_label" tools:ignore="PluralsCandidate">%1$d dipilih</string>
+    <string name="apps_intervention_save_button">Simpan Pilihan</string>
+
+    <string name="informed_consent_header">Informed Consent</string>
+    <string name="informed_consent_title">INFORMED CONSENT</string>
+    <string name="informed_consent_p1">Perkenalkan kami dari Tim “Mama, Aku Kecanduan HP” SMAN 70 Jakarta. Saat ini kami sedang melaksanakan penelitian dengan judul “PELUKDIRI (Perangkat Lunak Untuk Kesejahteraan Digital Remaja Indonesia): Sistem Pengaturan Waktu Layar Berbasis Teori Kontrol untuk Kesehatan Digital”.</string>
+    <string name="informed_consent_p2">Penelitian ini bertujuan untuk mengetahui apakah penggunaan aplikasi PELUKDIRI dengan intervensi tantangan kognitif adaptif dapat membantu mengurangi durasi penggunaan layar, khususnya pada aplikasi hiburan, tanpa meningkatkan tingkat stres pengguna secara signifikan. PELUKDIRI dirancang sebagai perangkat lunak kesejahteraan digital yang memberikan tantangan kognitif singkat berupa matematika mental dan pola ketika responden membuka aplikasi hiburan yang telah ditentukan.</string>
+    <string name="informed_consent_p3">Manfaat penelitian ini adalah memberikan pengalaman kepada responden dalam menggunakan teknologi yang dirancang untuk membantu meningkatkan kesadaran terhadap penggunaan waktu layar. Selain itu, hasil penelitian diharapkan dapat menjadi dasar pengembangan perangkat lunak kesejahteraan digital yang lebih adaptif dan sesuai dengan kebutuhan remaja.</string>
+    <string name="informed_consent_p4">Metode penelitian yang digunakan adalah penelitian kuantitatif eksperimental dengan desain repeated measures. Pengumpulan data dilakukan melalui aplikasi PELUKDIRI dan kuesioner. Responden akan menggunakan aplikasi selama periode penelitian, kemudian data penggunaan layar dan aktivitas intervensi akan dianalisis untuk melihat perubahan waktu layar selama periode pengukuran.</string>
+    <string name="informed_consent_p5">Penelitian ini dilakukan secara daring melalui smartphone masing-masing responden. Responden akan menggunakan aplikasi PELUKDIRI selama periode penelitian yang telah ditentukan. Selama penelitian berlangsung, responden diminta menggunakan smartphone seperti biasa dan tidak perlu sengaja mengubah kebiasaan penggunaan perangkatnya.</string>
+    <string name="informed_consent_p6">Pada saat responden membuka aplikasi hiburan yang telah dipilih untuk diberikan intervensi, PELUKDIRI akan menampilkan tantangan kognitif singkat sebelum aplikasi dapat digunakan. Tingkat intervensi dapat disesuaikan berdasarkan performa responden dalam menyelesaikan tantangan dengan batas tingkat kesulitan yang telah ditentukan.</string>
+    <string name="informed_consent_p7">Selama penelitian, aplikasi akan mengumpulkan data yang diperlukan untuk penelitian, seperti durasi waktu layar, durasi penggunaan aplikasi hiburan, jumlah pembukaan aplikasi, serta aktivitas dan performa intervensi. Responden juga akan diminta mengisi kuesioner untuk memberikan feedback mengenai pengalaman menggunakan aplikasi.</string>
+    <string name="informed_consent_p8">PELUKDIRI tidak digunakan untuk membaca isi pesan, foto, video, kontak, kata sandi, maupun isi percakapan pribadi responden. Data yang dikumpulkan hanya digunakan untuk keperluan penelitian.</string>
+    <string name="informed_consent_p9">Proses penggunaan aplikasi dapat menimbulkan ketidaknyamanan ringan, seperti merasa terganggu ketika intervensi muncul atau merasa kurang nyaman karena harus berhenti sejenak dari penggunaan aplikasi hiburan. Responden juga mungkin mengalami kesulitan ketika mengerjakan tantangan matematika mental atau pola. Intervensi dirancang dalam bentuk tantangan singkat dengan batas tingkat kesulitan yang telah ditentukan.</string>
+    <string name="informed_consent_p10">Data yang diperoleh akan dijaga kerahasiaannya dan hanya dapat diakses oleh peneliti. Data penelitian akan disimpan secara lokal pada laptop peneliti. Identitas responden akan menggunakan kode dalam proses pengolahan data dan tidak akan dicantumkan dalam penyajian hasil penelitian. Hasil penelitian akan disajikan dalam bentuk data kelompok, tabel, grafik, atau analisis statistik sehingga identitas responden tidak dapat diketahui.</string>
+    <string name="informed_consent_p11">Partisipasi dalam penelitian ini dilakukan sesuai prosedur penelitian dan persetujuan responden serta orang tua atau wali. Responden akan mendapatkan kompensasi sebesar Rp50.000,00 sebagai penghargaan atas waktu dan partisipasinya dalam penelitian. Kompensasi tersebut bukan merupakan paksaan untuk mengikuti penelitian.</string>
+    <string name="informed_consent_p12">Apabila terdapat pertanyaan, kendala dalam penggunaan aplikasi, atau hal yang ingin disampaikan berkaitan dengan penelitian ini, Kamu dapat menghubungi: josuaku091010@gmail.com (Joshua Leonardo Hilman Hutajulu) dan daffa.satya.alif@gmail.com (Daffa Satya Alif Siregar).</string>
+    <string name="settings_logout_title">Keluar</string>
+    <string name="settings_logout_desc">Keluar dari aplikasi PELUKDIRI.</string>
+    <string name="settings_export_confirm_title">Ekspor Data</string>
+    <string name="settings_export_confirm_msg">Semua data PELUKDIRI akan dikemas dalam ZIP berisi file CSV. Ekspor?</string>
+    <string name="settings_export_button">Ekspor</string>
+    <string name="settings_export_progress_title">Mengekspor data</string>
+    <string name="settings_export_progress_msg">Sedang menyiapkan file ZIP…</string>
+    <string name="settings_export_success_title">Ekspor selesai</string>
+    <string name="settings_export_success_msg">File tersimpan di:\n%1$s</string>
+    <string name="export_failed">Ekspor gagal</string>
+    <string name="export_storage_permission_required">Izin penyimpanan diperlukan untuk menyimpan ekspor ke folder Download pada Android 9.</string>
+    <string name="settings_export_close">Tutup</string>
+
+    <string name="settings_sleep_time_title">Jam Tidur</string>
+    <string name="settings_sleep_time_desc">Atur waktu tidurmu.</string>
+    <string name="settings_wake_time_title">Jam Bangun</string>
+    <string name="settings_wake_time_desc">Kapan harimu dimulai.</string>
+    <string name="settings_sleep_time_label">Waktu Tidur</string>
+    <string name="settings_wake_time_label">Waktu Bangun</string>
+
+    <!-- Adaptive Mode -->
+    <string name="adaptive_mode_title">Mode Adaptif</string>
+    <string name="adaptive_mode_active">Mode Adaptif Aktif</string>
+    <string name="adaptive_mode_active_desc">Sistem terus belajar dari kebiasaanmu untuk memberikan intervensi terbaik.</string>
+    <string name="adaptive_mode_intensity_title">Tingkat Agresivitas Intervensi</string>
+    <string name="adaptive_mode_intensity_desc">Tentukan seberapa ketat sistem akan memantau penggunaanmu.</string>
+    <string name="adaptive_mode_level_conservative">Konservatif</string>
+    <string name="adaptive_mode_level_balanced">Seimbang</string>
+    <string name="adaptive_mode_level_aggressive">Agresif</string>
+    <string name="adaptive_mode_prediction_title">Prediksi Hari Ini</string>
+    <string name="adaptive_mode_view_detail">Lihat detail</string>
+    <string name="adaptive_mode_predicted_limit">Batas Adaptif</string>
+    <string name="adaptive_mode_predicted_intensity">Intensitas</string>
+    <string name="adaptive_mode_difficulty">Tingkat Kesulitan</string>
+    <string name="adaptive_mode_monitored_apps">Aplikasi Dipantau</string>
+    <string name="adaptive_mode_monitored_apps_desc_format" tools:ignore="PluralsCandidate">Dari %1$d aplikasi</string>
+    <string name="adaptive_mode_prediction_detail_title">Detail Prediksi</string>
+    <string name="adaptive_mode_prediction_detail_msg">Algoritma memprediksi perilaku penggunaanmu berdasarkan data 14 hari terakhir untuk menentukan batas yang paling efektif namun tetap nyaman.</string>
+    <string name="adaptive_mode_understand">Mengerti</string>
+
+    <!-- Apps Intervention -->
+    <string name="apps_intervention_title">Aplikasi Terpantau</string>
+    <string name="apps_intervention_desc">Pilih aplikasi yang ingin dipantau.\nIntervensi akan muncul saat aplikasi ini dibuka.</string>
+    <string name="apps_intervention_loading">Memuat aplikasi</string>
+
+    <string name="apps_intervention_per_day_format">%1$s per hari</string>
+
+    <!-- Notification Settings -->
+    <string name="notification_settings_daily_summary">Ringkasan Harian</string>
+    <string name="notification_settings_daily_summary_desc">Dapatkan ringkasan penggunaan harianmu setiap malam.</string>
+    <string name="notification_settings_weekly_reflection">Refleksi Mingguan</string>
+    <string name="notification_settings_weekly_reflection_desc">Lihat refleksi dan progres mingguanmu setiap hari Minggu.</string>
+    <string name="notification_settings_limit_reminder">Pengingat Batas</string>
+    <string name="notification_settings_limit_reminder_desc">Pengingat ketika kamu mendekati atau mencapai batas waktu layar adaptif.</string>
+    <string name="notification_settings_limit_reminder_time">Saat mendekati limit</string>
+
+    <!-- Privacy Screen -->
+    <string name="privacy_title">Privasi</string>
+    <string name="privacy_commitment">Kami berkomitmen untuk melindungi privasi dan data pribadimu.</string>
+    <string name="privacy_prioritized_title">Privasi adalah prioritas kami</string>
+    <string name="privacy_prioritized_desc">Data kamu digunakan hanya untuk membantu PELUKDIRI bekerja lebih baik untukmu. Kami tidak menjual data kamu ke pihak manapun.</string>
+    <string name="privacy_collected_section">Data yang Kami Kumpulkan</string>
+    <string name="privacy_item_screen_time_title">Waktu Layar</string>
+    <string name="privacy_item_screen_time_desc">Durasi penggunaan aplikasi dan waktu layar harian.</string>
+    <string name="privacy_item_apps_opened_title">Aplikasi yang Dibuka</string>
+    <string name="privacy_item_apps_opened_desc">Informasi aplikasi yang kamu buka dan frekuensinya.</string>
+    <string name="privacy_item_intervention_title">Intervensi &amp; Progres</string>
+    <string name="privacy_item_intervention_desc">Riwayat intervensi, jawaban soal, dan progres mingguanmu.</string>
+    <string name="privacy_item_device_data_title">Data Perangkat (Ringan)</string>
+    <string name="privacy_item_device_data_desc">Informasi perangkat seperti model OS untuk mendukung stabilitas aplikasi.</string>
+    <string name="privacy_not_collected_title">Data yang Tidak Kami Kumpulkan</string>
+    <string name="privacy_not_collected_desc">Kami tidak mengakses pesan, kontak, lokasi, foto, mikrofon, kamera, atau konten pribadimu lainnya.</string>
+    <string name="privacy_ownership_section">Kepemilikan &amp; Penyimpanan Data</string>
+    <string name="privacy_item_local_storage_title">Penyimpanan Lokal</string>
+    <string name="privacy_item_local_storage_desc">Data kamu disimpan secara aman di perangkatmu dan tidak dikirim ke server eksternal.</string>
+    <string name="privacy_item_local_badge">Lokal</string>
+    <string name="privacy_questions_title">Punya pertanyaan tentang privasi?</string>
+    <string name="privacy_questions_desc">Hubungi kami di https://github.com/daffa-satya/pelukdiri</string>
+    <string name="privacy_delete_data_title">Hapus Data Saya</string>
+    <string name="privacy_delete_data_desc">Hapus semua data yang dikumpulkan oleh PELUKDIRI dari perangkat ini.</string>
+
+    <!-- About Screen -->
+
+    <!-- Profile Sidebar -->
+    <string name="profile_title">Profil Pengguna</string>
+    <string name="profile_image_description">Foto Profil</string>
+    <string name="profile_nickname">Nama Panggilan</string>
+    <string name="profile_username">Username</string>
+    <string name="profile_not_set">Belum diatur</string>
+    <string name="profile_close">Tutup</string>
+    <string name="profile_edit_nickname">Ubah Nama Panggilan</string>
+    <string name="profile_edit_username">Ubah Username</string>
+    <string name="profile_save">Simpan</string>
+    <string name="profile_cancel">Batal</string>
+    <string name="profile_select_source">Pilih Sumber Foto</string>
+    <string name="profile_gallery">Galeri</string>
+    <string name="profile_delete_photo">Hapus Foto Profil</string>
+    <string name="profile_test_intervention">Tes Intervensi MTK</string>
+    <string name="profile_test_intervention_pattern">Tes Intervensi Pola</string>
+
+    <!-- All Apps -->
+    <string name="all_apps_title">Aplikasi %1$s</string>
+    <string name="all_apps_add_app">Tambah Aplikasi</string>
+    <string name="all_apps_installed_not_used">Aplikasi Belum Digunakan</string>
+    <string name="all_apps_load_installed_failed">Daftar aplikasi tidak dapat dimuat.</string>
+    <string name="all_apps_no_apps_available">Tidak ada aplikasi lain yang dapat ditambahkan.</string>
+    <string name="common_retry">Coba lagi</string>
+
+    <!-- App Detail Insights -->
+    <string name="app_detail_great_job">Kerja bagus!</string>
+    <string name="app_detail_great_job_2">Mantap kelas!</string>
+    <string name="app_detail_great_job_3">Hebat!</string>
+    <string name="app_detail_great_job_4">Terus pertahankan!</string>
+    <string name="app_detail_watch_out">Berhenti sejenak!</string>
+    <string name="app_detail_watch_out_2">Waspada!</string>
+    <string name="app_detail_watch_out_3">Yuk, fokus lagi!</string>
+    <string name="app_detail_watch_out_4">Hati-hati!</string>
+    <string name="app_detail_spent_less">Kamu menghabiskan %1$d%% lebih sedikit waktu di %2$s dibandingkan kemarin.</string>
+    <string name="app_detail_spent_more">Kamu menghabiskan %1$d%% lebih banyak waktu di %2$s dari hari kemarin.</string>
+    <string name="app_detail_time_spent">Waktu terpakai</string>
+    <string name="app_detail_openings">Dibuka</string>
+    <string name="app_detail_peak_time">Sesi terlama</string>
+    <string name="app_detail_interventions">Intervensi</string>
+    <string name="app_detail_yesterday">Kemarin: %1$s</string>
+    <string name="app_detail_times_count">%1$d kali</string>
+    <string name="app_detail_completed_today">Dipicu hari ini</string>
+    <string name="app_detail_suggestion">Saran</string>
+    <string name="app_detail_suggestion_message">Coba hindari aplikasi ini antara %1$s.\nJaga momentummu!</string>
+    <string name="app_detail_view_full_analytics">Lihat analitik lengkap</string>
+
+    <!-- Intervention UI -->
+    <string name="intervention_emergency_confirm_title">Konfirmasi Darurat</string>
+    <string name="intervention_emergency_confirm_msg">Mode darurat akan memberikan akses selama 3 menit, namun tindakan ini akan mencatat penalti pada batas harian kamu. Lanjutkan?</string>
+    <string name="intervention_continue">Lanjutkan</string>
+    <string name="intervention_cancel">Batal</string>
+    <string name="intervention_retry">Coba Lagi</string>
+    <string name="intervention_error_title">PELUKDIRI mengalami kendala</string>
+    <string name="intervention_error_start">Tantangan belum dapat disiapkan. Pertanyaan dan status intervensi tetap aman.</string>
+    <string name="intervention_error_restore">Intervensi yang aktif belum dapat dipulihkan. Coba lagi untuk melanjutkan pertanyaan yang sama.</string>
+    <string name="intervention_error_submit">Jawaban belum dapat disimpan. Coba lagi tanpa mengubah jawaban Anda.</string>
+    <string name="intervention_error_bypass">Mode darurat belum dapat diselesaikan. Coba lagi; kuota tidak akan digunakan dua kali.</string>
+    <string name="intervention_error_complete">Intervensi belum dapat ditutup dengan aman. Coba lagi untuk menyelesaikannya.</string>
+    <string name="intervention_emergency_button">Mode Darurat (3 Menit)</string>
+    <string name="intervention_pattern_title">Jeda Sebentar</string>
+    <string name="intervention_pattern_hint">Ingat urutan pola</string>
+    <string name="intervention_replay_pattern">Ulangi Pola</string>
+    <string name="intervention_playing_pattern">Memutar pola...</string>
+    <string name="intervention_pattern_correct">Urutan pola berhasil diingat.</string>
+    <string name="intervention_pattern_incorrect">Urutan yang dipilih belum tepat.</string>
+    <string name="intervention_response_time">Waktu respons: %1$s detik</string>
+    <string name="intervention_bypass_exhausted">Kuota darurat telah habis hari ini.</string>
+    <string name="intervention_shape_circle">Lingkaran</string>
+    <string name="intervention_shape_square">Persegi</string>
+    <string name="intervention_shape_triangle">Segitiga</string>
+    <string name="intervention_shape_pentagon">Pentagon</string>
+    <string name="intervention_pattern_progress">%1$d dari %2$d bentuk dipilih</string>
+    <string name="intervention_mindful_pause_title">Jeda Sebentar</string>
+    <string name="intervention_difficulty_level">Kesulitan: %1$d</string>
+    <string name="intervention_timer">Timer: %1$s</string>
+    <string name="intervention_max_penalty">Penalti Maksimum Diterapkan</string>
+    <string name="intervention_emergency_remaining">Sisa Darurat: %1$d</string>
+    <string name="intervention_emergency_button_short">Darurat</string>
+    <string name="intervention_submit_button_short">Kirim</string>
+    <string name="intervention_result_success">Berhasil!</string>
+    <string name="intervention_result_failed">Belum Tepat</string>
+    <string name="intervention_result_finish">Selesai</string>
+    <string name="intervention_result_retry">Coba Lagi</string>
+    <string name="intervention_error_retry_challenge">Soal berikutnya tidak dapat disiapkan. Coba lagi.</string>
+    <string name="intervention_result_user_answer">Jawaban Kamu: %1$s</string>
+    <string name="intervention_result_correct_answer">Jawaban Benar: %1$s</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Lewati</string>
+    <string name="onboarding_next">Selanjutnya</string>
+    <string name="onboarding_start">Mulai Sekarang</string>
+    <string name="onboarding_welcome_title">Selamat datang di</string>
+    <string name="onboarding_welcome_brand">PELUKDIRI</string>
+    <string name="onboarding_welcome_desc">Aplikasi yang membantumu mengelola waktu layar secara adaptif.</string>
+
+    <string name="onboarding_facts_label">FAKTA</string>
+    <string name="onboarding_facts_title">Waktu layar yang tinggi mempengaruhi banyak hal</string>
+    <string name="onboarding_facts_desc">Data menunjukkan bahwa penggunaan layar berlebihan berdampak pada kesehatan dan fokus.</string>
+    <string name="onboarding_fact_1_title">7j 23m</string>
+    <string name="onboarding_fact_1_desc">Rata-rata waktu layar harian remaja Indonesia (Sumber: We Are Social 2024)</string>
+    <string name="onboarding_fact_2_title">-31%</string>
+    <string name="onboarding_fact_2_desc">Penurunan fokus setelah > 4 jam layar/hari (Sumber: Microsoft, 2021)</string>
+    <string name="onboarding_fact_3_title">-29%</string>
+    <string name="onboarding_fact_3_desc">Penurunan kualitas tidur pada pengguna dengan waktu layar tinggi (Sumber: Sleep Foundation, 2021)</string>
+
+    <string name="onboarding_how_label">CARA KERJA</string>
+    <string name="onboarding_how_title">Intervensi adaptif, bukan ngeblokir doang nih</string>
+    <string name="onboarding_how_desc">Saat kamu membuka aplikasi yang dipantau, PELUKDIRI akan memberikan tantangan untuk membantumu jeda sejenak dan berpikir.</string>
+    <string name="onboarding_how_step_title">Seperti ini cara PELUKDIRI membantumu</string>
+    <string name="onboarding_how_step_1">Kamu membuka maupun menggunakan aplikasi yang dipantau</string>
+    <string name="onboarding_how_step_2">Muncul tantangan singkat sesuai kemampuanmu</string>
+    <string name="onboarding_how_step_3">Kamu berhasil menyelesaikan tantangan</string>
+    <string name="onboarding_how_step_4">Aplikasi terbuka, kamu dapat lanjut maupun berhenti menggunakannya</string>
+
+    <string name="onboarding_perm_accessibility_title">Izinkan Aksesibilitas</string>
+    <string name="onboarding_perm_accessibility_desc">Aksesibilitas dibutuhkan PELUKDIRI untuk mendeteksi aplikasi dan menjalankan intervensi.</string>
+    <string name="onboarding_perm_usage_title">Akses Penggunaan</string>
+    <string name="onboarding_perm_usage_desc">Akses penggunaan diperlukan agar PELUKDIRI bisa menghitung waktu layar kamu secara akurat.</string>
+    <string name="onboarding_perm_notif_title">Notifikasi</string>
+    <string name="onboarding_perm_notif_desc_v2">Aktifkan notifikasi agar kamu tidak melewatkan pengingat dan ringkasan harian.</string>
+    <string name="onboarding_perm_why_title">Mengapa kami memerlukannya?</string>
+    <string name="onboarding_perm_why_1_title">Mendeteksi aplikasi</string>
+    <string name="onboarding_perm_why_1_desc">Mengetahui aplikasi apa yang sedang kamu buka.</string>
+    <string name="onboarding_perm_why_2_title">Menampilkan intervensi</string>
+    <string name="onboarding_perm_why_2_desc">Menampilkan tantangan singkat sebelum aplikasi terbuka penuh.</string>
+    <string name="onboarding_perm_why_3_title" formatted="false">100% aman</string>
+    <string name="onboarding_perm_why_3_desc">Kami tidak membaca isi layar, teks, atau data pribadi lainnya.</string>
+
+    <string name="onboarding_perm_why_usage_title">Mengapa butuh Akses Penggunaan?</string>
+    <string name="onboarding_perm_why_usage_1_title">Hitung Waktu Layar</string>
+    <string name="onboarding_perm_why_usage_1_desc">Menghitung total durasi penggunaan HP.</string>
+    <string name="onboarding_perm_why_usage_2_title">Analisis Aplikasi</string>
+    <string name="onboarding_perm_why_usage_2_desc">Melihat aplikasi mana yang paling sering kamu gunakan.</string>
+    <string name="onboarding_perm_why_usage_3_title">Batas Adaptif</string>
+    <string name="onboarding_perm_why_usage_3_desc">Menyesuaikan limit harian dan intervensi berdasarkan kebiasaanmu.</string>
+
+    <string name="onboarding_perm_why_notif_title">Mengapa butuh Notifikasi?</string>
+    <string name="onboarding_perm_why_notif_1_title">Pengingat Batas</string>
+    <string name="onboarding_perm_why_notif_1_desc">Memberitahu saat kamu hampir mencapai limit harian.</string>
+    <string name="onboarding_perm_why_notif_2_title">Ringkasan Harian</string>
+    <string name="onboarding_perm_why_notif_2_desc">Mendapatkan laporan progresmu setiap malam.</string>
+    <string name="onboarding_perm_why_notif_3_title">Pesan Motivasi</string>
+    <string name="onboarding_perm_why_notif_3_desc">Memberikan semangat agar kamu tetap konsisten.</string>
+
+    <string name="onboarding_perm_button">Izinkan Akses dan Lanjutkan</string>
+    <string name="onboarding_perm_privacy">Data kamu aman bersama kami. Lihat Kebijakan Privasi</string>
+
+    <!-- Daily Usage Notification -->
+    <string name="notification_daily_usage_channel_name">Status Penggunaan Harian</string>
+    <string name="notification_daily_usage_channel_description">Menampilkan penggunaan dan batas adaptif hari ini.</string>
+    <string name="notification_reminder_channel_name">Pengingat PELUKDIRI</string>
+    <string name="notification_reminder_channel_description">Ringkasan dan pengingat penggunaan aplikasi.</string>
+    <string name="notification_usage_label">Kamu sudah menggunakan %1$s hari ini</string>
+    <string name="notification_limit_label">Batas adaptifmu: %1$s</string>
+    <string name="notification_insufficient_data">Data tidak mencukupi</string>
+
+    <!-- Notification Templates -->
+    <string name="notification_daily_summary_title_1">Sekilas harimu</string>
+    <string name="notification_daily_summary_title_2">Ini ringkasan waktu layarmu.</string>
+    <string name="notification_daily_summary_title_3">Luangkan waktu sebentar untuk cek waktu layar.</string>
+    <string name="notification_daily_summary_title_4">Lihat bagaimana hari ini berjalan.</string>
+
+    <string name="notification_weekly_reflection_title_1">Saatnya refleksi mingguan.</string>
+    <string name="notification_weekly_reflection_title_2">Lihat bagaimana kebiasaan waktu layar kamu berubah minggu ini.</string>
+    <string name="notification_weekly_reflection_title_3">Progres mingguan kamu siap ditinjau.</string>
+    <string name="notification_weekly_reflection_title_4">Lihat progres kamu minggu ini.</string>
+    <string name="notification_weekly_reflection_content">Ketuk untuk meninjau progres kesejahteraan digital mingguan kamu.</string>
+
+    <string name="notification_limit_reminder_title_1">Hati-hati ama batas waktu layar.</string>
+    <string name="notification_limit_reminder_title_2">Kamu mendekati batas adaptif.</string>
+    <string name="notification_limit_reminder_title_3">Lihat batas waktu layarmu.</string>
+    <string name="notification_limit_reminder_title_4">Jangan lupa jeda sebentar.</string>
+    <string name="notification_limit_reminder_content">Gunakanlah HP dengan bijak ^_^.</string>
+
+    <string name="notification_intervention_title_1">Kerjain ya biar pintar.</string>
+    <string name="notification_intervention_title_2">Intervensi sebentar ya.</string>
+    <string name="notification_intervention_title_3">Intervensi atau diparani?</string>
+    <string name="notification_intervention_title_4">Hati-hati main HP mulu nanti datang intervensi.</string>
+    <string name="notification_intervention_content">Intervensi biar fokus.</string>
+
+    <string name="onboarding_grant_usage_access">Berikan Akses Penggunaan</string>
+
+    <!-- Keypad -->
+    <string name="keypad_clear">C</string>
+    <string name="keypad_clear_description">Hapus semua angka</string>
+    <string name="keypad_zero">0</string>
+    <string name="keypad_backspace">⌫</string>
+    <string name="keypad_backspace_description">Hapus angka terakhir</string>
+    <string name="analytics_weekly_progress_title">PROGRES MINGGUAN</string>
+    <string name="analytics_vs_last_week">vs minggu lalu</string>
+    <string name="analytics_weekly_progress_icon_desc">Ikon progres mingguan</string>
+    <string name="dashboard_of_limit">dari batas</string>
+
+    <!-- Terms Screen -->
+    <string name="terms_title_full">Syarat &amp; Ketentuan Penggunaan</string>
+    <string name="terms_last_updated">Terakhir diperbarui: 7 Agustus 2026</string>
+    <string name="terms_header">Syarat &amp; Ketentuan</string>
+    <string name="terms_section_1_title">1. Penggunaan Layanan</string>
+    <string name="terms_section_1_desc">PELUKDIRI adalah aplikasi yang membantu kamu mengelola waktu layar dan membangun kebiasaan digital yang lebih sehat. Kamu setuju untuk menggunakan aplikasi ini secara bertanggung jawab.</string>
+    <string name="terms_section_2_title">2. Pengumpulan Data</string>
+    <string name="terms_section_2_desc">Aplikasi ini mengumpulkan data penggunaan aplikasi dan perangkat (seperti waktu layar, frekuensi membuka aplikasi, dan interaksi) untuk memberikan intervensi adaptif dan analitik yang personal.</string>
+    <string name="terms_section_3_title">3. Privasi</string>
+    <string name="terms_section_3_desc">Data yang dikumpulkan hanya digunakan untuk keperluan aplikasi dan tidak akan dijual atau dibagikan kepada pihak ketiga tanpa izinmu. Semua data disimpan secara aman dan anonim.</string>
+    <string name="terms_section_4_title">4. Intervensi Adaptif</string>
+    <string name="terms_section_4_desc">Aplikasi ini akan memberikan tantangan singkat (seperti soal matematika atau permainan pola) untuk membantumu jeda sejenak. Kesulitan intervensi menyesuaikan kebiasaanmu dan memiliki batas maksimum.</string>
+    <string name="terms_section_5_title">5. Perubahan</string>
+    <string name="terms_section_5_desc">Kami dapat memperbarui Syarat &amp; Ketentuan ini dari waktu ke waktu. Perubahan akan diberitahukan melalui aplikasi.</string>
+</resources>

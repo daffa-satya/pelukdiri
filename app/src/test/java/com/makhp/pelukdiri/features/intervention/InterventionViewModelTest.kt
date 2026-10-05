@@ -11,8 +11,9 @@ import com.makhp.pelukdiri.core.domain.model.PatternShape
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
-import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
 import com.makhp.pelukdiri.core.domain.usecase.BypassResult
+import com.makhp.pelukdiri.core.domain.usecase.CalculateRetryDifficultyUseCase
+import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -25,7 +26,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
@@ -44,10 +47,12 @@ class InterventionViewModelTest {
     private val adaptiveLimitRepository: AdaptiveLimitRepository = mockk()
     private val userPreferencesRepository: UserPreferencesRepository = mockk()
     private val performEmergencyBypassUseCase: PerformEmergencyBypassUseCase = mockk()
+    private val calculateRetryDifficulty: CalculateRetryDifficultyUseCase = mockk()
     private val lockManager = InterventionLockManager()
     private lateinit var activeInterventionSession: ActiveInterventionSession
+    private var fakeNowMillis = 1_800_000_000_000L
     private val timeProvider = object : TimeProvider {
-        override fun nowMillis() = 1_800_000_000_000L
+        override fun nowMillis() = fakeNowMillis
         override fun zoneId() = java.time.ZoneId.of("Asia/Jakarta")
     }
 
@@ -60,7 +65,9 @@ class InterventionViewModelTest {
         coEvery { interventionLogRepository.getBypassCountForDay(any(), any()) } returns 0
         every { challengeSelector.select() } returns InterventionChallengeType.MATH
         coEvery { userPreferencesRepository.setActiveInterventionSession(any()) } returns Unit
+        coEvery { userPreferencesRepository.setCurrentDifficulty(any()) } returns Unit
         coEvery { userPreferencesRepository.activeInterventionSession } returns flowOf(null)
+        coEvery { calculateRetryDifficulty(any(), any(), any()) } answers { firstArg() }
         activeInterventionSession = ActiveInterventionSession(userPreferencesRepository, timeProvider, lockManager)
 
         viewModel = InterventionViewModel(
@@ -71,6 +78,7 @@ class InterventionViewModelTest {
             adaptiveLimitRepository,
             userPreferencesRepository,
             performEmergencyBypassUseCase,
+            calculateRetryDifficulty,
             lockManager,
             activeInterventionSession,
             timeProvider
@@ -103,6 +111,21 @@ class InterventionViewModelTest {
     }
 
     @Test
+    fun `math response timer starts when generated question becomes active`() = runTest {
+        coEvery { cognitiveQuestionGenerator.generateQuestion(2) } coAnswers {
+            fakeNowMillis += 30_000L
+            MathQuestion("2+2", 4, 2)
+        }
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 2)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value is InterventionUiState.QuestionActive)
+        assertEquals(0L, viewModel.currentResponseTimeMs())
+    }
+
+    @Test
     fun `replacement ViewModel restores exact active question and input`() = runTest {
         val question = MathQuestion("43 + 47", 90, 1)
         coEvery { cognitiveQuestionGenerator.generateQuestion(1) } returns question
@@ -121,6 +144,7 @@ class InterventionViewModelTest {
             adaptiveLimitRepository,
             userPreferencesRepository,
             performEmergencyBypassUseCase,
+            calculateRetryDifficulty,
             lockManager,
             activeInterventionSession,
             timeProvider
@@ -211,13 +235,14 @@ class InterventionViewModelTest {
 
     @Test
     fun `incorrect math answer cannot complete until a retry is correct`() = runTest {
-        coEvery { cognitiveQuestionGenerator.generateQuestion(1) } returns
-            MathQuestion("1+1", 2, 1) andThen MathQuestion("2+2", 4, 1)
+        coEvery { cognitiveQuestionGenerator.generateQuestion(3) } returns MathQuestion("9+9", 18, 3)
+        coEvery { cognitiveQuestionGenerator.generateQuestion(2) } returns MathQuestion("2+2", 4, 2)
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
         coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
         coEvery { interventionLogRepository.insertLog(any()) } returns Unit
+        coEvery { calculateRetryDifficulty(3, InterventionChallengeType.MATH, any()) } returns 2
 
-        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 1)
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 3)
         advanceUntilIdle()
         viewModel.onAnswerChanged("1")
         viewModel.submitAnswer()
@@ -226,33 +251,97 @@ class InterventionViewModelTest {
         assertTrue(viewModel.uiState.value.toString(), viewModel.uiState.value is InterventionUiState.IncorrectAnswer)
         viewModel.resetToIdle()
         advanceUntilIdle()
-        assertTrue(viewModel.uiState.value is InterventionUiState.IncorrectAnswer)
+        assertTrue(
+            viewModel.uiState.value.toString(),
+            viewModel.uiState.value is InterventionUiState.IncorrectAnswer,
+        )
 
         viewModel.retryAfterIncorrectAnswer()
         advanceUntilIdle()
         val retry = viewModel.uiState.value as InterventionUiState.QuestionActive
         assertEquals("2+2", retry.question.expression)
+        assertEquals(2, retry.assessment.level)
         viewModel.onAnswerChanged("4")
         viewModel.submitAnswer()
         viewModel.uiState.filterIsInstance<InterventionUiState.CorrectAnswer>().first()
 
         assertTrue(viewModel.uiState.value is InterventionUiState.CorrectAnswer)
-        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { !it.isSuccess }) }
-        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { it.isSuccess }) }
+        coVerify(exactly = 1) { userPreferencesRepository.setCurrentDifficulty(2) }
+        coVerify(exactly = 1) {
+            interventionLogRepository.insertLog(match { !it.isSuccess && it.difficultyLevel == 3 })
+        }
+        coVerify(exactly = 1) {
+            interventionLogRepository.insertLog(match { it.isSuccess && it.difficultyLevel == 2 })
+        }
+    }
+
+    @Test
+    fun `failed retry generation does not decrease difficulty twice`() = runTest {
+        coEvery { cognitiveQuestionGenerator.generateQuestion(3) } returns MathQuestion("9+9", 18, 3)
+        coEvery { cognitiveQuestionGenerator.generateQuestion(2) } throws
+            IllegalStateException("generator unavailable") andThen MathQuestion("2+2", 4, 2)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+        coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
+        coEvery { interventionLogRepository.insertLog(any()) } returns Unit
+        coEvery { calculateRetryDifficulty(3, InterventionChallengeType.MATH, any()) } returns 2
+
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 3)
+        advanceUntilIdle()
+        viewModel.onAnswerChanged("1")
+        viewModel.submitAnswer()
+        viewModel.uiState.filterIsInstance<InterventionUiState.IncorrectAnswer>().first()
+
+        viewModel.retryAfterIncorrectAnswer()
+        val error = viewModel.uiState.filterIsInstance<InterventionUiState.Error>().first()
+        assertEquals(FailedInterventionOperation.RETRY_CHALLENGE, error.operation)
+
+        viewModel.retryLastOperation()
+        advanceUntilIdle()
+        val retry = viewModel.uiState.value as InterventionUiState.QuestionActive
+        assertEquals(2, retry.assessment.level)
+        coVerify(exactly = 1) { userPreferencesRepository.setCurrentDifficulty(2) }
+        coVerify(exactly = 0) { userPreferencesRepository.setCurrentDifficulty(1) }
+    }
+
+    @Test
+    fun `stalled retry becomes retryable error within ten seconds`() = runTest {
+        coEvery { cognitiveQuestionGenerator.generateQuestion(3) } returns MathQuestion("9+9", 18, 3)
+        coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
+        coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
+        coEvery { interventionLogRepository.insertLog(any()) } returns Unit
+        coEvery { calculateRetryDifficulty(3, InterventionChallengeType.MATH, any()) } coAnswers {
+            delay(InterventionViewModel.RETRY_CHALLENGE_TIMEOUT_MS + 1)
+            2
+        }
+
+        viewModel.startIntervention(10.0, 1.0, 100f, 0.1, 0.5, 3)
+        advanceUntilIdle()
+        viewModel.onAnswerChanged("1")
+        viewModel.submitAnswer()
+        viewModel.uiState.filterIsInstance<InterventionUiState.IncorrectAnswer>().first()
+
+        viewModel.retryAfterIncorrectAnswer()
+        advanceTimeBy(InterventionViewModel.RETRY_CHALLENGE_TIMEOUT_MS)
+        runCurrent()
+
+        val error = viewModel.uiState.value as InterventionUiState.Error
+        assertEquals(FailedInterventionOperation.RETRY_CHALLENGE, error.operation)
+        coVerify(exactly = 0) { userPreferencesRepository.setCurrentDifficulty(any()) }
     }
 
     @Test
     fun `incorrect pattern cannot complete until a retry is correct`() = runTest {
         val first = listOf(PatternShape.CIRCLE, PatternShape.SQUARE, PatternShape.TRIANGLE)
         val second = listOf(PatternShape.PENTAGON, PatternShape.CIRCLE, PatternShape.SQUARE)
-        coEvery { patternQuestionGenerator.generateQuestion(1) } returns
-            PatternQuestion(first, 1) andThen PatternQuestion(second, 1)
+        coEvery { patternQuestionGenerator.generateQuestion(3) } returns PatternQuestion(first, 3)
+        coEvery { patternQuestionGenerator.generateQuestion(2) } returns PatternQuestion(second, 2)
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
         coEvery { adaptiveLimitRepository.insertOrUpdateLimit(any()) } returns Unit
         coEvery { interventionLogRepository.insertLog(any()) } returns Unit
+        coEvery { calculateRetryDifficulty(3, InterventionChallengeType.PATTERN, any()) } returns 2
 
         viewModel.startIntervention(
-            10.0, 1.0, 100f, 0.1, 0.5, 1, InterventionChallengeType.PATTERN
+            10.0, 1.0, 100f, 0.1, 0.5, 3, InterventionChallengeType.PATTERN
         )
         advanceUntilIdle()
         repeat(first.size) { viewModel.onPatternSelected(PatternShape.PENTAGON) }
@@ -267,12 +356,18 @@ class InterventionViewModelTest {
         advanceUntilIdle()
         val retry = viewModel.uiState.value as InterventionUiState.PatternActive
         assertEquals(second, retry.question.sequence)
+        assertEquals(2, retry.assessment.level)
         second.forEach(viewModel::onPatternSelected)
         viewModel.uiState.filterIsInstance<InterventionUiState.PatternCorrectAnswer>().first()
 
         assertTrue(viewModel.uiState.value is InterventionUiState.PatternCorrectAnswer)
-        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { !it.isSuccess }) }
-        coVerify(exactly = 1) { interventionLogRepository.insertLog(match { it.isSuccess }) }
+        coVerify(exactly = 1) { userPreferencesRepository.setCurrentDifficulty(2) }
+        coVerify(exactly = 1) {
+            interventionLogRepository.insertLog(match { !it.isSuccess && it.difficultyLevel == 3 })
+        }
+        coVerify(exactly = 1) {
+            interventionLogRepository.insertLog(match { it.isSuccess && it.difficultyLevel == 2 })
+        }
     }
 
     @Test
@@ -290,6 +385,7 @@ class InterventionViewModelTest {
 
         val active = viewModel.uiState.value as InterventionUiState.PatternActive
         assertEquals(false, active.isPlaying)
+        coVerify(exactly = 3) { userPreferencesRepository.setActiveInterventionSession(any()) }
         sequence.forEach(viewModel::onPatternSelected)
         viewModel.uiState.filterIsInstance<InterventionUiState.PatternCorrectAnswer>().first()
         coVerify(exactly = 1) { interventionLogRepository.insertLog(match { it.isSuccess }) }

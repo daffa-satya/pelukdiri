@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.features.intervention.InterventionActivity
@@ -36,8 +37,9 @@ import com.makhp.pelukdiri.features.intervention.InterventionActivity
 fun ProfileSidebar(
     viewModel: ProfileViewModel,
     onClose: () -> Unit,
+    onTestOnboarding: () -> Unit,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     
     var showEditNameDialog by remember { mutableStateOf(false) }
     var showEditUserDialog by remember { mutableStateOf(false) }
@@ -162,6 +164,12 @@ fun ProfileSidebar(
                     label = stringResource(R.string.profile_test_notification),
                     icon = Icons.Default.Notifications,
                     onClick = { viewModel.triggerTestNotification() }
+                )
+
+                DebugActionItem(
+                    label = stringResource(R.string.profile_test_onboarding),
+                    icon = Icons.Default.PlayArrow,
+                    onClick = onTestOnboarding
                 )
                 
                 DebugActionItem(

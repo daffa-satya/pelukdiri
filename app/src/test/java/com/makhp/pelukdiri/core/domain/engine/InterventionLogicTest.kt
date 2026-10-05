@@ -4,6 +4,7 @@ import com.makhp.pelukdiri.core.domain.model.*
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalTime
 
 class InterventionLogicTest {
 
@@ -60,6 +61,7 @@ class InterventionLogicTest {
             bedtime = null,
             wakeTime = null,
             currentLevel = 1,
+            currentTime = LocalTime.NOON,
             timestampMs = timestamp
         )
 
@@ -100,6 +102,8 @@ class InterventionLogicTest {
             bedtime = null,
             wakeTime = null,
             currentLevel = 3,
+            currentTime = LocalTime.NOON,
+            timestampMs = 0L,
             difficultyHistory = listOf(
                 DifficultyHistoryEntry(3, true),
                 DifficultyHistoryEntry(2, true),
@@ -122,10 +126,12 @@ class InterventionLogicTest {
         )
         val latest = PerformanceMetrics(500L, true, 2)
         val afterTwoTotal = engine.calculateNextIntervention(
-            0.5, latest, listOf(1_000L), 500f, null, null, 2
+            0.5, latest, listOf(1_000L), 500f, null, null, 2,
+            LocalTime.NOON, 0L,
         )
         val afterThreeTotal = engine.calculateNextIntervention(
-            0.5, latest, listOf(1_000L, 1_000L), 500f, null, null, 2
+            0.5, latest, listOf(1_000L, 1_000L), 500f, null, null, 2,
+            LocalTime.NOON, 0L,
         )
 
         assertEquals(2, afterTwoTotal.nextDifficulty)
@@ -151,6 +157,8 @@ class InterventionLogicTest {
             bedtime = null,
             wakeTime = null,
             currentLevel = 1,
+            currentTime = LocalTime.NOON,
+            timestampMs = 0L,
         )
         val afterTwo = engine.calculateNextIntervention(
             deviation = 0.0,
@@ -160,6 +168,8 @@ class InterventionLogicTest {
             bedtime = null,
             wakeTime = null,
             currentLevel = 1,
+            currentTime = LocalTime.NOON,
+            timestampMs = 0L,
         )
 
         assertEquals(ControlMode.INSUFFICIENT_HISTORY, afterOne.mode)
@@ -186,10 +196,12 @@ class InterventionLogicTest {
             bedtime = null,
             wakeTime = null,
             currentLevel = 3,
+            currentTime = LocalTime.NOON,
+            timestampMs = 0L,
         )
 
-        assertEquals(3, evaluate(100L).nextDifficulty)
-        assertEquals(3, evaluate(100_000L).nextDifficulty)
+        assertEquals(4, evaluate(100L).nextDifficulty)
+        assertEquals(4, evaluate(100_000L).nextDifficulty)
     }
 
     @Test
@@ -204,11 +216,11 @@ class InterventionLogicTest {
         )
         val afterTwo = engine.calculateNextIntervention(
             null, PerformanceMetrics(1_000L, false, 3), emptyList(), null, null, null,
-            3, consecutiveFailures = 2
+            3, LocalTime.NOON, 0L, consecutiveFailures = 2
         )
         val afterThree = engine.calculateNextIntervention(
             null, PerformanceMetrics(1_000L, false, 3), emptyList(), null, null, null,
-            3, consecutiveFailures = 3
+            3, LocalTime.NOON, 0L, consecutiveFailures = 3
         )
 
         assertEquals(2, afterTwo.nextDifficulty)

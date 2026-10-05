@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.core.domain.model.AppUsage
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.collections.immutable.toImmutableList
@@ -15,13 +16,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
 class AppsInterventionViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val usageRepository: UsageRepository,
+    private val timeProvider: TimeProvider,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -65,7 +66,7 @@ class AppsInterventionViewModel @Inject constructor(
                 _installedApps.value = apps
 
                 try {
-                    val todayUsage = usageRepository.getDailyUsage(LocalDate.now()).first()
+                    val todayUsage = usageRepository.getDailyUsage(timeProvider.today()).first()
                         .associateBy { it.packageName }
 
                     _installedApps.value = apps.map { app ->

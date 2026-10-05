@@ -105,21 +105,16 @@ class CognitiveQuestionGenerator @Inject constructor() {
     }
 
     private fun generateLevelFive(): MathQuestion {
-        while (true) {
-            val first = randomInRange(15, 30)
-            val second = randomInRange(6, 12)
-            val third = randomInRange(20, 80)
-            val fourth = randomInRange(20, 80)
-
-            val result = (first * second) - (third + fourth)
-            if (result > 0) {
-                return MathQuestion(
-                    expression = "($first * $second) - ($third + $fourth)",
-                    correctAnswer = result,
-                    level = 5
-                )
-            }
-        }
+        val first = randomInRange(15, 30)
+        val second = randomInRange(6, 12)
+        val product = first * second
+        val third = randomInRange(20, minOf(80, product - 21))
+        val fourth = randomInRange(20, minOf(80, product - third - 1))
+        return MathQuestion(
+            expression = "($first * $second) - ($third + $fourth)",
+            correctAnswer = product - (third + fourth),
+            level = 5
+        )
     }
 
     private fun randomInRange(min: Int, max: Int): Int = random.nextInt(from = min, until = max + 1)

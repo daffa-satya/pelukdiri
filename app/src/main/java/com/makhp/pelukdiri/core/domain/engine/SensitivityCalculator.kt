@@ -19,7 +19,7 @@ class SensitivityCalculator @Inject constructor(
         lux: Float?,
         bedtime: LocalTime?,
         wakeTime: LocalTime?,
-        currentTime: LocalTime = LocalTime.now(),
+        currentTime: LocalTime,
     ): Double {
         val qLux = calculateLuxSensitivity(lux)
         val qTime = calculateTimeSensitivity(bedtime, wakeTime, currentTime)

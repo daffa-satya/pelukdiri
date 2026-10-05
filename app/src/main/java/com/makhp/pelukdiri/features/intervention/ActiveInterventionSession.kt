@@ -7,7 +7,10 @@ import com.makhp.pelukdiri.core.domain.model.PatternShape
 import com.makhp.pelukdiri.core.domain.model.RiskAssessmentResult
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import javax.inject.Inject
@@ -163,28 +166,35 @@ class ActiveInterventionSession @Inject constructor(
     private val timeProvider: TimeProvider,
     private val lockManager: InterventionLockManager
 ) {
-    @Volatile private var activeSnapshot: ActiveInterventionSnapshot? = null
+    private val activeSnapshot = MutableStateFlow<ActiveInterventionSnapshot?>(null)
 
     suspend fun restore(): ActiveInterventionSnapshot? {
-        val snapshot = activeSnapshot ?: preferences.activeInterventionSession.first()?.let(ActiveInterventionCodec::decode)
+        val snapshot = activeSnapshot.value
+            ?: preferences.activeInterventionSession.first()?.let(ActiveInterventionCodec::decode)
         if (snapshot == null) return null
         if (timeProvider.nowMillis() >= snapshot.expiresAtMs) {
             clearExpired()
             return null
         }
-        activeSnapshot = snapshot
+        activeSnapshot.value = snapshot
         return snapshot
     }
 
     suspend fun save(snapshot: ActiveInterventionSnapshot) {
-        activeSnapshot = snapshot
+        activeSnapshot.value = snapshot
         preferences.setActiveInterventionSession(ActiveInterventionCodec.encode(snapshot))
     }
 
     suspend fun clear() {
-        activeSnapshot = null
+        activeSnapshot.value = null
         preferences.setActiveInterventionSession(null)
     }
+
+    suspend fun awaitLaunchAcknowledgement(timeoutMs: Long): Boolean =
+        withTimeoutOrNull(timeoutMs) {
+            activeSnapshot.filterNotNull().first()
+            true
+        } ?: false
 
     suspend fun clearExpired() {
         clear()
@@ -192,5 +202,5 @@ class ActiveInterventionSession @Inject constructor(
         lockManager.releaseLock()
     }
 
-    companion object { const val TTL_MS = 10L * 60L * 1000L }
+    companion object { const val TTL_MS = 2L * 60L * 1000L }
 }

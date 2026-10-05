@@ -16,12 +16,14 @@ import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.usecase.BypassResult
+import com.makhp.pelukdiri.core.domain.usecase.CalculateRetryDifficultyUseCase
 import com.makhp.pelukdiri.core.domain.usecase.PerformEmergencyBypassUseCase
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlin.math.max
 import kotlin.math.roundToInt
 import javax.inject.Inject
@@ -42,6 +45,7 @@ class InterventionViewModel @Inject constructor(
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val performEmergencyBypassUseCase: PerformEmergencyBypassUseCase,
+    private val calculateRetryDifficulty: CalculateRetryDifficultyUseCase,
     private val lockManager: com.makhp.pelukdiri.core.domain.InterventionLockManager,
     private val activeInterventionSession: ActiveInterventionSession,
     private val timeProvider: TimeProvider
@@ -110,7 +114,6 @@ class InterventionViewModel @Inject constructor(
                 )
 
                 val remaining = getRemainingBypasses()
-                questionStartTimeMs = timeProvider.nowMillis()
                 if (currentChallengeType == InterventionChallengeType.PATTERN) {
                     startPatternPlayback(
                         InterventionUiState.PatternActive(
@@ -121,9 +124,11 @@ class InterventionViewModel @Inject constructor(
                         resetResponseTimer = true,
                     )
                 } else {
+                    val question = cognitiveQuestionGenerator.generateQuestion(difficulty)
+                    questionStartTimeMs = timeProvider.nowMillis()
                     publishState(
                         InterventionUiState.QuestionActive(
-                            question = cognitiveQuestionGenerator.generateQuestion(difficulty),
+                            question = question,
                             assessment = assessment,
                             remainingBypasses = remaining,
                         )
@@ -206,7 +211,6 @@ class InterventionViewModel @Inject constructor(
         publishState(when (state) {
             is InterventionUiState.QuestionActive -> state.copy(answerInput = sanitizedInput)
             is InterventionUiState.MaxPenalized -> state.copy(answerInput = sanitizedInput)
-            else -> state
         })
     }
 
@@ -243,9 +247,9 @@ class InterventionViewModel @Inject constructor(
         patternPlaybackJob = viewModelScope.launch {
             delay(PATTERN_PREPARATION_MS)
             resetState.question.sequence.indices.forEach { index ->
-                publishState(resetState.copy(playbackIndex = index))
+                publishState(resetState.copy(playbackIndex = index), persistSession = false)
                 delay(PATTERN_HIGHLIGHT_MS)
-                publishState(resetState.copy(playbackIndex = null))
+                publishState(resetState.copy(playbackIndex = null), persistSession = false)
                 delay(PATTERN_GAP_MS)
             }
             if (resetResponseTimer) questionStartTimeMs = timeProvider.nowMillis()
@@ -298,12 +302,10 @@ class InterventionViewModel @Inject constructor(
         val question = when (currentState) {
             is InterventionUiState.QuestionActive -> currentState.question
             is InterventionUiState.MaxPenalized -> currentState.question
-            else -> return
         }
         val assessment = when (currentState) {
             is InterventionUiState.QuestionActive -> currentState.assessment
             is InterventionUiState.MaxPenalized -> currentState.assessment
-            else -> return
         }
 
         val responseTime = timeProvider.nowMillis() - questionStartTimeMs
@@ -312,37 +314,7 @@ class InterventionViewModel @Inject constructor(
         isAnswerProcessing = true
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    val dateString = timeProvider.today().toString()
-                    val existingLimit = adaptiveLimitRepository.getLimitForDate(dateString)
-                    val updatedActualScreenTime = max(
-                        existingLimit?.actualScreenTimeMinutes ?: 0,
-                        currentMonitoredUsageMinutes.roundToInt()
-                    )
-                    adaptiveLimitRepository.insertOrUpdateLimit(
-                        DailyAdaptiveLimit(
-                            dateString = dateString,
-                            calculatedLimitMinutes = assessment.calculatedLimitMinutes,
-                            actualScreenTimeMinutes = updatedActualScreenTime,
-                            reclaimedTimeMinutes = assessment.penaltyMinutes
-                        )
-                    )
-
-                    // Keep the append-only action log last. The adaptive-limit upsert is
-                    // idempotent, so retrying an earlier failure cannot duplicate an answer.
-                    interventionLogRepository.insertLog(
-                        InterventionLog(
-                            timestamp = timeProvider.nowMillis(),
-                            deviation = currentDeviation,
-                            difficultyControlSignal = currentDifficultyControlSignal,
-                            difficultyLevel = currentDifficulty,
-                            responseTimeMs = responseTime,
-                            isSuccess = isSuccess,
-                            penaltyAppliedMinutes = assessment.penaltyMinutes,
-                            challengeType = currentChallengeType,
-                        )
-                    )
-                }
+                persistOutcome(isSuccess, assessment, responseTime)
 
             publishState(if (isSuccess) {
                 InterventionUiState.CorrectAnswer(
@@ -385,6 +357,8 @@ class InterventionViewModel @Inject constructor(
                 reclaimedTimeMinutes = assessment.penaltyMinutes,
             )
         )
+        // Keep the append-only action log last. The adaptive-limit upsert is idempotent,
+        // so retrying an earlier failure cannot duplicate an answer.
         interventionLogRepository.insertLog(
             InterventionLog(
                 timestamp = timeProvider.nowMillis(),
@@ -503,27 +477,47 @@ class InterventionViewModel @Inject constructor(
         isAnswerProcessing = true
         questionJob = viewModelScope.launch {
             try {
-                when (incorrectState) {
-                    is InterventionUiState.IncorrectAnswer -> {
-                        questionStartTimeMs = timeProvider.nowMillis()
-                        publishState(
-                            InterventionUiState.QuestionActive(
-                                question = cognitiveQuestionGenerator.generateQuestion(currentDifficulty),
-                                assessment = incorrectState.assessment,
-                                remainingBypasses = incorrectState.remainingBypasses,
+                withTimeout(RETRY_CHALLENGE_TIMEOUT_MS) {
+                    val previousAssessment = when (incorrectState) {
+                        is InterventionUiState.IncorrectAnswer -> incorrectState.assessment
+                        is InterventionUiState.PatternIncorrectAnswer -> incorrectState.assessment
+                    }
+                    val retryDifficulty = calculateRetryDifficulty(
+                        currentLevel = previousAssessment.level,
+                        challengeType = currentChallengeType,
+                        deviation = currentDeviation,
+                    )
+                    if (retryDifficulty != currentDifficulty) {
+                        userPreferencesRepository.setCurrentDifficulty(retryDifficulty)
+                    }
+                    currentDifficulty = retryDifficulty
+                    val retryAssessment = previousAssessment.copy(level = retryDifficulty)
+                    when (incorrectState) {
+                        is InterventionUiState.IncorrectAnswer -> {
+                            val question = cognitiveQuestionGenerator.generateQuestion(retryDifficulty)
+                            questionStartTimeMs = timeProvider.nowMillis()
+                            publishState(
+                                InterventionUiState.QuestionActive(
+                                    question = question,
+                                    assessment = retryAssessment,
+                                    remainingBypasses = incorrectState.remainingBypasses,
+                                )
                             )
+                        }
+                        is InterventionUiState.PatternIncorrectAnswer -> startPatternPlayback(
+                            InterventionUiState.PatternActive(
+                                question = patternQuestionGenerator.generateQuestion(retryDifficulty),
+                                assessment = retryAssessment,
+                                remainingBypasses = incorrectState.remainingBypasses,
+                            ),
+                            resetResponseTimer = true,
                         )
                     }
-                    is InterventionUiState.PatternIncorrectAnswer -> startPatternPlayback(
-                        InterventionUiState.PatternActive(
-                            question = patternQuestionGenerator.generateQuestion(currentDifficulty),
-                            assessment = incorrectState.assessment,
-                            remainingBypasses = incorrectState.remainingBypasses,
-                        ),
-                        resetResponseTimer = true,
-                    )
-                    else -> Unit
                 }
+            } catch (_: TimeoutCancellationException) {
+                showOperationError(FailedInterventionOperation.RETRY_CHALLENGE)
+            } catch (error: CancellationException) {
+                throw error
             } catch (_: Exception) {
                 showOperationError(FailedInterventionOperation.RETRY_CHALLENGE)
             } finally {
@@ -572,11 +566,12 @@ class InterventionViewModel @Inject constructor(
         _uiState.value = InterventionUiState.Error(operation)
     }
 
-    private fun publishState(state: InterventionUiState) {
+    private fun publishState(
+        state: InterventionUiState,
+        persistSession: Boolean = true,
+    ) {
         _uiState.value = state
-        if (state is InterventionUiState.Idle) {
-            return
-        }
+        if (state is InterventionUiState.Idle || !persistSession) return
 
         val now = timeProvider.nowMillis()
         if (sessionCreatedAtMs == 0L) sessionCreatedAtMs = now
@@ -609,5 +604,6 @@ class InterventionViewModel @Inject constructor(
         const val PATTERN_PREPARATION_MS = 1_000L
         const val PATTERN_HIGHLIGHT_MS = 500L
         const val PATTERN_GAP_MS = 100L
+        const val RETRY_CHALLENGE_TIMEOUT_MS = 10_000L
     }
 }

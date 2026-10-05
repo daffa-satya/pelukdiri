@@ -16,4 +16,11 @@ class InterventionResponseTimeFormatTest {
         assertEquals("01.05", formatInterventionTimer(65_999L))
         assertEquals("00.00", formatInterventionTimer(-1L))
     }
+
+    @Test
+    fun `pattern replay freezes timer while initial playback stays at zero`() {
+        assertEquals(4_200L, nextInterventionTimerElapsed(4_200L, 9_000L, true, true))
+        assertEquals(0L, nextInterventionTimerElapsed(4_200L, 9_000L, true, false))
+        assertEquals(9_000L, nextInterventionTimerElapsed(4_200L, 9_000L, false, true))
+    }
 }

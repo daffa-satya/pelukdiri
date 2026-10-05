@@ -7,7 +7,7 @@ import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -17,15 +17,12 @@ class AdaptiveModeViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<AdaptiveModeUiState> = combine(
-        userPreferencesRepository.aggressivenessLevel,
-        userPreferencesRepository.monitoredPackages
-    ) { aggressiveness, monitored ->
+    val uiState: StateFlow<AdaptiveModeUiState> = userPreferencesRepository.snapshot.map { preferences ->
         AdaptiveModeUiState(
             isEnabled = true,
-            interventionIntensity = aggressiveness.name,
-            monitoredAppsCount = monitored.size,
-            aggressivenessLevel = aggressiveness
+            interventionIntensity = preferences.aggressivenessLevel.name,
+            monitoredAppsCount = preferences.monitoredPackages.size,
+            aggressivenessLevel = preferences.aggressivenessLevel,
         )
     }.stateIn(
         scope = viewModelScope,

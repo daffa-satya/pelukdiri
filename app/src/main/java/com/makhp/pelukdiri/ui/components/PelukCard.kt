@@ -1,5 +1,6 @@
 package com.makhp.pelukdiri.ui.components
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 
 @Composable
+@SuppressLint("ModifierParameter") // Full width is the design-system default for every PelukCard.
 fun PelukCard(
     modifier: Modifier = Modifier.fillMaxWidth(),
     content: @Composable ColumnScope.() -> Unit

@@ -24,6 +24,8 @@ import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesSnapshot
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -33,6 +35,9 @@ import io.mockk.slot
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -55,11 +60,17 @@ class EvaluateInterventionEligibilityUseCaseTest {
     private val challengeSelector: InterventionChallengeSelector = mockk()
     private val appUsageCollector: AppUsageCollector = mockk()
     private val lockManager = InterventionLockManager()
+    private val nowMillis = Instant.parse("2026-08-27T07:30:00Z").toEpochMilli()
+    private val timeProvider = object : TimeProvider {
+        override fun nowMillis() = nowMillis
+        override fun zoneId() = ZoneId.of("Asia/Jakarta")
+    }
 
     @Before
     fun setup() {
         coEvery { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
         every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
+        every { userPreferencesRepository.snapshot } returns flowOf(preferencesSnapshot())
         coEvery { userPreferencesRepository.setNextEligibleInterventionAt(any()) } returns Unit
         coEvery { interventionDecisionRepository.insert(any()) } returns Unit
         coEvery { adaptiveLimitRepository.getLimitForDate(any()) } returns null
@@ -77,6 +88,7 @@ class EvaluateInterventionEligibilityUseCaseTest {
             appUsageCollector,
             lockManager,
             ControlConfig.CANDIDATE_3,
+            timeProvider,
         )
         every { appUsageCollector.getCurrentAmbientLightLux() } returns 100f
     }
@@ -113,6 +125,34 @@ class EvaluateInterventionEligibilityUseCaseTest {
         assertEquals(15.0, result.totalUsageMinutes, 0.0001)
         assertTrue(result.shouldTrigger)
         verify { deviationEngine.calculate(10.0, List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 10.0 }) }
+    }
+
+    @Test
+    fun `controller time uses the injected local clock`() = runBlocking {
+        stubEligibleEvaluation()
+
+        useCase(targetPackage)
+
+        verify {
+            controlEngine.calculateNextIntervention(
+                any(), any(), any(), any(), any(), any(), any(),
+                LocalTime.of(14, 30), nowMillis, any(), any(), any(),
+            )
+        }
+    }
+
+    @Test
+    fun `eligibility reads controller preferences from one atomic snapshot`() = runBlocking {
+        stubEligibleEvaluation()
+
+        useCase(targetPackage)
+
+        verify(exactly = 1) { userPreferencesRepository.snapshot }
+        verify(exactly = 0) { userPreferencesRepository.monitoredPackages }
+        verify(exactly = 0) { userPreferencesRepository.nextEligibleInterventionAt }
+        verify(exactly = 0) { userPreferencesRepository.emergencyBypassUntil }
+        verify(exactly = 0) { userPreferencesRepository.bedtime }
+        verify(exactly = 0) { userPreferencesRepository.wakeTime }
     }
 
     @Test
@@ -244,9 +284,9 @@ class EvaluateInterventionEligibilityUseCaseTest {
     fun `cooldown decision is audited without running engines`() = runBlocking {
         every { usageEventCollector.getUsageForDay(any()) } returns
             listOf(AppUsage(targetPackage, "Target", 60_000L, 0L))
-        every { userPreferencesRepository.monitoredPackages } returns flowOf(setOf(targetPackage))
-        every { userPreferencesRepository.nextEligibleInterventionAt } returns flowOf(Long.MAX_VALUE)
-        every { userPreferencesRepository.emergencyBypassUntil } returns flowOf(0L)
+        every { userPreferencesRepository.snapshot } returns flowOf(
+            preferencesSnapshot(nextEligibleAt = Long.MAX_VALUE)
+        )
 
         val result = useCase(targetPackage)
 
@@ -283,6 +323,16 @@ class EvaluateInterventionEligibilityUseCaseTest {
 
         assertTrue(thrown is CancellationException)
         coVerify(exactly = 0) { interventionDecisionRepository.insert(any()) }
+    }
+
+    @Test
+    fun `decision audit cancellation is rethrown`() = runBlocking {
+        lockManager.acquireLock()
+        coEvery { interventionDecisionRepository.insert(any()) } throws CancellationException("stopped")
+
+        val thrown = runCatching { useCase(targetPackage) }.exceptionOrNull()
+
+        assertTrue(thrown is CancellationException)
     }
 
     @Test
@@ -409,7 +459,9 @@ class EvaluateInterventionEligibilityUseCaseTest {
     @Test
     fun `unmonitored package cannot trigger the engine`() = runBlocking {
         every { usageEventCollector.getUsageForDay(any()) } returns emptyList()
-        every { userPreferencesRepository.monitoredPackages } returns flowOf(emptySet())
+        every { userPreferencesRepository.snapshot } returns flowOf(
+            preferencesSnapshot(monitoredPackages = emptySet())
+        )
 
         val result = useCase("com.example.unmonitored")
 
@@ -423,12 +475,9 @@ class EvaluateInterventionEligibilityUseCaseTest {
         nextEligibleAt: Long = 1L,
     ) {
         every { usageEventCollector.getUsageForDay(any()) } returns usage
-        every { userPreferencesRepository.monitoredPackages } returns flowOf(setOf(targetPackage))
-        every { userPreferencesRepository.nextEligibleInterventionAt } returns flowOf(nextEligibleAt)
-        every { userPreferencesRepository.emergencyBypassUntil } returns flowOf(0L)
-        every { userPreferencesRepository.currentDifficulty } returns flowOf(2)
-        every { userPreferencesRepository.bedtime } returns flowOf(null)
-        every { userPreferencesRepository.wakeTime } returns flowOf(null)
+        every { userPreferencesRepository.snapshot } returns flowOf(
+            preferencesSnapshot(nextEligibleAt = nextEligibleAt)
+        )
         coEvery { getAdaptiveHistoryUseCase() } returns
             List(HistoricalConfig.HISTORY_SAMPLE_DAYS) { 10.0 }
         every { deviationEngine.calculate(any(), any()) } returns DeviationResult(
@@ -447,6 +496,15 @@ class EvaluateInterventionEligibilityUseCaseTest {
             )
         } returns controlResult()
     }
+
+    private fun preferencesSnapshot(
+        monitoredPackages: Set<String> = setOf(targetPackage),
+        nextEligibleAt: Long = 1L,
+    ) = UserPreferencesSnapshot(
+        monitoredPackages = monitoredPackages,
+        currentDifficulty = 2,
+        nextEligibleInterventionAt = nextEligibleAt,
+    )
 
     private fun performanceLog(
         id: Long,

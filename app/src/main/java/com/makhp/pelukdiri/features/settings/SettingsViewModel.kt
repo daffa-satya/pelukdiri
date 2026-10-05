@@ -9,6 +9,7 @@ import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.R
 import android.content.Context
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -23,23 +24,19 @@ class SettingsViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
+    private val localizedContext: Context
+        get() = ContextCompat.getContextForLanguage(context)
 
     private val exportState = MutableStateFlow(ExportState())
     private val backfillState = MutableStateFlow(BackfillState())
 
-    private val preferencesState = combine(
-        userPreferencesRepository.aggressivenessLevel,
-        userPreferencesRepository.isFixedLimitEnabled,
-        userPreferencesRepository.fixedDailyLimitMinutes,
-        userPreferencesRepository.bedtime,
-        userPreferencesRepository.wakeTime
-    ) { aggressiveness, isFixed, fixedLimit, sleep, wake ->
+    private val preferencesState = userPreferencesRepository.snapshot.map { preferences ->
         SettingsUiState(
-            aggressivenessLevel = aggressiveness,
-            isFixedLimitEnabled = isFixed,
-            fixedDailyLimitMinutes = fixedLimit,
-            sleepTime = sleep ?: "22:00",
-            wakeTime = wake ?: "06:00",
+            aggressivenessLevel = preferences.aggressivenessLevel,
+            isFixedLimitEnabled = preferences.isFixedLimitEnabled,
+            fixedDailyLimitMinutes = preferences.fixedDailyLimitMinutes,
+            sleepTime = preferences.bedtime ?: "22:00",
+            wakeTime = preferences.wakeTime ?: "06:00",
             appVersion = "1.0.0 (Beta)"
         )
     }
@@ -101,7 +98,7 @@ class SettingsViewModel @Inject constructor(
                     exportState.value = ExportState(exportedFilePath = export.savedPath)
                 },
                 onFailure = { error ->
-                    exportState.value = ExportState(error = error.message ?: context.getString(R.string.export_failed))
+                    exportState.value = ExportState(error = error.message ?: localizedContext.getString(R.string.export_failed))
                 },
             )
         }
@@ -112,7 +109,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun reportExportPermissionDenied() {
-        exportState.value = ExportState(error = context.getString(R.string.export_storage_permission_required))
+        exportState.value = ExportState(error = localizedContext.getString(R.string.export_storage_permission_required))
     }
 
     fun backfillHistory() {

@@ -50,44 +50,50 @@ class UsageRepositoryImpl @Inject constructor(
     override suspend fun syncRecentEventsOnly() = withContext(Dispatchers.IO) {
         if (!appUsageCollector.isPermissionGranted()) return@withContext
 
-        val today = LocalDate.now()
-        reconstructAndSave(today)
+        val today = timeProvider.today()
+        reconstructAndSave(today, userPreferencesRepository.monitoredPackages.first())
         
-        userPreferencesRepository.setLastSyncedTimestamp(System.currentTimeMillis())
+        userPreferencesRepository.setLastSyncedTimestamp(timeProvider.nowMillis())
     }
 
     override suspend fun executeFullBackfill(daysHistory: Int, force: Boolean) = withContext(Dispatchers.IO) {
         if (!appUsageCollector.isPermissionGranted()) return@withContext
 
         // For validation phase, we force backfill
-        val today = LocalDate.now()
+        val today = timeProvider.today()
+        val monitoredPackages = userPreferencesRepository.monitoredPackages.first()
         for (i in 1..daysHistory) {
             val targetDate = today.minusDays(i.toLong())
-            reconstructAndSave(targetDate)
+            reconstructAndSave(targetDate, monitoredPackages)
         }
 
         userPreferencesRepository.setHistoryBackfilled(true)
     }
 
-    private suspend fun reconstructAndSave(date: LocalDate) {
-        val usageList = usageEventCollector.getUsageForDay(date)
-        saveUsageData(usageList, date.toString())
+    private suspend fun reconstructAndSave(date: LocalDate, monitoredPackages: Set<String>) {
+        val result = usageEventCollector.getUsageAndScreenOnForDay(date)
+        saveUsageData(result.usageList, date.toString(), monitoredPackages, result.screenOnMillis)
     }
 
-    private suspend fun saveUsageData(usageList: List<AppUsage>, dateStr: String) {
+    private suspend fun saveUsageData(
+        usageList: List<AppUsage>,
+        dateStr: String,
+        monitoredPackages: Set<String>,
+        precalculatedScreenOnMillis: Long? = null
+    ) {
         val entities = usageList.map { it.toEntity(dateStr) }
 
         // Calculate daily summary
         val totalScreenTime = usageList.sumOf { it.usageDurationMillis }
         val mostUsedApp = usageList.maxByOrNull { it.usageDurationMillis }?.appName
 
-        val monitoredPackages = userPreferencesRepository.monitoredPackages.first()
         val monitoredUsage = usageList
             .filter { it.packageName in monitoredPackages }
             .sumOf { it.usageDurationMillis }
 
         val existingSummary = dao.getDailySummary(dateStr).firstOrNull()
-        val totalScreenOnMillis = usageEventCollector.getScreenOnMillisForDay(LocalDate.parse(dateStr))
+        val totalScreenOnMillis = precalculatedScreenOnMillis
+            ?: usageEventCollector.getScreenOnMillisForDay(LocalDate.parse(dateStr))
         val newSummary = DailySummaryEntity(
             date = dateStr,
             totalScreenTimeMillis = totalScreenTime,

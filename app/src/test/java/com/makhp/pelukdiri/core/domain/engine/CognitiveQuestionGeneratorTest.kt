@@ -134,4 +134,11 @@ class CognitiveQuestionGeneratorTest {
             assertEquals(computed, question.correctAnswer)
         }
     }
+
+    @Test(timeout = 5_000L)
+    fun `all supported levels regenerate repeatedly within local timeout`() {
+        repeat(1_000) {
+            (1..5).forEach(generator::generateQuestion)
+        }
+    }
 }

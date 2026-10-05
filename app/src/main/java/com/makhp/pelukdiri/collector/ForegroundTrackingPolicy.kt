@@ -18,4 +18,10 @@ object ForegroundTrackingPolicy {
     ): Boolean = resolvedPackage == currentPackage &&
         resolvedPackage in monitoredPackages &&
         !trackingJobActive
+
+    fun nextDelay(
+        nowMs: Long,
+        nextSyncAtMs: Long,
+        nextEvaluationAtMs: Long,
+    ): Long = (minOf(nextSyncAtMs, nextEvaluationAtMs) - nowMs).coerceAtLeast(1_000L)
 }

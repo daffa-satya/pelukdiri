@@ -28,12 +28,12 @@ class ProfileViewModel @Inject constructor(
         return lockManager.acquireLock()
     }
 
-    val uiState: StateFlow<ProfileUiState> = combine(
-        userPreferencesRepository.userNickname,
-        userPreferencesRepository.username,
-        userPreferencesRepository.profileImagePath
-    ) { nickname, username, path ->
-        ProfileUiState(nickname, username, path)
+    val uiState: StateFlow<ProfileUiState> = userPreferencesRepository.snapshot.map { preferences ->
+        ProfileUiState(
+            nickname = preferences.userNickname,
+            username = preferences.username,
+            profileImagePath = preferences.profileImagePath,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

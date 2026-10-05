@@ -17,7 +17,7 @@ class AttemptInterventionLaunchUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         controlResult: ControlResult,
-        launch: () -> Boolean,
+        launch: suspend () -> Boolean,
     ): InterventionLaunchResult {
         if (!lockManager.acquireLock()) return InterventionLaunchResult.LOCKED
 

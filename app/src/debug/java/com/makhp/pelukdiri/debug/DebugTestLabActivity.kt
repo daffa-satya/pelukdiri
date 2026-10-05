@@ -27,6 +27,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -421,7 +422,7 @@ private fun DebugTestLabScreen(
     onLaunch: (Int) -> Unit,
     onLaunchPattern: (Int) -> Unit,
 ) {
-    var deviation by remember { mutableStateOf(0.5f) }
+    var deviation by remember { mutableFloatStateOf(0.5f) }
     var showResetDialog by remember { mutableStateOf(false) }
     Surface(Modifier.fillMaxSize()) {
         Column(
@@ -543,7 +544,7 @@ private fun SimulatorSlider(
 private fun LabPreviewContent() {
     DebugTestLabScreen(
         status = "now=0\ndifficulty=2",
-        simulationStatus = "Challenge: MATH\nD=0.50  lux=25.0  λD=0.20\nP=0.75  Q=0.90\nCurrent=2  target=2.80  next=3",
+        simulationStatus = "Challenge: MATH\nD=0.50  lux=25.0  λD=0.20\nP=0.75  Q=0.90\nCurrent=2  target=4.00  next=3",
         onRefresh = {},
         onSimulate = {},
         onLaunchSimulation = {},

@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,9 +35,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val allAppsDateFormatter =
-    DateTimeFormatter.ofPattern("EEEE, dd MMM", Locale.forLanguageTag("id-ID"))
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllAppsScreen(
@@ -46,6 +44,8 @@ fun AllAppsScreen(
     onNavigateToAnalytics: () -> Unit,
     viewModel: AnalyticsViewModel = hiltViewModel(),
 ) {
+    val locale = Locale.forLanguageTag(LocalConfiguration.current.locales[0].toLanguageTag())
+    val allAppsDateFormatter = remember(locale) { DateTimeFormatter.ofPattern("EEEE, dd MMM", locale) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val canEditUsage = (uiState as? AnalyticsUiState.Success)?.let { state ->
         state.selectedDate == selectedDate &&
@@ -115,7 +115,7 @@ fun AllAppsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(state.topApps) { app ->
+                    items(state.topApps, key = { it.packageName }) { app ->
                         AllAppUsageRow(
                             app = app,
                             totalScreenTimeMillis = state.summary?.totalScreenTimeMillis ?: 0L,
@@ -248,7 +248,7 @@ private fun AddAppBottomSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
-                    items(filteredApps) { app ->
+                    items(filteredApps, key = { it.packageName }) { app ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

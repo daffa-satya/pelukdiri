@@ -41,7 +41,7 @@ class EventSequenceAuditTest {
         var lastEvent: UsageEvents.Event? = null
         var doubleResumes = 0
         events.forEach { e ->
-            if (e.eventType == 1 && lastEvent?.eventType == 1 && e.packageName == lastEvent?.packageName) {
+            if (e.eventType == 1 && lastEvent?.eventType == 1 && e.packageName == lastEvent.packageName) {
                 doubleResumes++
             }
             lastEvent = e

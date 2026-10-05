@@ -1,8 +1,6 @@
 package com.makhp.pelukdiri.features.dashboard
 
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.makhp.pelukdiri.R
@@ -39,6 +38,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MainStatsScreen(
+    onTestOnboarding: () -> Unit,
     onProgressClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onViewAllClick: () -> Unit,
@@ -58,6 +58,12 @@ fun MainStatsScreen(
             ProfileSidebar(
                 viewModel = profileViewModel,
                 onClose = { scope.launch { drawerState.close() } },
+                onTestOnboarding = {
+                    scope.launch {
+                        drawerState.close()
+                        onTestOnboarding()
+                    }
+                },
             )
         }
     ) {
@@ -70,11 +76,9 @@ fun MainStatsScreen(
             onGrantUsageAccess = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
             onGrantAccessibility = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
             onGrantBatteryExemption = {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = Uri.parse("package:${context.packageName}")
-                    })
-                }
+                context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = "package:${context.packageName}".toUri()
+                })
             },
             onRetry = viewModel::loadData,
             onProgressClick = onProgressClick,
@@ -247,7 +251,7 @@ private fun ScreenTimeCard(
     val change = remember(usage, previous) {
         if (previous == 0L) 0 else (((usage - previous) * 100) / previous).toInt()
     }
-    val usageFormatted = remember(usage) { formatDuration(usage) }
+    val usageFormatted = formatDuration(usage)
     val limitFormatted = if (adaptiveLimitMinutes != null) {
         formatDuration(adaptiveLimitMillis)
     } else {

@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -27,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.core.content.ContextCompat
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.features.dashboard.DashboardTokens
 import com.makhp.pelukdiri.ui.components.PelukDiriLogo
@@ -36,10 +39,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val timeWithPeriodFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)
-
-internal fun formatTimeWithPeriod(time: String): String =
-    runCatching { LocalTime.parse(time).format(timeWithPeriodFormatter) }.getOrDefault(time)
+internal fun formatTimeWithPeriod(time: String, locale: Locale = Locale.ENGLISH): String =
+    runCatching { LocalTime.parse(time).format(DateTimeFormatter.ofPattern("h:mm a", locale)) }.getOrDefault(time)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +56,9 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val locale = Locale.forLanguageTag(LocalConfiguration.current.locales[0].toLanguageTag())
     var showExportDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var showTimePickerDialog by remember { mutableStateOf<String?>(null) } // "sleep" or "wake"
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -76,6 +79,9 @@ fun SettingsScreen(
 
     SettingsLayout(
         state = state,
+        locale = locale,
+        selectedLanguage = AppCompatDelegate.getApplicationLocales().toLanguageTags(),
+        onLanguageClick = { showLanguageDialog = true },
         onHomeClick = onHomeClick,
         onProgressClick = onProgressClick,
         onNavigateToAdaptiveMode = onNavigateToAdaptiveMode,
@@ -88,6 +94,46 @@ fun SettingsScreen(
         onNavigateToAbout = onNavigateToAbout,
         onLogout = onExitApp
     )
+
+    if (showLanguageDialog) {
+        val selectedLanguage = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(R.string.settings_language_title), fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    listOf(
+                        "" to stringResource(R.string.settings_language_system),
+                        "in" to stringResource(R.string.settings_language_indonesian),
+                        "en" to stringResource(R.string.settings_language_english),
+                    ).forEach { (tag, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+                                    showLanguageDialog = false
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedLanguage == tag,
+                                onClick = {
+                                    AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
+                                    showLanguageDialog = false
+                                }
+                            )
+                            Text(label, modifier = Modifier.padding(start = 8.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(28.dp)
+        )
+    }
 
     if (showTimePickerDialog != null) {
         val initialTime = if (showTimePickerDialog == "sleep") state.sleepTime else state.wakeTime
@@ -218,6 +264,9 @@ fun SettingsScreen(
 @Composable
 private fun SettingsLayout(
     state: SettingsUiState,
+    locale: Locale,
+    selectedLanguage: String,
+    onLanguageClick: () -> Unit,
     onHomeClick: () -> Unit,
     onProgressClick: () -> Unit,
     onNavigateToAdaptiveMode: () -> Unit,
@@ -255,7 +304,7 @@ private fun SettingsLayout(
                         onClick = onSleepTimeClick,
                         trailing = {
                             Text(
-                                text = formatTimeWithPeriod(state.sleepTime),
+                                text = formatTimeWithPeriod(state.sleepTime, locale),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -269,7 +318,25 @@ private fun SettingsLayout(
                         onClick = onWakeTimeClick,
                         trailing = {
                             Text(
-                                text = formatTimeWithPeriod(state.wakeTime),
+                                text = formatTimeWithPeriod(state.wakeTime, locale),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                    SettingsDivider()
+                    SettingsItem(
+                        title = stringResource(R.string.settings_language_title),
+                        description = stringResource(R.string.settings_language_desc),
+                        icon = Icons.Default.Language,
+                        onClick = onLanguageClick,
+                        trailing = {
+                            Text(
+                                text = when {
+                                    selectedLanguage.startsWith("id") || selectedLanguage.startsWith("in") -> stringResource(R.string.settings_language_indonesian)
+                                    selectedLanguage.startsWith("en") -> stringResource(R.string.settings_language_english)
+                                    else -> stringResource(R.string.settings_language_system)
+                                },
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )

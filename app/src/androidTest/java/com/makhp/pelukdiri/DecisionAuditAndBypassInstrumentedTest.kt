@@ -11,6 +11,8 @@ import com.makhp.pelukdiri.core.database.entity.DailySummaryEntity
 import com.makhp.pelukdiri.core.database.entity.InterventionDecisionEntity
 import com.makhp.pelukdiri.core.database.entity.InterventionLogEntity
 import com.makhp.pelukdiri.core.database.export.CsvExporter
+import com.makhp.pelukdiri.core.domain.model.ControlConfig
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -24,6 +26,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.ZoneId
 import java.util.zip.ZipFile
 
 @RunWith(AndroidJUnit4::class)
@@ -249,6 +252,7 @@ class DecisionAuditAndBypassInstrumentedTest {
                 challengeType = "PATTERN",
             )
         )
+        val exportTime = 1_787_303_920_000L
         val exporter = CsvExporter(
             context,
             database.usageDao(),
@@ -257,11 +261,16 @@ class DecisionAuditAndBypassInstrumentedTest {
             database.interventionDecisionDao(),
             database.interventionNotificationDao(),
             database.adaptiveLimitDao(),
+            object : TimeProvider {
+                override fun nowMillis() = exportTime
+                override fun zoneId() = ZoneId.of("Asia/Jakarta")
+            },
         )
 
         val export = exporter.exportFullDatabaseToZip().getOrThrow()
         val file = export.archiveFile
         try {
+            assertEquals("PELUKDIRI_FullExport_20260821_091840.zip", file.name)
             assertEquals("${Environment.DIRECTORY_DOWNLOADS}/${file.name}", export.savedPath)
             context.contentResolver.query(
                 export.downloadUri,
@@ -301,8 +310,9 @@ class DecisionAuditAndBypassInstrumentedTest {
                 val deviceInfoEntry = zip.getEntry("device_info.txt")
                 assertNotNull(deviceInfoEntry)
                 val deviceInfo = zip.getInputStream(deviceInfoEntry).bufferedReader().use { it.readText() }
+                assertTrue(deviceInfo.contains("export.generated_at_utc=2026-08-21T09:18:40Z\r\n"))
                 assertTrue(deviceInfo.contains("app.package_name=${context.packageName}\r\n"))
-                assertTrue(deviceInfo.contains("intervention.policy_version=v1.1-failure-streak-decrease\r\n"))
+                assertTrue(deviceInfo.contains("intervention.policy_version=${ControlConfig.POLICY_VERSION}\r\n"))
                 assertTrue(deviceInfo.contains("device.model="))
                 assertTrue(deviceInfo.contains("os.api_level="))
                 assertTrue(deviceInfo.contains("battery.level_percent="))

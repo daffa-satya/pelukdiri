@@ -4,6 +4,7 @@ import com.makhp.pelukdiri.core.domain.model.AggressivenessLevel
 import com.makhp.pelukdiri.core.domain.model.InterventionLog
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -126,6 +127,9 @@ class EmergencyBypassAuditTest {
         override suspend fun getBypassCountForDay(startOfDay: Long, endOfDay: Long): Int {
             return logs.count { it.isBypassed && it.timestamp >= startOfDay && it.timestamp < endOfDay }
         }
+        override suspend fun getLogCountInRange(startMillis: Long, endMillis: Long): Int {
+            return logs.count { it.timestamp in startMillis..endMillis }
+        }
         override suspend fun insertBypassIfQuotaAvailable(
             log: InterventionLog,
             startOfDay: Long,
@@ -144,6 +148,36 @@ class EmergencyBypassAuditTest {
     private class FakeUserPreferencesRepository : UserPreferencesRepository {
         var bypassUntil: Long = 0L
         var nextEligibleAt: Long = 0L
+
+        override val snapshot: Flow<UserPreferencesSnapshot>
+            get() = flowOf(
+                UserPreferencesSnapshot(
+                    isHistoryBackfilled = false,
+                    lastSyncedTimestamp = 0L,
+                    emergencyBypassUntil = bypassUntil,
+                    monitoredPackages = emptySet(),
+                    aggressivenessLevel = AggressivenessLevel.BALANCED,
+                    isFixedLimitEnabled = false,
+                    fixedDailyLimitMinutes = 60,
+                    bedtime = null,
+                    wakeTime = null,
+                    currentDifficulty = 2,
+                    nextEligibleInterventionAt = nextEligibleAt,
+                    activeInterventionSession = null,
+                    userNickname = "",
+                    username = "",
+                    profileImagePath = null,
+                    isOnboardingCompleted = false,
+                    isDailySummaryEnabled = true,
+                    isWeeklyReflectionEnabled = true,
+                    isLimitReminderEnabled = true,
+                    isInterventionReminderEnabled = true,
+                    isDndEnabled = false,
+                    lastDailySummaryDate = null,
+                    lastWeeklyReflectionDate = null,
+                    lastLimitReminderTimestamp = 0L,
+                )
+            )
 
         override val emergencyBypassUntil: Flow<Long> get() = flowOf(bypassUntil)
         override val nextEligibleInterventionAt: Flow<Long> get() = flowOf(nextEligibleAt)

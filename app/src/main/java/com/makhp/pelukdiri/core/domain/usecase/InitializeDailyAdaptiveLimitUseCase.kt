@@ -6,17 +6,18 @@ import com.makhp.pelukdiri.core.domain.model.AdaptiveLimitResult
 import com.makhp.pelukdiri.core.domain.model.DailyAdaptiveLimit
 import com.makhp.pelukdiri.core.domain.model.HistoricalConfig
 import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
-import java.time.LocalDate
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import javax.inject.Inject
 
 class InitializeDailyAdaptiveLimitUseCase @Inject constructor(
     private val getAdaptiveHistoryUseCase: GetAdaptiveHistoryUseCase,
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val deviationEngine: DeviationEngine,
-    private val adaptiveLimitGenerator: AdaptiveLimitGenerator
+    private val adaptiveLimitGenerator: AdaptiveLimitGenerator,
+    private val timeProvider: TimeProvider,
 ) {
     suspend operator fun invoke(force: Boolean = false) {
-        val today = LocalDate.now()
+        val today = timeProvider.today()
         val dateStr = today.toString()
 
         // 1. Idempotency Check

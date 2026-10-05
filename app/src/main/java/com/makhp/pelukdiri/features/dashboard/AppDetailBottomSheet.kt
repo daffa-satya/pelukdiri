@@ -221,10 +221,10 @@ private fun MetricsGrid(app: UiAppUsage) {
                 modifier = Modifier.weight(1f),
                 title = stringResource(R.string.app_detail_peak_time),
                 icon = Icons.AutoMirrored.Filled.TrendingUp,
-                value = app.longestSessionTodayMillis?.let(::formatDuration) ?: "--",
+                value = app.longestSessionTodayMillis?.let { formatDuration(it) } ?: "--",
                 subValue = stringResource(
                     R.string.app_detail_yesterday,
-                    app.longestSessionYesterdayMillis?.let(::formatDuration) ?: "--",
+                    app.longestSessionYesterdayMillis?.let { formatDuration(it) } ?: "--",
                 ),
                 change = null, // Can add logic for earlier/later if peak time is parsed
                 isPositive = true
@@ -233,7 +233,7 @@ private fun MetricsGrid(app: UiAppUsage) {
                 modifier = Modifier.weight(1f),
                 title = stringResource(R.string.app_detail_interventions),
                 icon = Icons.Default.DoneAll,
-                value = "${app.interventionsToday ?: 0} kali",
+                value = stringResource(R.string.app_detail_times_count, app.interventionsToday ?: 0),
                 subValue = stringResource(R.string.app_detail_completed_today),
                 change = if ((app.interventionsToday ?: 0) > 0) "Good job!" else null,
                 isPositive = true

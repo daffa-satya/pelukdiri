@@ -37,6 +37,9 @@ interface InterventionDao {
     @Query("SELECT COUNT(*) FROM intervention_logs WHERE isBypassed = 1 AND timestamp >= :start AND timestamp < :end")
     suspend fun getBypassCountInInterval(start: Long, end: Long): Int
 
+    @Query("SELECT COUNT(*) FROM intervention_logs WHERE timestamp BETWEEN :startMillis AND :endMillis")
+    suspend fun getLogCountInRange(startMillis: Long, endMillis: Long): Int
+
     @Transaction
     suspend fun insertBypassIfQuotaAvailable(
         log: InterventionLogEntity,

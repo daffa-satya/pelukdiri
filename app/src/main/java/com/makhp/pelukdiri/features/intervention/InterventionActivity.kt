@@ -7,7 +7,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import javax.inject.Inject
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -20,7 +20,7 @@ import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class InterventionActivity : ComponentActivity() {
+class InterventionActivity : AppCompatActivity() {
     
     private val viewModel: InterventionViewModel by viewModels()
 

@@ -73,7 +73,7 @@ class UsageEventReconstructor @Inject constructor() {
                         }
                         
                         if (!isTransient) {
-                            sessions.add(UsageSession(currentPackage!!, sessionStartTime, event.timestamp))
+                            sessions.add(UsageSession(currentPackage, sessionStartTime, event.timestamp))
                             currentPackage = null
                             sessionStartTime = -1L
                         }
@@ -84,7 +84,7 @@ class UsageEventReconstructor @Inject constructor() {
                 ACTIVITY_STOPPED -> Unit
                 SCREEN_NON_INTERACTIVE -> {
                     if (currentPackage != null) {
-                        sessions.add(UsageSession(currentPackage!!, sessionStartTime, event.timestamp))
+                        sessions.add(UsageSession(currentPackage, sessionStartTime, event.timestamp))
                         currentPackage = null
                         sessionStartTime = -1L
                     }

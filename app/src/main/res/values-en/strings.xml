@@ -1,5 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">PELUKDIRI</string>
+    <string name="app_name">CelfCare</string>
     <plurals name="duration_hours">
         <item quantity="one">%1$dh</item>
         <item quantity="other">%1$dh</item>
@@ -8,56 +9,56 @@
         <item quantity="one">%1$dm</item>
         <item quantity="other">%1$dm</item>
     </plurals>
-    <string name="accessibility_service_description">Monitor app usage and prevent excessive screen time</string>
+    <string name="accessibility_service_description">Monitors app usage and prevents excessive screen time</string>
 
     <!-- Dashboard -->
-    <string name="dashboard_header_title">PELUKDIRI</string>
+    <string name="dashboard_header_title">CelfCare</string>
     <string name="dashboard_screen_time_today">MONITORED SCREEN TIME</string>
     <string name="dashboard_adaptive_limit">Adaptive Limit</string>
     <string name="dashboard_recalculate_limit">Recalculate</string>
-    <string name="dashboard_recalculate_limit_failed">Failed to recalculate adaptive limit.</string>
-    <string name="dashboard_load_failed">Failed to load dashboard.</string>
-    <string name="dashboard_refresh_failed">Failed to update dashboard data.</string>
+    <string name="dashboard_recalculate_limit_failed">Adaptive limit could not be recalculated.</string>
+    <string name="dashboard_load_failed">Dashboard could not be loaded.</string>
+    <string name="dashboard_refresh_failed">Dashboard data could not be updated.</string>
     <string name="dashboard_from_yesterday">%1$d%% from yesterday</string>
     <string name="dashboard_more_than_yesterday">%1$d%% longer than yesterday</string>
     <string name="dashboard_backfill_14_days">Fetch data</string>
-    <string name="settings_backfill_desc">Fetch all available usage data up to the last 14 days</string>
+    <string name="settings_backfill_desc">Fetch all available usage up to the last 14 days</string>
     <string name="settings_backfill_error_title">Fetch data failed</string>
-    <string name="settings_backfill_error_msg">Usage history could not be retrieved. Check usage access permission and try again.</string>
-    <string name="dashboard_usage_access_needed">Usage access permission is required to calculate screen time.</string>
+    <string name="settings_backfill_error_msg">Usage history could not be retrieved. Check usage access permissions, then try again.</string>
+    <string name="dashboard_usage_access_needed">Usage access is required to calculate screen time.</string>
     <string name="dashboard_open_permission">Open permissions</string>
     <string name="dashboard_accessibility_needed">Enable accessibility service to run interventions.</string>
     <string name="dashboard_enable">Enable</string>
-    <string name="dashboard_battery_optimization_needed">Allow app to run without battery optimization to keep monitoring active.</string>
+    <string name="dashboard_battery_optimization_needed">Allow the app to run without battery optimization to keep monitoring active.</string>
     <string name="dashboard_allow">Allow</string>
     <string name="dashboard_top_apps_today">TOP APPS TODAY</string>
     <string name="dashboard_view_all">View all</string>
-    <string name="dashboard_no_usage_data">No usage data today.</string>
+    <string name="dashboard_no_usage_data">No usage data for today.</string>
     <string name="dashboard_insufficient_data">Insufficient data</string>
     <string name="dashboard_home">Home</string>
     <string name="dashboard_progress">Analytics</string>
     <string name="dashboard_settings">Settings</string>
     <string name="dashboard_tap_to_retry">%1$s\nTap to try again</string>
     <string name="dashboard_insight_title">TODAY\'S INSIGHT</string>
-    <string name="dashboard_encouragement">A brief pause, for yourself.\nYou are becoming better.</string>
+    <string name="dashboard_encouragement">Take a short break, for yourself.\nYou are getting better.</string>
 
     <!-- Analytics / Progress -->
     <string name="analytics_edit_usage">Edit usage time</string>
-    <string name="analytics_edit_usage_title">Edit %1$s usage</string>
+    <string name="analytics_edit_usage_title">Edit usage for %1$s</string>
     <string name="analytics_edit_usage_hours">Hours</string>
     <string name="analytics_edit_usage_minutes">Minutes</string>
     <string name="analytics_edit_usage_save">Save</string>
     <string name="analytics_edit_usage_cancel">Cancel</string>
-    <string name="analytics_edit_usage_notice">Data changes will update the summary of the selected day and affect adaptive limit calculations. <b>Fetching data may overwrite edited data.</b></string>
-    <string name="analytics_edit_usage_failed">Usage time could not be changed. Tap to reload.</string>
-    <string name="analytics_edit_usage_daily_limit">Total daily app usage cannot exceed 24 hours.</string>
+    <string name="analytics_edit_usage_notice">Data changes will update the summary for the selected day and affect the adaptive limit calculation. &lt;b&gt;Fetching data may overwrite modified data.&lt;/b&gt;</string>
+    <string name="analytics_edit_usage_failed">Usage time could not be modified. Tap to reload.</string>
+    <string name="analytics_edit_usage_daily_limit">Total app usage in a single day cannot exceed 24 hours.</string>
     <string name="analytics_title">Analytics</string>
     <string name="analytics_period_daily">Daily</string>
     <string name="analytics_period_weekly">Weekly</string>
     <string name="analytics_period_monthly">Monthly</string>
     <string name="analytics_metric_total_screentime">Total Screen Time</string>
     <string name="analytics_metric_social_media_screentime">Monitored Screen Time</string>
-    <string name="analytics_avg_screentime">Average Screen Time</string>
+    <string name="analytics_avg_screentime">Avg Screen Time</string>
     <string name="analytics_metric_longest_session">Longest Session</string>
     <string name="analytics_metric_interventions">Interventions</string>
     <string name="analytics_vs_period">%1$s vs %2$s</string>
@@ -66,7 +67,7 @@
     <string name="analytics_comparison_previous_month">previous month</string>
     <string name="analytics_comparison_new">new</string>
     <string name="analytics_minutes_short">%1$d m</string>
-    <string name="analytics_x_axis_explanation">X-axis shows hour of day (00:00–24:00).</string>
+    <string name="analytics_x_axis_explanation">The X-axis shows the hours of the day (00:00–24:00).</string>
     <string name="analytics_graph_calculate">Calculate graph</string>
     <string name="analytics_graph_calculating">Calculating graph…</string>
     <string name="analytics_graph_failed">Graph could not be calculated. Try again.</string>
@@ -77,52 +78,52 @@
     <string name="analytics_insufficient_data">Insufficient data</string>
     <string name="analytics_insight_positive_1">Great job!</string>
     <string name="analytics_insight_positive_2">Awesome!</string>
-    <string name="analytics_insight_positive_3">Superb!</string>
-    <string name="analytics_insight_positive_4">Wonderful!</string>
-    <string name="analytics_insight_negative_1">Watch out!</string>
-    <string name="analytics_insight_negative_2">Careful!</string>
-    <string name="analytics_insight_negative_3">Improve your habits!</string>
+    <string name="analytics_insight_positive_3">Top tier!</string>
+    <string name="analytics_insight_positive_4">Excellent!</string>
+    <string name="analytics_insight_negative_1">Heads up!</string>
+    <string name="analytics_insight_negative_2">Uh-oh!</string>
+    <string name="analytics_insight_negative_3">Fix your habits!</string>
     <string name="analytics_insight_negative_4">Be careful!</string>
     <string name="analytics_insight_sub_positive">Your daily screen time is %1$s below the adaptive limit.</string>
     <string name="analytics_insight_sub_negative">Your daily screen time is %1$s above the adaptive limit.</string>
 
-    <string name="analytics_fun_fact_guitar">%1$s every day could be spent playing guitar.</string>
-    <string name="analytics_fun_fact_reading" tools:ignore="PluralsCandidate">This %1$s duration is enough to read about %2$d book pages.</string>
-    <string name="analytics_fun_fact_meditation" tools:ignore="PluralsCandidate">Instead of %1$s on screen, you could complete %2$d meditation sessions.</string>
-    <string name="analytics_fun_fact_workout">Wasted %1$s time could be turned into a running session.</string>
-    <string name="analytics_fun_fact_language">Within %1$s, you can learn dozens of new foreign words.</string>
+    <string name="analytics_fun_fact_guitar">Spending %1$s every day could be used to play the guitar.</string>
+    <string name="analytics_fun_fact_reading" tools:ignore="PluralsCandidate">This %1$s duration is enough to read about %2$d pages of a book.</string>
+    <string name="analytics_fun_fact_meditation" tools:ignore="PluralsCandidate">Instead of %1$s on screen, you could do %2$d meditation sessions.</string>
+    <string name="analytics_fun_fact_workout">Wasted time of %1$s could be turned into a running session.</string>
+    <string name="analytics_fun_fact_language">In %1$s, you could learn dozens of new foreign words.</string>
     <string name="analytics_prev">Previous</string>
     <string name="analytics_next">Next</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_language_title">App language</string>
-    <string name="settings_language_desc">Choose the language used in PelukDiri.</string>
+    <string name="settings_language_desc">Choose the language used in CelfCare.</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_indonesian">Bahasa Indonesia</string>
     <string name="settings_language_english">English</string>
     <string name="settings_preferences_section">Preferences</string>
     <string name="settings_monitored_apps_title">Monitored Apps</string>
-    <string name="settings_monitored_apps_desc">Manage monitored applications.</string>
+    <string name="settings_monitored_apps_desc">Manage supervised applications.</string>
     <string name="settings_notifications_title">Notifications</string>
     <string name="settings_export_csv_title">Export CSV</string>
-    <string name="settings_export_csv_desc">Export app usage and intervention data.</string>
+    <string name="settings_export_csv_desc">Export app usage data and interventions.</string>
     <string name="settings_info_section">Information</string>
     <string name="settings_about_title">About</string>
     <string name="settings_informed_consent_title">Informed Consent</string>
     <string name="settings_informed_consent_desc">Research consent.</string>
-    <string name="settings_about_desc">PELUKDIRI GitHub.</string>
+    <string name="settings_about_desc">GitHub CelfCare.</string>
     <string name="settings_notifications_section_title">Notification List</string>
-    <string name="settings_notifications_auto_info">The app will send automatic notifications to help you stay mindful of your screen time.</string>
+    <string name="settings_notifications_auto_info">The app will automatically send notifications to help you stay aware of your screen usage.</string>
     <string name="settings_notifications_mandatory_note">You will continue to receive these important notifications regularly.</string>
     <string name="settings_notifications_auto_banner_title">Automatic Notifications</string>
-    <string name="settings_notifications_auto_banner_desc">PELUKDIRI ensures you stay connected with your digital progress.</string>
+    <string name="settings_notifications_auto_banner_desc">CelfCare ensures you stay connected with your digital progress.</string>
     <string name="settings_about_header">About</string>
 
     <string name="profile_test_notification">Test Notification</string>
     <string name="profile_test_onboarding">Test Onboarding</string>
-    <string name="profile_test_lab">PELUKDIRI Test Lab</string>
-    <string name="common_logo_desc">PELUKDIRI Logo</string>
+    <string name="profile_test_lab">CelfCare Test Lab</string>
+    <string name="common_logo_desc">CelfCare Logo</string>
     <string name="common_back">Back</string>
     <string name="common_close">Close</string>
     <string name="common_cancel">Cancel</string>
@@ -134,22 +135,22 @@
 
     <string name="informed_consent_header">Informed Consent</string>
     <string name="informed_consent_title">INFORMED CONSENT</string>
-    <string name="informed_consent_p1">We are the research team “Mama, Aku Kecanduan HP” from SMAN 70 Jakarta. We are currently conducting research entitled “PELUKDIRI (Perangkat Lunak Untuk Kesejahteraan Digital Remaja Indonesia): Control Theory-Based Screen Time Management System for Digital Health”.</string>
-    <string name="informed_consent_p2">This study aims to determine whether using the PELUKDIRI application with adaptive cognitive challenge interventions can help reduce screen time duration, especially on entertainment apps, without significantly increasing user stress levels. PELUKDIRI is designed as digital wellbeing software that provides brief cognitive challenges in the form of mental math and patterns when respondents open designated entertainment apps.</string>
-    <string name="informed_consent_p3">The benefit of this research is providing respondents with experience using technology designed to increase awareness of screen time usage. Furthermore, the findings are expected to serve as a basis for developing more adaptive digital wellbeing software suited for teenagers\' needs.</string>
-    <string name="informed_consent_p4">The research method used is quantitative experimental research with a repeated measures design. Data collection is conducted via the PELUKDIRI app and questionnaires. Respondents will use the app during the study period, and screen time and intervention activity data will be analyzed to observe screen time changes.</string>
-    <string name="informed_consent_p5">This study is conducted online via each respondent\'s smartphone. Respondents will use PELUKDIRI during the specified study period. During the study, respondents are asked to use their smartphones normally without intentionally changing their device usage habits.</string>
-    <string name="informed_consent_p6">When opening selected entertainment apps configured for intervention, PELUKDIRI will display a brief cognitive challenge before the app can be used. Intervention levels can be adjusted based on respondent performance in solving challenges within established difficulty thresholds.</string>
-    <string name="informed_consent_p7">During the study, the app will collect necessary research data such as screen time duration, entertainment app usage duration, app launch counts, and intervention activity and performance. Respondents will also be asked to complete questionnaires providing feedback on their app experience.</string>
-    <string name="informed_consent_p8">PELUKDIRI does not read personal messages, photos, videos, contacts, passwords, or personal conversations. Collected data is used strictly for research purposes.</string>
-    <string name="informed_consent_p9">App usage may cause minor discomfort, such as feeling interrupted when interventions appear or brief inconvenience in pausing entertainment app usage. Respondents may also experience difficulty with mental math or pattern challenges. Interventions are designed as short challenges with predetermined difficulty bounds.</string>
-    <string name="informed_consent_p10">Obtained data will be kept confidential and accessible only by researchers. Research data will be stored locally on researcher laptops. Respondent identities will be anonymized with codes during processing and omitted from research publications. Results will be presented in group data, tables, charts, or statistical analysis so individual identities remain unknown.</string>
-    <string name="informed_consent_p11">Participation in this study is voluntary and follows research procedures and consent from respondents and parents or guardians. Respondents will receive compensation of IDR 50,000.00 as appreciation for their time and participation. Compensation is not coercion to participate.</string>
-    <string name="informed_consent_p12">If you have any questions, app usage difficulties, or inquiries regarding this study, you may contact: josuaku091010@gmail.com (Joshua Leonardo Hilman Hutajulu) and daffa.satya.alif@gmail.com (Daffa Satya Alif Siregar).</string>
-    <string name="settings_logout_title">Logout</string>
-    <string name="settings_logout_desc">Log out from PELUKDIRI.</string>
+    <string name="informed_consent_p1">We are from the team \"Mama, Aku Kecanduan HP\" from SMAN 70 Jakarta. Currently, we are conducting a research project titled \"CelfCare (Software for Indonesian Adolescent Digital Wellbeing): Control Theory-Based Screen Time Management System for Digital Health\".</string>
+    <string name="informed_consent_p2">This research aims to determine whether using the CelfCare app with adaptive cognitive challenge interventions can help reduce screen time duration, particularly on entertainment apps, without significantly increasing user stress levels. CelfCare is designed as digital wellbeing software that delivers short cognitive challenges in the form of mental math and pattern recognition when respondents open designated entertainment apps.</string>
+    <string name="informed_consent_p3">The benefit of this study is providing respondents with experience using technology designed to enhance awareness of screen time usage. Additionally, the findings are expected to serve as a foundation for developing adaptive digital wellbeing software tailored to adolescents\' needs.</string>
+    <string name="informed_consent_p4">The research methodology utilized is experimental quantitative research with a repeated measures design. Data collection is carried out through the CelfCare app and questionnaires. Respondents will use the application throughout the study period, after which screen usage data and intervention activities will be analyzed to observe changes in screen time over the measurement period.</string>
+    <string name="informed_consent_p5">This research is conducted online via each respondent\'s smartphone. Respondents will use the CelfCare application for the designated study period. During the study, respondents are asked to use their smartphones as usual without intentionally altering their device usage habits.</string>
+    <string name="informed_consent_p6">When respondents open designated entertainment apps selected for intervention, CelfCare will display a brief cognitive challenge before the app can be accessed. The intervention level can adjust based on the respondent\'s performance in solving challenges within pre-determined difficulty limits.</string>
+    <string name="informed_consent_p7">Throughout the study, the app will collect necessary research data, such as total screen time, entertainment app usage duration, app launch counts, and intervention activity and performance. Respondents will also be asked to complete a questionnaire to provide feedback on their experience using the application.</string>
+    <string name="informed_consent_p8">CelfCare is not used to read the content of messages, photos, videos, contacts, passwords, or personal conversation logs of respondents. The collected data is strictly used for research purposes.</string>
+    <string name="informed_consent_p9">Using the application may cause mild inconvenience, such as feeling interrupted when interventions pop up or feeling discomfort when pausing entertainment app usage. Respondents might also experience difficulty when solving mental math or pattern challenges. Interventions are designed as short challenges within pre-set difficulty limits.</string>
+    <string name="informed_consent_p10">Obtained data will be kept strictly confidential and accessible only to the research team. Research data will be stored locally on the researcher\'s laptop. Respondent identities will use codes during data processing and will not be disclosed in research reports. Research outcomes will be presented in aggregate form, tables, graphs, or statistical analyses so individual identities cannot be identified.</string>
+    <string name="informed_consent_p11">Participation in this study is conducted according to research procedures with consent from the respondent and their parent or guardian. Respondents will receive a compensation of IDR 50,000 as appreciation for their time and participation. This compensation is not a form of coercion to join the study.</string>
+    <string name="informed_consent_p12">If you have questions, trouble using the app, or feedback regarding this study, you may contact: josuaku091010@gmail.com (Joshua Leonardo Hilman Hutajulu) and daffa.satya.alif@gmail.com (Daffa Satya Alif Siregar).</string>
+    <string name="settings_logout_title">Log Out</string>
+    <string name="settings_logout_desc">Log out of the CelfCare application.</string>
     <string name="settings_export_confirm_title">Export Data</string>
-    <string name="settings_export_confirm_msg">All PELUKDIRI data will be packed into a ZIP containing CSV files. Export?</string>
+    <string name="settings_export_confirm_msg">All CelfCare data will be packed into a ZIP file containing CSV files. Export now?</string>
     <string name="settings_export_button">Export</string>
     <string name="settings_export_progress_title">Exporting data</string>
     <string name="settings_export_progress_msg">Preparing ZIP file…</string>
@@ -160,64 +161,64 @@
     <string name="settings_export_close">Close</string>
 
     <string name="settings_sleep_time_title">Bedtime</string>
-    <string name="settings_sleep_time_desc">Set your bedtime.</string>
+    <string name="settings_sleep_time_desc">Set your sleep schedule.</string>
     <string name="settings_wake_time_title">Wake Time</string>
-    <string name="settings_wake_time_desc">When your day starts.</string>
-    <string name="settings_sleep_time_label">Bedtime</string>
+    <string name="settings_wake_time_desc">When your day begins.</string>
+    <string name="settings_sleep_time_label">Sleep Time</string>
     <string name="settings_wake_time_label">Wake Time</string>
 
     <!-- Adaptive Mode -->
     <string name="adaptive_mode_title">Adaptive Mode</string>
     <string name="adaptive_mode_active">Adaptive Mode Active</string>
-    <string name="adaptive_mode_active_desc">The system continuously learns from your habits to provide the best interventions.</string>
+    <string name="adaptive_mode_active_desc">The system continuously learns from your habits to deliver the best interventions.</string>
     <string name="adaptive_mode_intensity_title">Intervention Aggressiveness Level</string>
-    <string name="adaptive_mode_intensity_desc">Determine how strictly the system monitors your usage.</string>
+    <string name="adaptive_mode_intensity_desc">Set how strictly the system will monitor your usage.</string>
     <string name="adaptive_mode_level_conservative">Conservative</string>
     <string name="adaptive_mode_level_balanced">Balanced</string>
     <string name="adaptive_mode_level_aggressive">Aggressive</string>
     <string name="adaptive_mode_prediction_title">Today\'s Prediction</string>
-    <string name="adaptive_mode_view_detail">View detail</string>
+    <string name="adaptive_mode_view_detail">View details</string>
     <string name="adaptive_mode_predicted_limit">Adaptive Limit</string>
     <string name="adaptive_mode_predicted_intensity">Intensity</string>
     <string name="adaptive_mode_difficulty">Difficulty Level</string>
     <string name="adaptive_mode_monitored_apps">Monitored Apps</string>
-    <string name="adaptive_mode_monitored_apps_desc_format" tools:ignore="PluralsCandidate">From %1$d apps</string>
+    <string name="adaptive_mode_monitored_apps_desc_format" tools:ignore="PluralsCandidate">Out of %1$d apps</string>
     <string name="adaptive_mode_prediction_detail_title">Prediction Details</string>
-    <string name="adaptive_mode_prediction_detail_msg">The algorithm predicts your usage behavior based on the last 14 days\' data to determine the most effective yet comfortable limit.</string>
-    <string name="adaptive_mode_understand">Understood</string>
+    <string name="adaptive_mode_prediction_detail_msg">The algorithm predicts your usage behavior based on data from the last 14 days to determine the most effective yet comfortable limit.</string>
+    <string name="adaptive_mode_understand">Got it</string>
 
     <!-- Apps Intervention -->
     <string name="apps_intervention_title">Monitored Apps</string>
-    <string name="apps_intervention_desc">Select apps to monitor.\nInterventions will appear when these apps are opened.</string>
+    <string name="apps_intervention_desc">Choose apps you want to monitor.\nInterventions will appear when these apps are opened.</string>
     <string name="apps_intervention_loading">Loading apps</string>
 
     <string name="apps_intervention_per_day_format">%1$s per day</string>
 
     <!-- Notification Settings -->
     <string name="notification_settings_daily_summary">Daily Summary</string>
-    <string name="notification_settings_daily_summary_desc">Get a summary of your daily usage every night.</string>
+    <string name="notification_settings_daily_summary_desc">Get a daily usage summary every night.</string>
     <string name="notification_settings_weekly_reflection">Weekly Reflection</string>
     <string name="notification_settings_weekly_reflection_desc">View your weekly reflection and progress every Sunday.</string>
     <string name="notification_settings_limit_reminder">Limit Reminder</string>
-    <string name="notification_settings_limit_reminder_desc">Reminder when you approach or reach your adaptive screen time limit.</string>
+    <string name="notification_settings_limit_reminder_desc">Reminders when you approach or reach your adaptive screen time limit.</string>
     <string name="notification_settings_limit_reminder_time">When approaching limit</string>
 
     <!-- Privacy Screen -->
     <string name="privacy_title">Privacy</string>
     <string name="privacy_commitment">We are committed to protecting your privacy and personal data.</string>
     <string name="privacy_prioritized_title">Privacy is our priority</string>
-    <string name="privacy_prioritized_desc">Your data is used only to help PELUKDIRI work better for you. We do not sell your data to any third party.</string>
+    <string name="privacy_prioritized_desc">Your data is only used to help CelfCare work better for you. We do not sell your data to third parties.</string>
     <string name="privacy_collected_section">Data We Collect</string>
     <string name="privacy_item_screen_time_title">Screen Time</string>
     <string name="privacy_item_screen_time_desc">App usage duration and daily screen time.</string>
     <string name="privacy_item_apps_opened_title">Opened Apps</string>
-    <string name="privacy_item_apps_opened_desc">Information on apps you open and their frequency.</string>
+    <string name="privacy_item_apps_opened_desc">Information about apps you open and their frequency.</string>
     <string name="privacy_item_intervention_title">Interventions &amp; Progress</string>
-    <string name="privacy_item_intervention_desc">Intervention history, answers, and weekly progress.</string>
+    <string name="privacy_item_intervention_desc">Intervention history, test answers, and weekly progress.</string>
     <string name="privacy_item_device_data_title">Device Data (Lightweight)</string>
-    <string name="privacy_item_device_data_desc">Device information such as OS model to support app stability.</string>
+    <string name="privacy_item_device_data_desc">Device info such as OS model to support application stability.</string>
     <string name="privacy_not_collected_title">Data We Do Not Collect</string>
-    <string name="privacy_not_collected_desc">We do not access messages, contacts, locations, photos, microphones, cameras, or other personal content.</string>
+    <string name="privacy_not_collected_desc">We do not access your messages, contacts, location, photos, microphone, camera, or other personal content.</string>
     <string name="privacy_ownership_section">Data Ownership &amp; Storage</string>
     <string name="privacy_item_local_storage_title">Local Storage</string>
     <string name="privacy_item_local_storage_desc">Your data is stored securely on your device and is not sent to external servers.</string>
@@ -225,13 +226,11 @@
     <string name="privacy_questions_title">Have questions about privacy?</string>
     <string name="privacy_questions_desc">Contact us at https://github.com/daffa-satya/pelukdiri</string>
     <string name="privacy_delete_data_title">Delete My Data</string>
-    <string name="privacy_delete_data_desc">Delete all data collected by PELUKDIRI from this device.</string>
-
-    <!-- About Screen -->
+    <string name="privacy_delete_data_desc">Delete all data collected by CelfCare from this device.</string>
 
     <!-- Profile Sidebar -->
     <string name="profile_title">User Profile</string>
-    <string name="profile_image_description">Profile Photo</string>
+    <string name="profile_image_description">Profile Picture</string>
     <string name="profile_nickname">Nickname</string>
     <string name="profile_username">Username</string>
     <string name="profile_not_set">Not set</string>
@@ -240,7 +239,7 @@
     <string name="profile_edit_username">Edit Username</string>
     <string name="profile_save">Save</string>
     <string name="profile_cancel">Cancel</string>
-    <string name="profile_select_source">Select Photo Source</string>
+    <string name="profile_select_source">Select Image Source</string>
     <string name="profile_gallery">Gallery</string>
     <string name="profile_delete_photo">Delete Profile Photo</string>
     <string name="profile_test_intervention">Test Math Intervention</string>
@@ -256,57 +255,56 @@
 
     <!-- App Detail Insights -->
     <string name="app_detail_great_job">Great job!</string>
-    <string name="app_detail_great_job_2">Awesome!</string>
-    <string name="app_detail_great_job_3">Superb!</string>
+    <string name="app_detail_great_job_2">Awesome job!</string>
+    <string name="app_detail_great_job_3">Excellent!</string>
     <string name="app_detail_great_job_4">Keep it up!</string>
-    <string name="app_detail_watch_out">Stop for a moment!</string>
-    <string name="app_detail_watch_out_2">Watch out!</string>
-    <string name="app_detail_watch_out_3">Let\'s focus again!</string>
+    <string name="app_detail_watch_out">Take a pause!</string>
+    <string name="app_detail_watch_out_2">Heads up!</string>
+    <string name="app_detail_watch_out_3">Let\'s refocus!</string>
     <string name="app_detail_watch_out_4">Be careful!</string>
     <string name="app_detail_spent_less">You spent %1$d%% less time on %2$s compared to yesterday.</string>
-    <string name="app_detail_spent_more">You spent %1$d%% more time on %2$s compared to yesterday.</string>
+    <string name="app_detail_spent_more">You spent %1$d%% more time on %2$s than yesterday.</string>
     <string name="app_detail_time_spent">Time spent</string>
     <string name="app_detail_openings">Opened</string>
     <string name="app_detail_peak_time">Longest session</string>
     <string name="app_detail_interventions">Interventions</string>
     <string name="app_detail_yesterday">Yesterday: %1$s</string>
-    <string name="app_detail_times_count">%1$d times</string>
+    <string name="app_detail_times_count" tools:ignore="PluralsCandidate">%1$d times</string>
     <string name="app_detail_completed_today">Triggered today</string>
     <string name="app_detail_suggestion">Suggestion</string>
-    <string name="app_detail_suggestion_message">Try avoiding this app between %1$s.\nKeep your momentum!</string>
+    <string name="app_detail_suggestion_message">Try to avoid this app during %1$s.\nKeep your momentum going!</string>
     <string name="app_detail_view_full_analytics">View full analytics</string>
 
     <!-- Intervention UI -->
     <string name="intervention_emergency_confirm_title">Emergency Confirmation</string>
-    <string name="intervention_emergency_confirm_msg">Emergency mode grants 3 minutes of access, but this action will record a penalty on your daily limit. Continue?</string>
+    <string name="intervention_emergency_confirm_msg">Emergency mode will grant 3 minutes of access, but this will apply a penalty to your daily limit. Continue?</string>
     <string name="intervention_continue">Continue</string>
     <string name="intervention_cancel">Cancel</string>
     <string name="intervention_retry">Try Again</string>
-    <string name="intervention_error_title">PELUKDIRI encountered an issue</string>
-    <string name="intervention_error_start">Challenge could not be prepared yet. Questions and intervention state remain safe.</string>
-    <string name="intervention_error_restore">Active intervention could not be restored. Try again to resume the same question.</string>
+    <string name="intervention_error_title">CelfCare encountered an issue</string>
+    <string name="intervention_error_start">Challenge could not be prepared. Question and intervention status remain safe.</string>
+    <string name="intervention_error_restore">Active intervention could not be restored. Try again to continue with the same question.</string>
     <string name="intervention_error_submit">Answer could not be saved. Try again without changing your answer.</string>
     <string name="intervention_error_bypass">Emergency mode could not be completed. Try again; quota will not be used twice.</string>
     <string name="intervention_error_complete">Intervention could not be closed safely. Try again to complete it.</string>
-    <string name="intervention_emergency_button">Emergency Mode (3 Mins)</string>
-    <string name="intervention_pattern_title">Brief Pause</string>
+    <string name="intervention_pattern_title">Pause Momentarily</string>
     <string name="intervention_pattern_hint">Remember the pattern sequence</string>
     <string name="intervention_replay_pattern">Replay Pattern</string>
-    <string name="intervention_playing_pattern">Playing pattern...</string>
+    <string name="intervention_playing_pattern">Playing pattern…</string>
     <string name="intervention_pattern_correct">Pattern sequence remembered successfully.</string>
-    <string name="intervention_pattern_incorrect">Selected sequence is not quite correct.</string>
+    <string name="intervention_pattern_incorrect">The selected sequence was incorrect.</string>
     <string name="intervention_response_time">Response time: %1$s seconds</string>
     <string name="intervention_bypass_exhausted">Emergency quota has been exhausted today.</string>
     <string name="intervention_shape_circle">Circle</string>
     <string name="intervention_shape_square">Square</string>
     <string name="intervention_shape_triangle">Triangle</string>
     <string name="intervention_shape_pentagon">Pentagon</string>
-    <string name="intervention_pattern_progress">%1$d of %2$d shapes selected</string>
-    <string name="intervention_mindful_pause_title">Brief Pause</string>
+    <string name="intervention_pattern_progress" tools:ignore="PluralsCandidate">%1$d of %2$d shapes selected</string>
+    <string name="intervention_mindful_pause_title">Pause Momentarily</string>
     <string name="intervention_difficulty_level">Difficulty: %1$d</string>
     <string name="intervention_timer">Timer: %1$s</string>
     <string name="intervention_max_penalty">Maximum Penalty Applied</string>
-    <string name="intervention_emergency_remaining">Emergency Remaining: %1$d</string>
+    <string name="intervention_emergency_remaining">Remaining Emergency: %1$d</string>
     <string name="intervention_emergency_button_short">Emergency</string>
     <string name="intervention_submit_button_short">Submit</string>
     <string name="intervention_result_success">Success!</string>
@@ -322,99 +320,99 @@
     <string name="onboarding_next">Next</string>
     <string name="onboarding_start">Get Started</string>
     <string name="onboarding_welcome_title">Welcome to</string>
-    <string name="onboarding_welcome_brand">PELUKDIRI</string>
-    <string name="onboarding_welcome_desc">An app that helps you manage your screen time adaptively.</string>
+    <string name="onboarding_welcome_brand">CelfCare</string>
+    <string name="onboarding_welcome_desc">An app to help you manage screen time adaptively.</string>
 
     <string name="onboarding_facts_label">FACTS</string>
-    <string name="onboarding_facts_title">High screen time affects many aspects</string>
-    <string name="onboarding_facts_desc">Data shows excessive screen use impacts health and focus.</string>
+    <string name="onboarding_facts_title">High screen time affects many things</string>
+    <string name="onboarding_facts_desc">Data shows that excessive screen usage impacts health and focus.</string>
     <string name="onboarding_fact_1_title">7h 23m</string>
-    <string name="onboarding_fact_1_desc">Average daily screen time of Indonesian teenagers (Source: We Are Social 2024)</string>
+    <string name="onboarding_fact_1_desc">Average daily screen time of Indonesian adolescents (Source: We Are Social 2024)</string>
     <string name="onboarding_fact_2_title">-31%</string>
-    <string name="onboarding_fact_2_desc">Decrease in focus after > 4 hours screen time/day (Source: Microsoft, 2021)</string>
+    <string name="onboarding_fact_2_desc">Drop in focus after &gt; 4 hours of screen time/day (Source: Microsoft, 2021)</string>
     <string name="onboarding_fact_3_title">-29%</string>
-    <string name="onboarding_fact_3_desc">Decrease in sleep quality in users with high screen time (Source: Sleep Foundation, 2021)</string>
+    <string name="onboarding_fact_3_desc">Decline in sleep quality in high screen time users (Source: Sleep Foundation, 2021)</string>
 
     <string name="onboarding_how_label">HOW IT WORKS</string>
-    <string name="onboarding_how_title">Adaptive intervention, not just blocking</string>
-    <string name="onboarding_how_desc">When you open monitored apps, PELUKDIRI provides challenges to help you pause and reflect.</string>
-    <string name="onboarding_how_step_title">How PELUKDIRI helps you</string>
-    <string name="onboarding_how_step_1">You open or use monitored apps</string>
-    <string name="onboarding_how_step_2">A short challenge suited to your ability appears</string>
-    <string name="onboarding_how_step_3">You successfully complete the challenge</string>
-    <string name="onboarding_how_step_4">The app opens, and you can continue or stop using it</string>
+    <string name="onboarding_how_title">Adaptive interventions, not just blocking</string>
+    <string name="onboarding_how_desc">When you open a monitored app, CelfCare will present a challenge to help you pause and think.</string>
+    <string name="onboarding_how_step_title">How CelfCare helps you</string>
+    <string name="onboarding_how_step_1">You open or use a monitored app</string>
+    <string name="onboarding_how_step_2">A short challenge matching your ability appears</string>
+    <string name="onboarding_how_step_3">You successfully solve the challenge</string>
+    <string name="onboarding_how_step_4">The app unlocks; you can continue or choose to stop using it</string>
 
-    <string name="onboarding_perm_accessibility_title">Enable Accessibility</string>
-    <string name="onboarding_perm_accessibility_desc">Accessibility is needed by PELUKDIRI to detect apps and run interventions.</string>
+    <string name="onboarding_perm_accessibility_title">Grant Accessibility</string>
+    <string name="onboarding_perm_accessibility_desc">Accessibility is needed by CelfCare to detect apps and execute interventions.</string>
     <string name="onboarding_perm_usage_title">Usage Access</string>
-    <string name="onboarding_perm_usage_desc">Usage access is required so PELUKDIRI can accurately calculate your screen time.</string>
+    <string name="onboarding_perm_usage_desc">Usage access is required for CelfCare to accurately calculate your screen time.</string>
     <string name="onboarding_perm_notif_title">Notifications</string>
     <string name="onboarding_perm_notif_desc_v2">Enable notifications so you don\'t miss reminders and daily summaries.</string>
-    <string name="onboarding_perm_why_title">Why do we need it?</string>
+    <string name="onboarding_perm_why_title">Why do we need this?</string>
     <string name="onboarding_perm_why_1_title">Detect apps</string>
-    <string name="onboarding_perm_why_1_desc">Know which app you are opening.</string>
-    <string name="onboarding_perm_why_2_title">Show interventions</string>
-    <string name="onboarding_perm_why_2_desc">Display brief challenges before apps fully open.</string>
+    <string name="onboarding_perm_why_1_desc">Know which app you are currently opening.</string>
+    <string name="onboarding_perm_why_2_title">Display interventions</string>
+    <string name="onboarding_perm_why_2_desc">Show short challenges before an app fully opens.</string>
     <string name="onboarding_perm_why_3_title" formatted="false">100% secure</string>
-    <string name="onboarding_perm_why_3_desc">We do not read screen content, text, or other personal data.</string>
+    <string name="onboarding_perm_why_3_desc">We do not read on-screen content, text, or any other personal data.</string>
 
-    <string name="onboarding_perm_why_usage_title">Why need Usage Access?</string>
+    <string name="onboarding_perm_why_usage_title">Why is Usage Access needed?</string>
     <string name="onboarding_perm_why_usage_1_title">Calculate Screen Time</string>
-    <string name="onboarding_perm_why_usage_1_desc">Calculate total phone usage duration.</string>
-    <string name="onboarding_perm_why_usage_2_title">App Analysis</string>
-    <string name="onboarding_perm_why_usage_2_desc">See which apps you use most frequently.</string>
+    <string name="onboarding_perm_why_usage_1_desc">Tracks total phone usage duration.</string>
+    <string name="onboarding_perm_why_usage_2_title">App Analytics</string>
+    <string name="onboarding_perm_why_usage_2_desc">Sees which apps you use most frequently.</string>
     <string name="onboarding_perm_why_usage_3_title">Adaptive Limit</string>
-    <string name="onboarding_perm_why_usage_3_desc">Adjust daily limits and interventions based on your habits.</string>
+    <string name="onboarding_perm_why_usage_3_desc">Adjusts daily limits and interventions based on your habits.</string>
 
-    <string name="onboarding_perm_why_notif_title">Why need Notifications?</string>
-    <string name="onboarding_perm_why_notif_1_title">Limit Reminder</string>
-    <string name="onboarding_perm_why_notif_1_desc">Notify you when you are close to your daily limit.</string>
+    <string name="onboarding_perm_why_notif_title">Why are Notifications needed?</string>
+    <string name="onboarding_perm_why_notif_1_title">Limit Reminders</string>
+    <string name="onboarding_perm_why_notif_1_desc">Notifies you when approaching your daily limit.</string>
     <string name="onboarding_perm_why_notif_2_title">Daily Summary</string>
-    <string name="onboarding_perm_why_notif_2_desc">Get progress reports every evening.</string>
+    <string name="onboarding_perm_why_notif_2_desc">Receive progress reports every evening.</string>
     <string name="onboarding_perm_why_notif_3_title">Motivational Messages</string>
-    <string name="onboarding_perm_why_notif_3_desc">Provide encouragement to stay consistent.</string>
+    <string name="onboarding_perm_why_notif_3_desc">Encourages you to stay consistent.</string>
 
-    <string name="onboarding_perm_button">Allow Access and Continue</string>
-    <string name="onboarding_perm_privacy">Your data is safe with us. View Privacy Policy</string>
+    <string name="onboarding_perm_button">Grant Access and Continue</string>
+    <string name="onboarding_perm_privacy">Your data is safe with us. See Privacy Policy</string>
 
     <!-- Daily Usage Notification -->
     <string name="notification_daily_usage_channel_name">Daily Usage Status</string>
     <string name="notification_daily_usage_channel_description">Shows today\'s usage and adaptive limit.</string>
-    <string name="notification_reminder_channel_name">PELUKDIRI Reminder</string>
+    <string name="notification_reminder_channel_name">CelfCare Reminder</string>
     <string name="notification_reminder_channel_description">App usage summaries and reminders.</string>
     <string name="notification_usage_label">You have used %1$s today</string>
     <string name="notification_limit_label">Your adaptive limit: %1$s</string>
     <string name="notification_insufficient_data">Insufficient data</string>
 
     <!-- Notification Templates -->
-    <string name="notification_daily_summary_title_1">Your day in review</string>
+    <string name="notification_daily_summary_title_1">Your day at a glance</string>
     <string name="notification_daily_summary_title_2">Here is your screen time summary.</string>
     <string name="notification_daily_summary_title_3">Take a moment to check your screen time.</string>
     <string name="notification_daily_summary_title_4">See how today went.</string>
 
-    <string name="notification_weekly_reflection_title_1">Time for weekly reflection.</string>
-    <string name="notification_weekly_reflection_title_2">See how your screen time habits changed this week.</string>
+    <string name="notification_weekly_reflection_title_1">Time for a weekly reflection.</string>
+    <string name="notification_weekly_reflection_title_2">See how your screen time habits shifted this week.</string>
     <string name="notification_weekly_reflection_title_3">Your weekly progress is ready to review.</string>
-    <string name="notification_weekly_reflection_title_4">Check your progress this week.</string>
+    <string name="notification_weekly_reflection_title_4">Check out your progress this week.</string>
     <string name="notification_weekly_reflection_content">Tap to review your weekly digital wellbeing progress.</string>
 
-    <string name="notification_limit_reminder_title_1">Watch your screen time limit.</string>
+    <string name="notification_limit_reminder_title_1">Keep an eye on your screen time limit.</string>
     <string name="notification_limit_reminder_title_2">You are approaching your adaptive limit.</string>
     <string name="notification_limit_reminder_title_3">Check your screen time limit.</string>
-    <string name="notification_limit_reminder_title_4">Don\'t forget to take a break.</string>
+    <string name="notification_limit_reminder_title_4">Don\'t forget to take a short pause.</string>
     <string name="notification_limit_reminder_content">Use your phone wisely ^_^.</string>
 
-    <string name="notification_intervention_title_1">Solve this to get smarter.</string>
-    <string name="notification_intervention_title_2">Time for a brief intervention.</string>
+    <string name="notification_intervention_title_1">Solve this to stay sharp.</string>
+    <string name="notification_intervention_title_2">Quick intervention moment.</string>
     <string name="notification_intervention_title_3">Intervention time!</string>
-    <string name="notification_intervention_title_4">Watch out for excessive phone use.</string>
-    <string name="notification_intervention_content">Intervention to stay focused.</string>
+    <string name="notification_intervention_title_4">Watch out, using your phone too much triggers an intervention.</string>
+    <string name="notification_intervention_content">Intervention to help you focus.</string>
 
     <string name="onboarding_grant_usage_access">Grant Usage Access</string>
 
     <!-- Keypad -->
     <string name="keypad_clear">C</string>
-    <string name="keypad_clear_description">Clear all digits</string>
+    <string name="keypad_clear_description">Clear all numbers</string>
     <string name="keypad_zero">0</string>
     <string name="keypad_backspace">⌫</string>
     <string name="keypad_backspace_description">Delete last digit</string>
@@ -427,14 +425,14 @@
     <string name="terms_title_full">Terms &amp; Conditions of Use</string>
     <string name="terms_last_updated">Last updated: August 7, 2026</string>
     <string name="terms_header">Terms &amp; Conditions</string>
-    <string name="terms_section_1_title">1. Use of Service</string>
-    <string name="terms_section_1_desc">PELUKDIRI is an application that helps you manage screen time and build healthier digital habits. You agree to use this application responsibly.</string>
+    <string name="terms_section_1_title">1. Service Usage</string>
+    <string name="terms_section_1_desc">CelfCare is an application that helps you manage your screen time and build healthier digital habits. You agree to use this application responsibly.</string>
     <string name="terms_section_2_title">2. Data Collection</string>
-    <string name="terms_section_2_desc">This application collects app and device usage data (such as screen time, app launch frequency, and interactions) to provide adaptive interventions and personalized analytics.</string>
+    <string name="terms_section_2_desc">This app collects app and device usage data (such as screen time, app launch frequency, and interactions) to provide adaptive interventions and personalized analytics.</string>
     <string name="terms_section_3_title">3. Privacy</string>
-    <string name="terms_section_3_desc">Collected data is used solely for app functionality and will not be sold or shared with third parties without your consent. All data is stored securely and anonymously.</string>
+    <string name="terms_section_3_desc">Collected data is used solely for the application\'s functionality and will not be sold or shared with third parties without your permission. All data is stored securely and anonymously.</string>
     <string name="terms_section_4_title">4. Adaptive Interventions</string>
-    <string name="terms_section_4_desc">This application provides brief challenges (such as math problems or pattern games) to help you pause. Intervention difficulty adapts to your habits and has maximum limits.</string>
+    <string name="terms_section_4_desc">The application provides short challenges (such as math problems or pattern games) to help you pause. The difficulty of interventions adjusts based on your habits and has a maximum cap.</string>
     <string name="terms_section_5_title">5. Changes</string>
-    <string name="terms_section_5_desc">We may update these Terms &amp; Conditions from time to time. Changes will be notified through the app.</string>
+    <string name="terms_section_5_desc">We may update these Terms &amp; Conditions from time to time. Any changes will be communicated through the app.</string>
 </resources>

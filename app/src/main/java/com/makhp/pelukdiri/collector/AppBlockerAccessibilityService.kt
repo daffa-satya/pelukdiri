@@ -15,14 +15,17 @@ import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import com.makhp.pelukdiri.core.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -54,10 +57,12 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     @Inject lateinit var notificationHelper: NotificationHelper
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile
     private var currentMonitoredPackages = emptySet<String>()
+    @Volatile
     private var currentForegroundPackage: String? = null
+    @Volatile
     private var foregroundTrackingJob: Job? = null
-    private val TICK_INTERVAL_MS = 5_000L
     private val EVALUATION_THROTTLE_MS = 30_000L
     private val EVALUATION_TIMEOUT_MS = 10_000L
     private val SYNC_INTERVAL_MS = 30_000L
@@ -83,10 +88,22 @@ class AppBlockerAccessibilityService : AccessibilityService() {
             userPreferencesRepository.monitoredPackages.collect { packages ->
                 currentMonitoredPackages = packages
 
-                // If the current app just became a target app, start tracking
-                val foreground = currentForegroundPackage
-                if (foreground != null && packages.contains(foreground) && foregroundTrackingJob == null) {
-                    startForegroundTracking(foreground)
+                val foreground = currentForegroundPackage ?: return@collect
+                val shouldTrack = ForegroundTrackingPolicy.shouldTrack(
+                    resolvedPackage = foreground,
+                    ownPackage = packageName,
+                    monitoredPackages = packages,
+                    excludedPackages = nonInterventionPackages,
+                )
+                if (!shouldTrack) {
+                    foregroundTrackingJob?.cancel()
+                    foregroundTrackingJob = null
+                } else if (foregroundTrackingJob?.isActive != true) {
+                    if (lockManager.isLocked.value) {
+                        restoreActiveIntervention()
+                    } else {
+                        startForegroundTracking(foreground)
+                    }
                 }
             }
         }
@@ -122,17 +139,19 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         val controlResult = decision.controlResult
 
         if (decision.shouldTrigger && controlResult != null) {
-            attemptInterventionLaunchUseCase(controlResult) {
-                launchInterventionOverlay(
-                    packageName = packageName,
-                    monitoredUsageMinutes = decision.monitoredUsageMinutes,
-                    intervalMinutesAtLaunch = controlResult.intervalMinutes,
-                    ambientLightLuxAtLaunch = decision.ambientLux,
-                    deviation = controlResult.deviation ?: 0.0,
-                    difficultyControlSignal = controlResult.normalizedDifficultyControl,
-                    difficulty = controlResult.nextDifficulty,
-                    challengeType = decision.challengeType,
-                )
+            withContext(NonCancellable) {
+                attemptInterventionLaunchUseCase(controlResult) {
+                    launchInterventionOverlay(
+                        packageName = packageName,
+                        monitoredUsageMinutes = decision.monitoredUsageMinutes,
+                        intervalMinutesAtLaunch = controlResult.intervalMinutes,
+                        ambientLightLuxAtLaunch = decision.ambientLux,
+                        deviation = controlResult.deviation ?: 0.0,
+                        difficultyControlSignal = controlResult.normalizedDifficultyControl,
+                        difficulty = controlResult.nextDifficulty,
+                        challengeType = decision.challengeType,
+                    )
+                }
             }
         }
     }
@@ -191,29 +210,41 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         challengeType: InterventionChallengeType,
     ) {
         if (!lockManager.acquireLock()) return
-        val difficulty = userPreferencesRepository.currentDifficulty.first()
-        val launched = launchInterventionOverlay(
-            packageName = packageName,
-            monitoredUsageMinutes = 90.0,
-            intervalMinutesAtLaunch = FORCED_TEST_INTERVAL_MINUTES.toDouble(),
-            ambientLightLuxAtLaunch = appUsageCollector.getCurrentAmbientLightLux(),
-            deviation = 0.4,
-            difficultyControlSignal = 0.5,
-            difficulty = difficulty,
-            challengeType = challengeType,
-        )
-        if (launched) {
-            userPreferencesRepository.setNextEligibleInterventionAt(
-                timeProvider.nowMillis() + FORCED_TEST_INTERVAL_MINUTES * 60_000L
+        var launchAcknowledged = false
+        try {
+            val difficulty = userPreferencesRepository.currentDifficulty.first()
+            appUsageCollector.startLightSensor()
+            val ambientLux = try {
+                appUsageCollector.getCurrentAmbientLightLux()
+            } finally {
+                appUsageCollector.stopLightSensor()
+            }
+            launchAcknowledged = launchInterventionOverlay(
+                packageName = packageName,
+                monitoredUsageMinutes = 90.0,
+                intervalMinutesAtLaunch = FORCED_TEST_INTERVAL_MINUTES.toDouble(),
+                ambientLightLuxAtLaunch = ambientLux,
+                deviation = 0.4,
+                difficultyControlSignal = 0.5,
+                difficulty = difficulty,
+                challengeType = challengeType,
             )
-        } else {
-            lockManager.releaseLock()
+            if (launchAcknowledged) {
+                userPreferencesRepository.setNextEligibleInterventionAt(
+                    timeProvider.nowMillis() + FORCED_TEST_INTERVAL_MINUTES * 60_000L
+                )
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            Log.e("AppBlockerService", "Forced intervention launch failed")
+        } finally {
+            if (!launchAcknowledged) lockManager.releaseLock()
         }
     }
 
     private fun startForegroundTracking(packageName: String) {
         foregroundTrackingJob?.cancel()
-        appUsageCollector.startLightSensor()
         val trackingJob = serviceScope.launch {
             while (isActive) {
                 val currentTime = timeProvider.nowMillis()
@@ -221,32 +252,50 @@ class AppBlockerAccessibilityService : AccessibilityService() {
                 // Periodically flush data to Room/Prefs (every 30s)
                 if (currentTime - lastSyncTimestamp > SYNC_INTERVAL_MS) {
                     runCatching { usageRepository.refreshUsageData() }
-                        .onFailure { Log.e("AppBlockerService", "Periodic usage sync failed") }
+                        .onFailure { error ->
+                            if (error is CancellationException) throw error
+                            Log.e("AppBlockerService", "Periodic usage sync failed")
+                        }
                     lastSyncTimestamp = currentTime
                 }
 
                 // Throttle evaluation to 30s
                 if (currentTime - lastEvaluationTimestamp >= EVALUATION_THROTTLE_MS) {
                     runCatching {
-                        withTimeout(EVALUATION_TIMEOUT_MS) { evaluateIntervention(packageName) }
+                        appUsageCollector.startLightSensor()
+                        try {
+                            withTimeout(EVALUATION_TIMEOUT_MS) { evaluateIntervention(packageName) }
+                        } finally {
+                            appUsageCollector.stopLightSensor()
+                        }
+                    }.onFailure { error ->
+                        if (error is CancellationException) throw error
+                        Log.e("AppBlockerService", "Periodic intervention evaluation failed")
                     }
-                        .onFailure { Log.e("AppBlockerService", "Periodic intervention evaluation failed") }
                     lastEvaluationTimestamp = currentTime
                 }
                 
-                delay(TICK_INTERVAL_MS)
+                val afterWorkTime = timeProvider.nowMillis()
+                delay(
+                    ForegroundTrackingPolicy.nextDelay(
+                        nowMs = afterWorkTime,
+                        nextSyncAtMs = lastSyncTimestamp + SYNC_INTERVAL_MS,
+                        nextEvaluationAtMs = lastEvaluationTimestamp + EVALUATION_THROTTLE_MS,
+                    )
+                )
             }
         }
         foregroundTrackingJob = trackingJob
         trackingJob.invokeOnCompletion { cause ->
-            if (cause != null && cause !is kotlinx.coroutines.CancellationException) {
+            appUsageCollector.stopLightSensor()
+            if (cause != null && cause !is CancellationException) {
                 Log.e("AppBlockerService", "Foreground evaluator stopped unexpectedly")
             }
             if (foregroundTrackingJob === trackingJob) foregroundTrackingJob = null
         }
     }
 
-    private fun launchInterventionOverlay(
+    private suspend fun launchInterventionOverlay(
         packageName: String,
         monitoredUsageMinutes: Double,
         intervalMinutesAtLaunch: Double,
@@ -254,7 +303,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         deviation: Double,
         difficultyControlSignal: Double,
         difficulty: Int,
-        challengeType: com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType,
+        challengeType: InterventionChallengeType,
     ): Boolean {
         if (launchPolicy.consumeForcedFailure()) {
             return false
@@ -284,7 +333,11 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         return try {
             startActivity(intent)
-            true
+            activeInterventionSession.awaitLaunchAcknowledgement(LAUNCH_ACK_TIMEOUT_MS).also {
+                if (!it) Log.e("AppBlockerService", "Intervention launch was not acknowledged")
+            }
+        } catch (error: CancellationException) {
+            throw error
         } catch (_: Exception) {
             Log.e("AppBlockerService", "Intervention launch failed")
             false
@@ -314,5 +367,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         appUsageCollector.stopLightSensor()
         foregroundTrackingJob?.cancel()
         serviceScope.cancel()
+    }
+
+    private companion object {
+        const val LAUNCH_ACK_TIMEOUT_MS = 3_000L
     }
 }

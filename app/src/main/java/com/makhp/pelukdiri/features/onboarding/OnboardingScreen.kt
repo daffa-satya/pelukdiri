@@ -47,27 +47,32 @@ sealed class OnboardingStep {
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
+    isTestMode: Boolean = false,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(viewModel) {
-        viewModel.onboardingCompleted.collect { onComplete() }
+    LaunchedEffect(viewModel, isTestMode) {
+        if (!isTestMode) viewModel.onboardingCompleted.collect { onComplete() }
     }
 
     OnboardingScreenInternal(
-        onFinishOnboarding = { viewModel.completeOnboarding() }
+        onFinishOnboarding = {
+            if (isTestMode) onComplete() else viewModel.completeOnboarding()
+        },
+        onExitIntro = if (isTestMode) onComplete else null,
     )
 }
 
 @Composable
 private fun OnboardingScreenInternal(
-    onFinishOnboarding: () -> Unit
+    onFinishOnboarding: () -> Unit,
+    onExitIntro: (() -> Unit)?,
 ) {
     var currentStep by remember { mutableStateOf<OnboardingStep>(OnboardingStep.Intro) }
     val context = LocalContext.current
 
     BackHandler {
         if (currentStep == OnboardingStep.Intro) {
-            (context as? Activity)?.finish()
+            onExitIntro?.invoke() ?: (context as? Activity)?.finish()
         } else {
             currentStep = OnboardingStep.Intro
         }
@@ -592,7 +597,7 @@ private fun WhyItem(title: String, desc: String, icon: ImageVector) {
 @Composable
 private fun OnboardingScreenPreview() {
     PELUKDIRITheme {
-        OnboardingScreenInternal(onFinishOnboarding = {})
+        OnboardingScreenInternal(onFinishOnboarding = {}, onExitIntro = null)
     }
 }
 

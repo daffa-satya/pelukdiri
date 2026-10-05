@@ -17,6 +17,7 @@ import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
+import androidx.core.content.ContextCompat
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -24,6 +25,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -45,6 +47,8 @@ class AnalyticsViewModel @Inject constructor(
     private val timeProvider: TimeProvider,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
+    private val localizedContext: Context
+        get() = ContextCompat.getContextForLanguage(context)
     private val _uiState = MutableStateFlow<AnalyticsUiState>(AnalyticsUiState.Loading)
     val uiState: StateFlow<AnalyticsUiState> = _uiState.asStateFlow()
     private var loadJob: Job? = null
@@ -56,11 +60,12 @@ class AnalyticsViewModel @Inject constructor(
     }
 
     private fun startFunFactRotation() = viewModelScope.launch {
-        while (true) {
-            val state = _uiState.value
-            if (state is AnalyticsUiState.Success) {
-                _uiState.update { 
-                    (it as AnalyticsUiState.Success).copy(funFact = generateFunFact(it))
+        while (isActive) {
+            _uiState.update { state ->
+                if (state is AnalyticsUiState.Success) {
+                    state.copy(funFact = generateFunFact(state))
+                } else {
+                    state
                 }
             }
             delay(5 * 60 * 1000L) // 5 minutes
@@ -73,17 +78,17 @@ class AnalyticsViewModel @Inject constructor(
         val totalTime = state.summary?.totalScreenTimeMillis ?: 0L
         val activeTime = if (monitoredTime > 0) monitoredTime else totalTime
         
-        if (activeTime == 0L) return context.getString(R.string.analytics_fun_fact_empty)
+        if (activeTime == 0L) return localizedContext.getString(R.string.analytics_fun_fact_empty)
 
-        val formattedTime = com.makhp.pelukdiri.ui.components.formatDuration(activeTime)
+        val formattedTime = com.makhp.pelukdiri.ui.components.formatDuration(localizedContext, activeTime)
         val minutes = activeTime / 60_000L
 
         return when ((0..4).random()) {
-            0 -> context.getString(R.string.analytics_fun_fact_guitar, formattedTime)
-            1 -> context.getString(R.string.analytics_fun_fact_reading, formattedTime, (minutes / 2).toInt())
-            2 -> context.getString(R.string.analytics_fun_fact_meditation, formattedTime, (minutes / 10).toInt())
-            3 -> context.getString(R.string.analytics_fun_fact_workout, formattedTime)
-            else -> context.getString(R.string.analytics_fun_fact_language, formattedTime)
+            0 -> localizedContext.getString(R.string.analytics_fun_fact_guitar, formattedTime)
+            1 -> localizedContext.getString(R.string.analytics_fun_fact_reading, formattedTime, (minutes / 2).toInt())
+            2 -> localizedContext.getString(R.string.analytics_fun_fact_meditation, formattedTime, (minutes / 10).toInt())
+            3 -> localizedContext.getString(R.string.analytics_fun_fact_workout, formattedTime)
+            else -> localizedContext.getString(R.string.analytics_fun_fact_language, formattedTime)
         }
     }
 
@@ -145,13 +150,11 @@ class AnalyticsViewModel @Inject constructor(
                 if (period == AnalyticsPeriod.DAILY) 1 else comparisonActiveDays
             )
             val comparisonAppsByPackage = comparisonApps.associateBy { it.packageName }
-            val currentAppInsights = loadAppInsights(startDate, endDate)
-            val comparisonAppInsights = loadAppInsights(comparisonStartDate, comparisonEndDate)
-            val allDecisions = interventionDecisionRepository.getAllList()
-            val triggeredInterventions = allDecisions.asSequence()
-                .filter { it.reason == InterventionDecisionReason.TRIGGERED && it.timestamp in startMillis..endMillis }
-                .groupingBy { it.packageName }
-                .eachCount()
+            val currentSessionMetrics = loadSessionMetrics(startDate, endDate)
+            val comparisonSessionMetrics = loadSessionMetrics(comparisonStartDate, comparisonEndDate)
+            val currentAppInsights = currentSessionMetrics.appInsights
+            val comparisonAppInsights = comparisonSessionMetrics.appInsights
+            val triggeredInterventions = interventionDecisionRepository.getTriggeredCountsInRange(startMillis, endMillis)
             val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
             val topApps = currentApps.map { app ->
                 UiAppUsage(
@@ -171,19 +174,18 @@ class AnalyticsViewModel @Inject constructor(
 
             val calculateGraphNow = shouldCalculateGraphAutomatically(period, cappedDate, today)
             val hourlyUsageList = if (calculateGraphNow) {
-                loadAverageHourlyUsage(startDate, endDate)
+                currentSessionMetrics.hourlyUsage
             } else {
                 List(24) { 0L }
             }
             
-            val allInterventions = interventionLogRepository.getAllLogsList()
-            val interventions = allInterventions.count { it.timestamp in startMillis..endMillis }
-            val comparisonInterventions = allInterventions.count { it.timestamp in comparisonStartMillis..comparisonEndMillis }
+            val interventions = interventionLogRepository.getLogCountInRange(startMillis, endMillis)
+            val comparisonInterventions = interventionLogRepository.getLogCountInRange(comparisonStartMillis, comparisonEndMillis)
             
             val socialMediaUsage = aggregatedSummary?.monitoredUsageMillis ?: 0L
             val comparisonSocialMediaUsage = comparisonSummary?.monitoredUsageMillis ?: 0L
-            val longestSession = longestSessionInRange(startDate, endDate)
-            val comparisonLongestSession = longestSessionInRange(comparisonStartDate, comparisonEndDate)
+            val longestSession = currentSessionMetrics.longestSessionMillis
+            val comparisonLongestSession = comparisonSessionMetrics.longestSessionMillis
 
             val limit = if (period == AnalyticsPeriod.DAILY) {
                 adaptiveLimitRepository.getLimitForDate(cappedDate.toString())?.calculatedLimitMinutes
@@ -257,7 +259,7 @@ class AnalyticsViewModel @Inject constructor(
                     ) {
                         current.copy(
                             isCalculatingGraph = false,
-                            graphError = context.getString(R.string.analytics_graph_failed),
+                            graphError = localizedContext.getString(R.string.analytics_graph_failed),
                         )
                     } else current
                 }
@@ -301,48 +303,18 @@ class AnalyticsViewModel @Inject constructor(
         }
     }
 
-    private fun longestSessionInRange(startDate: LocalDate, endDate: LocalDate): Long {
-        var date = startDate
-        var longest = 0L
-        while (!date.isAfter(endDate)) {
-            longest = maxOf(longest, usageEventCollector.getLongestSessionForDay(date))
-            date = date.plusDays(1)
-        }
-        return longest
-    }
-
-    private fun loadAppInsights(startDate: LocalDate, endDate: LocalDate): Map<String, AppUsageInsight> {
-        val insights = mutableMapOf<String, AppUsageInsight>()
+    private fun loadSessionMetrics(startDate: LocalDate, endDate: LocalDate): RangeSessionMetrics {
+        val dailyMetrics = mutableListOf<UsageEventCollector.DailySessionMetrics>()
         var date = startDate
         while (!date.isAfter(endDate)) {
-            usageEventCollector.getAppInsightsForDay(date).forEach { (packageName, dailyInsight) ->
-                val existing = insights[packageName]
-                insights[packageName] = when {
-                    existing == null -> dailyInsight
-                    dailyInsight.longestSessionDurationMillis > existing.longestSessionDurationMillis ->
-                        dailyInsight.copy(launchCount = existing.launchCount + dailyInsight.launchCount)
-                    else -> existing.copy(launchCount = existing.launchCount + dailyInsight.launchCount)
-                }
-            }
+            dailyMetrics += usageEventCollector.getSessionMetricsForDay(date)
             date = date.plusDays(1)
         }
-        return insights
+        return aggregateSessionMetrics(dailyMetrics)
     }
 
     private fun loadAverageHourlyUsage(startDate: LocalDate, endDate: LocalDate): List<Long> {
-        val totals = LongArray(24)
-        var daysWithUsage = 0
-        var date = startDate
-        while (!date.isAfter(endDate)) {
-            val dailyUsage = usageEventCollector.getHourlyUsageForDay(date)
-            if (dailyUsage.any { it > 0L }) {
-                daysWithUsage++
-                dailyUsage.forEachIndexed { hour, usage -> totals[hour] += usage }
-            }
-            date = date.plusDays(1)
-        }
-        val divisor = daysWithUsage.coerceAtLeast(1)
-        return totals.map { it / divisor }
+        return loadSessionMetrics(startDate, endDate).hourlyUsage
     }
 
     fun updateAppUsage(packageName: String, appName: String, durationMillis: Long) {
@@ -437,13 +409,50 @@ class AnalyticsViewModel @Inject constructor(
                     ) {
                         current.copy(
                             isInstalledAppsLoading = false,
-                            installedAppsError = context.getString(R.string.all_apps_load_installed_failed),
+                            installedAppsError = localizedContext.getString(R.string.all_apps_load_installed_failed),
                         )
                     } else current
                 }
             }
         }
     }
+}
+
+internal data class RangeSessionMetrics(
+    val appInsights: Map<String, AppUsageInsight>,
+    val longestSessionMillis: Long,
+    val hourlyUsage: List<Long>,
+)
+
+internal fun aggregateSessionMetrics(
+    days: List<UsageEventCollector.DailySessionMetrics>,
+): RangeSessionMetrics {
+    val insights = mutableMapOf<String, AppUsageInsight>()
+    val hourlyTotals = LongArray(24)
+    var daysWithUsage = 0
+
+    days.forEach { day ->
+        day.appInsights.forEach { (packageName, dailyInsight) ->
+            val existing = insights[packageName]
+            insights[packageName] = when {
+                existing == null -> dailyInsight
+                dailyInsight.longestSessionDurationMillis > existing.longestSessionDurationMillis ->
+                    dailyInsight.copy(launchCount = existing.launchCount + dailyInsight.launchCount)
+                else -> existing.copy(launchCount = existing.launchCount + dailyInsight.launchCount)
+            }
+        }
+        if (day.hourlyUsage.any { it > 0L }) {
+            daysWithUsage++
+            day.hourlyUsage.forEachIndexed { hour, usage -> hourlyTotals[hour] += usage }
+        }
+    }
+
+    val hourlyDivisor = daysWithUsage.coerceAtLeast(1)
+    return RangeSessionMetrics(
+        appInsights = insights,
+        longestSessionMillis = days.maxOfOrNull { it.longestSessionMillis } ?: 0L,
+        hourlyUsage = hourlyTotals.map { it / hourlyDivisor },
+    )
 }
 
 private fun AppUsageInsight?.toPeakTimeLabel(

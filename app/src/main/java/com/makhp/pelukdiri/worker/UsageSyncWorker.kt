@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -10,15 +11,19 @@ import com.makhp.pelukdiri.core.domain.repository.AdaptiveLimitRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageSensorRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import com.makhp.pelukdiri.core.domain.usecase.InitializeDailyAdaptiveLimitUseCase
 import com.makhp.pelukdiri.core.util.NotificationHelper
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
+import java.time.Instant
 import java.util.Calendar
+import java.util.TimeZone
 
 @HiltWorker
 class UsageSyncWorker @AssistedInject constructor(
@@ -30,7 +35,8 @@ class UsageSyncWorker @AssistedInject constructor(
     private val adaptiveLimitRepository: AdaptiveLimitRepository,
     private val initializeDailyAdaptiveLimitUseCase: InitializeDailyAdaptiveLimitUseCase,
     private val notificationHelper: NotificationHelper,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val timeProvider: TimeProvider,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -39,24 +45,33 @@ class UsageSyncWorker @AssistedInject constructor(
             usageRepository.refreshUsageData()
 
             // 2. Ambil data dari UsageStats & Sensor untuk logs (Variabel H, F, L)
-            val currentTimestamp = System.currentTimeMillis()
-            
-            val calendar = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val startTime = calendar.timeInMillis
+            val currentTimestamp = timeProvider.nowMillis()
+            val zoneId = timeProvider.zoneId()
+            val startTime = Instant.ofEpochMilli(currentTimestamp)
+                .atZone(zoneId)
+                .toLocalDate()
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli()
             
             val activeApps = appUsageCollector.fetchRecentEvents(startTime, currentTimestamp)
-            val ambientLux = appUsageCollector.getCurrentAmbientLightLux()
+            appUsageCollector.startLightSensor()
+            val ambientLux = try {
+                appUsageCollector.getCurrentAmbientLightLux()
+            } finally {
+                appUsageCollector.stopLightSensor()
+            }
+
+            val launchCounts = appUsageCollector.getLaunchCountsForAllPackages(
+                startTime = startTime,
+                endTime = currentTimestamp,
+            )
 
             // 3. Batch save logs
             val sensorLogs = activeApps.map { app ->
                 val pkg = app.packageName
                 val screenTimeMs = app.usageDurationMillis
-                val openFreq = appUsageCollector.getLaunchCountForPackage(pkg)
+                val openFreq = launchCounts[pkg] ?: 0
 
                 UsageSensorLog(
                     timestamp = currentTimestamp,
@@ -75,20 +90,25 @@ class UsageSyncWorker @AssistedInject constructor(
             initializeDailyAdaptiveLimitUseCase()
 
             // 5. Update Notifications
-            handleNotifications()
+            handleNotifications(currentTimestamp)
 
             Result.success()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            Log.e(TAG, "Usage synchronization failed")
             Result.retry()
         }
     }
 
-    private suspend fun handleNotifications() {
+    private suspend fun handleNotifications(currentTimestamp: Long) {
         // MANDATORY: DND check removed as per user request to delete DND
-        val today = LocalDate.now()
+        val zoneId = timeProvider.zoneId()
+        val today = Instant.ofEpochMilli(currentTimestamp).atZone(zoneId).toLocalDate()
         val todayStr = today.toString()
-        val calendar = Calendar.getInstance()
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone(zoneId)).apply {
+            timeInMillis = currentTimestamp
+        }
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
         val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // Sunday = 1
 
@@ -103,37 +123,44 @@ class UsageSyncWorker @AssistedInject constructor(
             adaptiveLimitMinutes = limitMinutes
         )
 
+        val shouldCheckDailySummary = currentHour >= 20
+        val shouldCheckWeeklyReflection = dayOfWeek == Calendar.SUNDAY && currentHour >= 19
+        val shouldCheckLimitReminder = limitMinutes != null &&
+            limitMinutes > 0 &&
+            monitoredUsageMillis >= limitMinutes * 54_000L
+        if (!shouldCheckDailySummary && !shouldCheckWeeklyReflection && !shouldCheckLimitReminder) {
+            return
+        }
+        val preferences = userPreferencesRepository.snapshot.first()
+
         // 1. Daily Summary (around 20:00) - MANDATORY
-        if (currentHour >= 20) {
-            val lastSentDate = userPreferencesRepository.lastDailySummaryDate.firstOrNull()
-            if (lastSentDate != todayStr) {
+        if (shouldCheckDailySummary) {
+            if (preferences.lastDailySummaryDate != todayStr) {
                 notificationHelper.showDailySummaryNotification(monitoredUsageMillis)
                 userPreferencesRepository.setLastDailySummaryDate(todayStr)
             }
         }
 
         // 2. Weekly Reflection (Sundays around 19:00) - MANDATORY
-        if (dayOfWeek == Calendar.SUNDAY && currentHour >= 19) {
+        if (shouldCheckWeeklyReflection) {
             val weekId = "${calendar.get(Calendar.YEAR)}-${calendar.get(Calendar.WEEK_OF_YEAR)}"
-            val lastSentWeek = userPreferencesRepository.lastWeeklyReflectionDate.firstOrNull()
-            if (lastSentWeek != weekId) {
+            if (preferences.lastWeeklyReflectionDate != weekId) {
                 notificationHelper.showWeeklyReflectionNotification()
                 userPreferencesRepository.setLastWeeklyReflectionDate(weekId)
             }
         }
 
         // 3. Limit Reminder (when usage > 90% of limit) - MANDATORY
-        if (limitMinutes != null && limitMinutes > 0) {
-            val limitMillis = limitMinutes * 60_000L
-            val threshold = 0.9f
-            if (monitoredUsageMillis >= limitMillis * threshold) {
-                val lastSentTime = userPreferencesRepository.lastLimitReminderTimestamp.firstOrNull() ?: 0L
-                val oneHourMillis = 60 * 60 * 1000L
-                if (System.currentTimeMillis() - lastSentTime > oneHourMillis) {
-                    notificationHelper.showLimitReminderNotification()
-                    userPreferencesRepository.setLastLimitReminderTimestamp(System.currentTimeMillis())
-                }
+        if (shouldCheckLimitReminder) {
+            val oneHourMillis = 60 * 60 * 1000L
+            if (currentTimestamp - preferences.lastLimitReminderTimestamp > oneHourMillis) {
+                notificationHelper.showLimitReminderNotification()
+                userPreferencesRepository.setLastLimitReminderTimestamp(currentTimestamp)
             }
         }
+    }
+
+    private companion object {
+        const val TAG = "UsageSyncWorker"
     }
 }

@@ -57,9 +57,13 @@ fun InterventionOverlayScreen(
             uiState is InterventionUiState.MaxPenalized ||
             uiState is InterventionUiState.PatternActive
         ) {
-            elapsedResponseTimeMs = if (
-                (uiState as? InterventionUiState.PatternActive)?.isPlaying == true
-            ) 0L else viewModel.currentResponseTimeMs()
+            val patternState = uiState as? InterventionUiState.PatternActive
+            elapsedResponseTimeMs = nextInterventionTimerElapsed(
+                previousElapsedMs = elapsedResponseTimeMs,
+                currentElapsedMs = viewModel.currentResponseTimeMs(),
+                patternIsPlaying = patternState?.isPlaying == true,
+                patternIsReplay = patternState?.replaysRemaining == 0,
+            )
             delay(RESPONSE_TIMER_TICK_MS)
         }
     }
@@ -108,6 +112,17 @@ fun InterventionOverlayScreen(
         onPatternSelected = onPatternSelected,
         onReplayPattern = onReplayPattern,
     )
+}
+
+internal fun nextInterventionTimerElapsed(
+    previousElapsedMs: Long,
+    currentElapsedMs: Long,
+    patternIsPlaying: Boolean,
+    patternIsReplay: Boolean,
+): Long = when {
+    patternIsPlaying && patternIsReplay -> previousElapsedMs
+    patternIsPlaying -> 0L
+    else -> currentElapsedMs
 }
 
 private const val RESPONSE_TIMER_TICK_MS = 100L

@@ -1,6 +1,7 @@
 package com.makhp.pelukdiri.collector
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -25,6 +26,22 @@ class ForegroundTrackingPolicyTest {
 
     @Test fun `unmonitored same package does not start evaluator`() {
         assertFalse(ForegroundTrackingPolicy.shouldRestart("example.app", "example.app", monitored, false))
+    }
+
+    @Test fun `removed foreground package is no longer tracked`() {
+        assertFalse(
+            ForegroundTrackingPolicy.shouldTrack(
+                "com.google.android.youtube",
+                "com.makhp.pelukdiri",
+                emptySet(),
+                emptySet(),
+            )
+        )
+    }
+
+    @Test fun `next delay uses one clock snapshot and nearest deadline`() {
+        assertEquals(2_000L, ForegroundTrackingPolicy.nextDelay(10_000L, 15_000L, 12_000L))
+        assertEquals(1_000L, ForegroundTrackingPolicy.nextDelay(12_000L, 15_000L, 12_000L))
     }
 
     @Test fun `both app variants are excluded from their own interventions`() {

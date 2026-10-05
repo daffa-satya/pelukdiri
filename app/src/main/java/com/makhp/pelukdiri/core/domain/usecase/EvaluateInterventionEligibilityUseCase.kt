@@ -22,6 +22,7 @@ import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CancellationException
 import android.util.Log
+import java.time.Instant
 import java.time.LocalTime
 import javax.inject.Inject
 
@@ -71,7 +72,8 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
 
     private suspend fun evaluate(packageName: String, currentTimeMs: Long): InterventionDecision {
         val today = timeProvider.today()
-        val currentDifficulty = userPreferencesRepository.currentDifficulty.first()
+        val preferences = userPreferencesRepository.snapshot.first()
+        val currentDifficulty = preferences.currentDifficulty
 
         // 0. Quick check for active intervention lock
         if (lockManager.isLocked.value) {
@@ -93,7 +95,7 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         
         // 1. Authoritative measurement
         val usageList = usageEventCollector.getUsageForDay(today)
-        val monitoredPackages = userPreferencesRepository.monitoredPackages.first()
+        val monitoredPackages = preferences.monitoredPackages
         
         val totalUsageMillis = usageList.sumOf { it.usageDurationMillis }
         val monitoredUsageMillis = usageList
@@ -119,8 +121,8 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
         }
         
         // 2. Cooldown & Quota check
-        val nextEligible = userPreferencesRepository.nextEligibleInterventionAt.first()
-        val bypassUntil = userPreferencesRepository.emergencyBypassUntil.first()
+        val nextEligible = preferences.nextEligibleInterventionAt
+        val bypassUntil = preferences.emergencyBypassUntil
         
         if (currentTimeMs < nextEligible || currentTimeMs < bypassUntil) {
             val bypassActive = currentTimeMs < bypassUntil
@@ -180,10 +182,10 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             .count()
             
         val lux = appUsageCollector.getCurrentAmbientLightLux()
-        val bedtime = userPreferencesRepository.bedtime.first()?.let { 
+        val bedtime = preferences.bedtime?.let {
             try { LocalTime.parse(it) } catch (_: Exception) { null }
         }
-        val wakeTime = userPreferencesRepository.wakeTime.first()?.let { 
+        val wakeTime = preferences.wakeTime?.let {
             try { LocalTime.parse(it) } catch (_: Exception) { null }
         }
         val adaptiveLimitProgress = adaptiveLimitRepository
@@ -201,6 +203,9 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
             bedtime = bedtime,
             wakeTime = wakeTime,
             currentLevel = currentDifficulty,
+            currentTime = Instant.ofEpochMilli(currentTimeMs)
+                .atZone(timeProvider.zoneId())
+                .toLocalTime(),
             timestampMs = currentTimeMs,
             difficultyHistory = difficultyHistory,
             consecutiveFailures = consecutiveFailures,
@@ -284,6 +289,8 @@ class EvaluateInterventionEligibilityUseCase @Inject constructor(
                     errorType = errorType,
                 )
             )
+        } catch (error: CancellationException) {
+            throw error
         } catch (_: Exception) {
             Log.e("EligibilityUseCase", "Unable to persist intervention decision audit")
         }

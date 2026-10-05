@@ -21,6 +21,16 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+object AppIconCache {
+    private val cache = android.util.LruCache<String, Drawable>(64)
+
+    fun get(packageName: String): Drawable? = cache.get(packageName)
+
+    fun put(packageName: String, drawable: Drawable) {
+        cache.put(packageName, drawable)
+    }
+}
+
 @Composable
 fun AppIcon(
     packageName: String,
@@ -30,13 +40,17 @@ fun AppIcon(
 ) {
     val context = LocalContext.current
     
-    // Load drawable in background to avoid blocking UI thread
-    val iconResult by produceState<Drawable?>(initialValue = null, packageName) {
-        value = withContext(Dispatchers.IO) {
-            try {
-                context.packageManager.getApplicationIcon(packageName)
-            } catch (_: Exception) {
-                null
+    // Load drawable in background with in-memory caching to avoid UI thread blocking & IPC overhead
+    val iconResult by produceState<Drawable?>(initialValue = AppIconCache.get(packageName), packageName) {
+        if (value == null) {
+            value = withContext(Dispatchers.IO) {
+                try {
+                    val drawable = context.packageManager.getApplicationIcon(packageName)
+                    AppIconCache.put(packageName, drawable)
+                    drawable
+                } catch (_: Exception) {
+                    null
+                }
             }
         }
     }

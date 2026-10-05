@@ -106,6 +106,7 @@ private fun DifficultyTimerRow(level: Int, elapsedTimeMs: Long) {
 @Composable
 fun MindfulPauseScreen(
     state: InterventionUiState,
+    modifier: Modifier = Modifier,
     elapsedResponseTimeMs: Long = 0L,
     onAnswerChanged: (String) -> Unit,
     onSubmitAnswer: () -> Unit,
@@ -115,7 +116,6 @@ fun MindfulPauseScreen(
     onPatternSelected: (PatternShape) -> Unit,
     onReplayPattern: () -> Unit,
     onRetryIncorrect: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE

@@ -29,6 +29,10 @@ class FakeInterventionLogRepository : InterventionLogRepository {
         return logs.count { it.isBypassed && it.timestamp >= startOfDay && it.timestamp < endOfDay }
     }
 
+    override suspend fun getLogCountInRange(startMillis: Long, endMillis: Long): Int {
+        return logs.count { it.timestamp in startMillis..endMillis }
+    }
+
     override suspend fun insertBypassIfQuotaAvailable(
         log: InterventionLog,
         startOfDay: Long,

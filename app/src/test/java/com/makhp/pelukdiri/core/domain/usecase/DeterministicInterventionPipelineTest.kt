@@ -28,6 +28,7 @@ import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionLogRepository
 import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
+import com.makhp.pelukdiri.core.domain.repository.UserPreferencesSnapshot
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import com.makhp.pelukdiri.features.intervention.ActiveInterventionSession
 import com.makhp.pelukdiri.features.intervention.InterventionUiState
@@ -36,6 +37,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -51,6 +53,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.ZoneId
+import java.time.LocalTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeterministicInterventionPipelineTest {
@@ -88,7 +91,16 @@ class DeterministicInterventionPipelineTest {
         val bypassUntil = MutableStateFlow(0L)
         val difficulty = MutableStateFlow(2)
         val activeSession = MutableStateFlow<String?>(null)
+        val preferenceSnapshot = MutableStateFlow(
+            UserPreferencesSnapshot(
+                monitoredPackages = setOf(targetPackage),
+                currentDifficulty = difficulty.value,
+                nextEligibleInterventionAt = nextEligible.value,
+                emergencyBypassUntil = bypassUntil.value,
+            )
+        )
         val preferences = mockk<UserPreferencesRepository>()
+        every { preferences.snapshot } returns preferenceSnapshot
         every { preferences.monitoredPackages } returns flowOf(setOf(targetPackage))
         every { preferences.nextEligibleInterventionAt } returns nextEligible
         every { preferences.emergencyBypassUntil } returns bypassUntil
@@ -97,13 +109,19 @@ class DeterministicInterventionPipelineTest {
         every { preferences.bedtime } returns flowOf(null)
         every { preferences.wakeTime } returns flowOf(null)
         coEvery { preferences.setNextEligibleInterventionAt(any()) } answers {
-            nextEligible.value = firstArg()
+            val value = firstArg<Long>()
+            nextEligible.value = value
+            preferenceSnapshot.value = preferenceSnapshot.value.copy(nextEligibleInterventionAt = value)
         }
         coEvery { preferences.setEmergencyBypassUntil(any()) } answers {
-            bypassUntil.value = firstArg()
+            val value = firstArg<Long>()
+            bypassUntil.value = value
+            preferenceSnapshot.value = preferenceSnapshot.value.copy(emergencyBypassUntil = value)
         }
         coEvery { preferences.setCurrentDifficulty(any()) } answers {
-            difficulty.value = firstArg()
+            val value = firstArg<Int>()
+            difficulty.value = value
+            preferenceSnapshot.value = preferenceSnapshot.value.copy(currentDifficulty = value)
         }
         coEvery { preferences.setActiveInterventionSession(any()) } answers {
             activeSession.value = firstArg()
@@ -212,6 +230,11 @@ class DeterministicInterventionPipelineTest {
             adaptiveLimitRepository,
             preferences,
             bypass,
+            CalculateRetryDifficultyUseCase(
+                logRepository,
+                DifficultyController(config),
+                config,
+            ),
             lockManager,
             session,
             time,
@@ -244,7 +267,7 @@ class DeterministicInterventionPipelineTest {
     }
 
     @Test
-    fun `failed launch releases ownership and commits no control state`() = runTest {
+    fun `unacknowledged launch releases ownership and allows the next launch`() = runTest {
         val nextEligible = MutableStateFlow(11L)
         val difficulty = MutableStateFlow(2)
         val preferences = mockk<UserPreferencesRepository>()
@@ -270,15 +293,64 @@ class DeterministicInterventionPipelineTest {
             bedtime = null,
             wakeTime = null,
             currentLevel = 2,
+            currentTime = LocalTime.NOON,
             timestampMs = 1_000L,
         )
 
-        val result = AttemptInterventionLaunchUseCase(lockManager, preferences)(control) { false }
+        val launch = AttemptInterventionLaunchUseCase(lockManager, preferences)
+        val firstResult = launch(control) { false }
 
-        assertEquals(InterventionLaunchResult.FAILED, result)
+        assertEquals(InterventionLaunchResult.FAILED, firstResult)
         assertFalse(lockManager.isLocked.value)
         assertEquals(11L, nextEligible.value)
         assertEquals(2, difficulty.value)
+
+        val retryResult = launch(control) { true }
+
+        assertEquals(InterventionLaunchResult.LAUNCHED, retryResult)
+        assertTrue(lockManager.isLocked.value)
+        assertEquals(control.nextEligibleInterventionAt, nextEligible.value)
+        assertEquals(control.nextDifficulty, difficulty.value)
+    }
+
+    @Test
+    fun `cancelled launch releases ownership and commits no control state`() = runTest {
+        val preferences = mockk<UserPreferencesRepository>()
+        coEvery { preferences.setNextEligibleInterventionAt(any()) } returns Unit
+        coEvery { preferences.setCurrentDifficulty(any()) } returns Unit
+        val lockManager = InterventionLockManager()
+        val config = ControlConfig.CANDIDATE_3
+        val control = ControlEngine(
+            config,
+            SensitivityCalculator(config),
+            PerformanceCalculator(config),
+            DifficultyController(config),
+            FrequencyController(config),
+        ).calculateNextIntervention(
+            deviation = 1.0,
+            lastPerformance = null,
+            performanceHistory = emptyList(),
+            lux = 25f,
+            bedtime = null,
+            wakeTime = null,
+            currentLevel = 2,
+            currentTime = LocalTime.NOON,
+            timestampMs = 1_000L,
+        )
+
+        var cancellationPropagated = false
+        try {
+            AttemptInterventionLaunchUseCase(lockManager, preferences)(control) {
+                throw CancellationException("tracking moved to intervention activity")
+            }
+        } catch (_: CancellationException) {
+            cancellationPropagated = true
+        }
+
+        assertTrue(cancellationPropagated)
+        assertFalse(lockManager.isLocked.value)
+        io.mockk.coVerify(exactly = 0) { preferences.setNextEligibleInterventionAt(any()) }
+        io.mockk.coVerify(exactly = 0) { preferences.setCurrentDifficulty(any()) }
     }
 
     private class MutableTimeProvider(

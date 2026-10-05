@@ -13,6 +13,7 @@ interface InterventionLogRepository {
     suspend fun getLatestValidPerformanceLogByDifficulty(difficulty: Int): InterventionLog?
     suspend fun getLatestLog(): InterventionLog?
     suspend fun getBypassCountForDay(startOfDay: Long, endOfDay: Long): Int
+    suspend fun getLogCountInRange(startMillis: Long, endMillis: Long): Int
     suspend fun insertBypassIfQuotaAvailable(
         log: InterventionLog,
         startOfDay: Long,

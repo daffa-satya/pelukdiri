@@ -11,6 +11,7 @@ import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.makhp.pelukdiri.MainActivity
 import com.makhp.pelukdiri.R
 import com.makhp.pelukdiri.ui.components.formatDuration
@@ -22,6 +23,9 @@ import javax.inject.Singleton
 class NotificationHelper @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
+    private val localizedContext: Context
+        get() = ContextCompat.getContextForLanguage(context)
+
     companion object {
         private const val LEGACY_CHANNEL_ID = "daily_usage_status_channel"
         private const val STATUS_CHANNEL_ID = "daily_usage_status_channel_v2"
@@ -39,24 +43,22 @@ class NotificationHelper @Inject constructor(
     }
 
     private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val statusChannel = NotificationChannel(
-                STATUS_CHANNEL_ID,
-                context.getString(R.string.notification_daily_usage_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = context.getString(R.string.notification_daily_usage_channel_description)
-            }
-            val reminderChannel = NotificationChannel(
-                REMINDER_CHANNEL_ID,
-                context.getString(R.string.notification_reminder_channel_name),
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = context.getString(R.string.notification_reminder_channel_description)
-            }
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannels(listOf(statusChannel, reminderChannel))
+        val statusChannel = NotificationChannel(
+            STATUS_CHANNEL_ID,
+            localizedContext.getString(R.string.notification_daily_usage_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = localizedContext.getString(R.string.notification_daily_usage_channel_description)
         }
+        val reminderChannel = NotificationChannel(
+            REMINDER_CHANNEL_ID,
+            localizedContext.getString(R.string.notification_reminder_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = localizedContext.getString(R.string.notification_reminder_channel_description)
+        }
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannels(listOf(statusChannel, reminderChannel))
     }
 
     private fun removeLegacyNotifications() {
@@ -68,19 +70,19 @@ class NotificationHelper @Inject constructor(
     }
 
     fun updateDailyUsageNotification(totalUsageMillis: Long, adaptiveLimitMinutes: Int?) {
-        val usageStr = formatDuration(totalUsageMillis)
+        val usageStr = formatDuration(context, totalUsageMillis)
         val limitStr = if (adaptiveLimitMinutes != null) {
-            formatDuration(adaptiveLimitMinutes * 60_000L)
+            formatDuration(context, adaptiveLimitMinutes * 60_000L)
         } else {
-            context.getString(R.string.notification_insufficient_data)
+            localizedContext.getString(R.string.notification_insufficient_data)
         }
 
-        val usageMessage = context.getString(R.string.notification_usage_label, usageStr)
-        val limitMessage = context.getString(R.string.notification_limit_label, limitStr)
+        val usageMessage = localizedContext.getString(R.string.notification_usage_label, usageStr)
+        val limitMessage = localizedContext.getString(R.string.notification_limit_label, limitStr)
         val contentText = "$usageMessage\n$limitMessage"
 
         val notification = createNotificationBuilder(STATUS_CHANNEL_ID)
-            .setContentTitle(context.getString(R.string.app_name))
+            .setContentTitle(localizedContext.getString(R.string.app_name))
             .setContentText(contentText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -93,7 +95,7 @@ class NotificationHelper @Inject constructor(
     }
 
     fun showDailySummaryNotification(totalUsageMillis: Long) {
-        val usageStr = formatDuration(totalUsageMillis)
+        val usageStr = formatDuration(context, totalUsageMillis)
         val templates = listOf(
             R.string.notification_daily_summary_title_1,
             R.string.notification_daily_summary_title_2,
@@ -101,7 +103,7 @@ class NotificationHelper @Inject constructor(
             R.string.notification_daily_summary_title_4
         )
         val title = context.getString(templates.random())
-        val contentText = context.getString(R.string.notification_usage_label, usageStr)
+        val contentText = localizedContext.getString(R.string.notification_usage_label, usageStr)
 
         val notification = createNotificationBuilder(REMINDER_CHANNEL_ID)
             .setContentTitle(title)
@@ -121,7 +123,7 @@ class NotificationHelper @Inject constructor(
             R.string.notification_weekly_reflection_title_4
         )
         val title = context.getString(templates.random())
-        val contentText = context.getString(R.string.notification_weekly_reflection_content)
+        val contentText = localizedContext.getString(R.string.notification_weekly_reflection_content)
 
         val notification = createNotificationBuilder(REMINDER_CHANNEL_ID)
             .setContentTitle(title)
@@ -141,7 +143,7 @@ class NotificationHelper @Inject constructor(
             R.string.notification_limit_reminder_title_4
         )
         val title = context.getString(templates.random())
-        val contentText = context.getString(R.string.notification_limit_reminder_content)
+        val contentText = localizedContext.getString(R.string.notification_limit_reminder_content)
 
         val notification = createNotificationBuilder(REMINDER_CHANNEL_ID)
             .setContentTitle(title)
@@ -161,7 +163,7 @@ class NotificationHelper @Inject constructor(
             R.string.notification_intervention_title_4
         )
         val title = context.getString(templates.random())
-        val contentText = context.getString(R.string.notification_intervention_content)
+        val contentText = localizedContext.getString(R.string.notification_intervention_content)
 
         val notification = createNotificationBuilder(REMINDER_CHANNEL_ID)
             .setContentTitle(title)

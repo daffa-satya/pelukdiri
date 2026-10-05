@@ -51,6 +51,10 @@ class InterventionLogRepositoryImpl @Inject constructor(
         return dao.getBypassCountInInterval(startOfDay, endOfDay)
     }
 
+    override suspend fun getLogCountInRange(startMillis: Long, endMillis: Long): Int {
+        return dao.getLogCountInRange(startMillis, endMillis)
+    }
+
     override suspend fun insertBypassIfQuotaAvailable(
         log: InterventionLog,
         startOfDay: Long,

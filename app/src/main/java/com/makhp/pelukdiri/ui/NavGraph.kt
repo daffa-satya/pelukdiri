@@ -1,5 +1,6 @@
 package com.makhp.pelukdiri.ui
 
+import com.makhp.pelukdiri.BuildConfig
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ sealed class Screen(val route: String) {
             "all_apps/$date/${period.name}"
     }
     object Onboarding : Screen("onboarding")
+    object OnboardingTest : Screen("onboarding_test")
 }
 
 @Composable
@@ -61,6 +63,7 @@ fun NavGraph(
     ) {
         composable(Screen.Home.route) {
             MainStatsScreen(
+                onTestOnboarding = { if (BuildConfig.DEBUG) navController.navigate(Screen.OnboardingTest.route) },
                 onProgressClick = { navController.navigate(Screen.Analytics.route) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onViewAllClick = {
@@ -77,6 +80,14 @@ fun NavGraph(
                     }
                 }
             )
+        }
+        if (BuildConfig.DEBUG) {
+            composable(Screen.OnboardingTest.route) {
+                OnboardingScreen(
+                    isTestMode = true,
+                    onComplete = { navController.popBackStack() }
+                )
+            }
         }
         composable(
             route = Screen.AllApps.route,

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">PELUKDIRI Debug</string>
     <string name="test_lab_title">Lab Pengujian PelukDiri</string>
     <string name="test_lab_runtime">Status runtime</string>
@@ -33,7 +33,7 @@
     <string name="test_lab_simulate">Hitung</string>
     <string name="test_lab_launch_simulation">Uji intervensi</string>
     <string name="test_lab_reset_simulation">Reset data intervensi</string>
-    <string name="test_lab_simulation_result">Tantangan: %1$s\nD=%2$.2f  lux=%3$.1f  λD=%4$.2f  λF=%5$.2f\nP=%6$.3f  Qlux=%7$.3f  Qtime=%8$.3f  Q=%9$.3f\nStreak sukses: %10$d/%11$d  streak gagal: %12$d/%13$d  terbaru=%14$s\nSaat ini=%15$d  CD=%16$.3f  target=%17$.2f  selanjutnya=%18$d\nInterval=%19$.2f m  mode=%20$s</string>
+    <string name="test_lab_simulation_result" tools:ignore="PluralsCandidate">Tantangan: %1$s\nD=%2$.2f  lux=%3$.1f  λD=%4$.2f  λF=%5$.2f\nP=%6$.3f  Qlux=%7$.3f  Qtime=%8$.3f  Q=%9$.3f\nStreak sukses: %10$d/%11$d  streak gagal: %12$d/%13$d  terbaru=%14$s\nSaat ini=%15$d  CD=%16$.3f  target=%17$.2f  selanjutnya=%18$d\nInterval=%19$.2f m  mode=%20$s</string>
     <string name="test_lab_reset_title">Reset data intervensi?</string>
     <string name="test_lab_reset_message">Tingkat kesulitan kembali ke level 2. Riwayat performa Debug, keputusan, jeda, darurat, dan sesi aktif akan dihapus.</string>
     <string name="test_lab_reset_confirm">Reset</string>

@@ -2,6 +2,7 @@ package com.makhp.pelukdiri.features.dashboard
 
 import android.content.Context
 import android.os.PowerManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.makhp.pelukdiri.R
@@ -16,6 +17,7 @@ import com.makhp.pelukdiri.core.domain.repository.UsageRepository
 import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import com.makhp.pelukdiri.core.domain.repository.InterventionDecisionRepository
 import com.makhp.pelukdiri.core.domain.model.InterventionDecisionReason
+import com.makhp.pelukdiri.core.domain.time.TimeProvider
 import com.makhp.pelukdiri.core.domain.usecase.InitializeDailyAdaptiveLimitUseCase
 import com.makhp.pelukdiri.core.util.AccessibilityUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,7 +32,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -45,8 +46,11 @@ class DashboardViewModel @Inject constructor(
     private val csvExporter: CsvExporter,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val initializeDailyAdaptiveLimitUseCase: InitializeDailyAdaptiveLimitUseCase,
+    private val timeProvider: TimeProvider,
     @param:ApplicationContext private val context: Context
 ) : ViewModel() {
+    private val localizedContext: Context
+        get() = ContextCompat.getContextForLanguage(context)
 
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -56,35 +60,43 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun loadData() {
+        _uiState.value = DashboardUiState.Loading
         viewModelScope.launch(Dispatchers.IO) {
-            // Lightweight sync on startup instead of backfill
-            usageRepository.syncRecentEventsOnly()
+            try {
+                // Lightweight sync on startup instead of backfill
+                usageRepository.syncRecentEventsOnly()
 
-            if (!userPreferencesRepository.isHistoryBackfilled.first()) {
-                try {
-                    usageRepository.executeFullBackfill(HistoricalConfig.BACKFILL_DAYS, force = false)
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (_: Exception) {
-                    // Settings keeps a visible, retryable import action if the automatic attempt fails.
+                var preferences = userPreferencesRepository.snapshot.first()
+                if (!preferences.isHistoryBackfilled) {
+                    try {
+                        usageRepository.executeFullBackfill(HistoricalConfig.BACKFILL_DAYS, force = false)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (_: Exception) {
+                        // Settings keeps a visible, retryable import action if the automatic attempt fails.
+                    }
                 }
-            }
 
-            val isGranted = appUsageCollector.isPermissionGranted()
-            val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
-            val isOptimized = isBatteryOptimizationIgnored()
-            val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
-            val monitored = userPreferencesRepository.monitoredPackages.first()
-            val dnd = userPreferencesRepository.isDndEnabled.first()
-            
-            _uiState.value = dashboardState(
-                isPermissionGranted = isGranted,
-                isAccessibilityEnabled = isAccessibilityEnabled,
-                isBatteryOptimizationIgnored = isOptimized,
-                isHistoryBackfilled = isBackfilled,
-                monitoredPackages = monitored,
-                isDndEnabled = dnd
-            )
+                preferences = userPreferencesRepository.snapshot.first()
+                val isGranted = appUsageCollector.isPermissionGranted()
+                val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
+                val isOptimized = isBatteryOptimizationIgnored()
+
+                _uiState.value = dashboardState(
+                    isPermissionGranted = isGranted,
+                    isAccessibilityEnabled = isAccessibilityEnabled,
+                    isBatteryOptimizationIgnored = isOptimized,
+                    isHistoryBackfilled = preferences.isHistoryBackfilled,
+                    monitoredPackages = preferences.monitoredPackages,
+                    isDndEnabled = preferences.isDndEnabled,
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                _uiState.value = DashboardUiState.Error(
+                    localizedContext.getString(R.string.dashboard_load_failed)
+                )
+            }
         }
     }
 
@@ -105,21 +117,22 @@ class DashboardViewModel @Inject constructor(
                 val isGranted = appUsageCollector.isPermissionGranted()
                 val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
                 val isOptimized = isBatteryOptimizationIgnored()
-                val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
-
-                val monitored = userPreferencesRepository.monitoredPackages.first()
-                val dnd = userPreferencesRepository.isDndEnabled.first()
+                val preferences = userPreferencesRepository.snapshot.first()
                 _uiState.value = dashboardState(
                     isPermissionGranted = isGranted,
                     isAccessibilityEnabled = isAccessibilityEnabled,
                     isBatteryOptimizationIgnored = isOptimized,
-                    isHistoryBackfilled = isBackfilled,
-                    monitoredPackages = monitored,
+                    isHistoryBackfilled = preferences.isHistoryBackfilled,
+                    monitoredPackages = preferences.monitoredPackages,
                     isRefreshing = false,
-                    isDndEnabled = dnd
+                    isDndEnabled = preferences.isDndEnabled,
                 )
-            } catch (e: Exception) {
-                _uiState.value = DashboardUiState.Error(e.message ?: "Failed to refresh data")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                _uiState.value = DashboardUiState.Error(
+                    localizedContext.getString(R.string.dashboard_refresh_failed)
+                )
             }
         }
     }
@@ -133,7 +146,7 @@ class DashboardViewModel @Inject constructor(
         isRefreshing: Boolean = false,
         isDndEnabled: Boolean = false
     ): DashboardUiState.Success {
-        val today = LocalDate.now()
+        val today = timeProvider.today()
         val yesterday = today.minusDays(1)
 
         val todayApps = usageRepository.getDailyUsage(today).first()
@@ -142,15 +155,13 @@ class DashboardViewModel @Inject constructor(
             .associateBy { it.packageName }
         val todayInsights = usageEventCollector.getAppInsightsForDay(today)
         val yesterdayInsights = usageEventCollector.getAppInsightsForDay(yesterday)
-        val zoneId = ZoneId.systemDefault()
+        val zoneId = timeProvider.zoneId()
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
         val dayEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1
-        val interventionCounts = interventionDecisionRepository.getAllList()
-            .asSequence()
-            .filter { it.reason == InterventionDecisionReason.TRIGGERED && it.timestamp in dayStart..dayEnd }
-            .groupingBy { it.packageName }
-            .eachCount()
+        val interventionCounts = interventionDecisionRepository.getTriggeredCountsInRange(dayStart, dayEnd)
+        val todaySummary = usageRepository.getDailySummary(today).first()
+        val yesterdaySummary = usageRepository.getDailySummary(yesterday).first()
 
         // Enrich today's apps with yesterday's comparison data for the UI
         val enrichedTodayApps = todayApps.map { app ->
@@ -175,15 +186,15 @@ class DashboardViewModel @Inject constructor(
             isBatteryOptimizationIgnored = isBatteryOptimizationIgnored,
             isHistoryBackfilled = isHistoryBackfilled,
             monitoredPackages = monitoredPackages.toImmutableSet(),
-            todaySummary = usageRepository.getDailySummary(today).first(),
+            todaySummary = todaySummary,
             todayAdaptiveLimit = adaptiveLimitRepository.getLimitForDate(today.toString())?.calculatedLimitMinutes,
             weeklySummaries = usageRepository.getUsageHistory(today.minusDays(6), today).first().toImmutableList(),
             topApps = enrichedTodayApps.toImmutableList(),
             yesterdayTopApps = yesterdayApps.values.map { UiAppUsage(it) }.toImmutableList(),
             isRefreshing = isRefreshing,
             isDndEnabled = isDndEnabled,
-            socialMediaUsageMillis = usageRepository.getDailySummary(today).first()?.monitoredUsageMillis ?: 0L,
-            yesterdaySocialMediaUsageMillis = usageRepository.getDailySummary(yesterday).first()?.monitoredUsageMillis ?: 0L
+            socialMediaUsageMillis = todaySummary?.monitoredUsageMillis ?: 0L,
+            yesterdaySocialMediaUsageMillis = yesterdaySummary?.monitoredUsageMillis ?: 0L
         )
     }
 
@@ -192,9 +203,7 @@ class DashboardViewModel @Inject constructor(
             val isGranted = appUsageCollector.isPermissionGranted()
             val isAccessibilityEnabled = AccessibilityUtils.isAccessibilityServiceEnabled(context, AppBlockerAccessibilityService::class.java)
             val isOptimized = isBatteryOptimizationIgnored()
-            val isBackfilled = userPreferencesRepository.isHistoryBackfilled.first()
-            val monitored = userPreferencesRepository.monitoredPackages.first()
-            val dnd = userPreferencesRepository.isDndEnabled.first()
+            val preferences = userPreferencesRepository.snapshot.first()
 
             _uiState.update { state ->
                 if (state is DashboardUiState.Success) {
@@ -202,9 +211,9 @@ class DashboardViewModel @Inject constructor(
                         isPermissionGranted = isGranted,
                         isAccessibilityEnabled = isAccessibilityEnabled,
                         isBatteryOptimizationIgnored = isOptimized,
-                        isHistoryBackfilled = isBackfilled,
-                        monitoredPackages = monitored.toImmutableSet(),
-                        isDndEnabled = dnd
+                        isHistoryBackfilled = preferences.isHistoryBackfilled,
+                        monitoredPackages = preferences.monitoredPackages.toImmutableSet(),
+                        isDndEnabled = preferences.isDndEnabled,
                     )
                 } else {
                     state
@@ -215,7 +224,7 @@ class DashboardViewModel @Inject constructor(
 
     fun toggleDnd() {
         viewModelScope.launch(Dispatchers.IO) {
-            val current = userPreferencesRepository.isDndEnabled.first()
+            val current = userPreferencesRepository.snapshot.first().isDndEnabled
             userPreferencesRepository.setDndEnabled(!current)
             updatePermissionStatus()
         }
@@ -239,7 +248,7 @@ class DashboardViewModel @Inject constructor(
             try {
                 initializeDailyAdaptiveLimitUseCase(force = true)
                 val recalculated = adaptiveLimitRepository
-                    .getLimitForDate(LocalDate.now().toString())
+                    .getLimitForDate(timeProvider.today().toString())
                     ?.calculatedLimitMinutes
                 _uiState.update { state ->
                     if (state is DashboardUiState.Success) {
@@ -256,7 +265,7 @@ class DashboardViewModel @Inject constructor(
                     if (state is DashboardUiState.Success) {
                         state.copy(
                             isRecalculatingAdaptiveLimit = false,
-                            adaptiveLimitError = context.getString(R.string.dashboard_recalculate_limit_failed)
+                            adaptiveLimitError = localizedContext.getString(R.string.dashboard_recalculate_limit_failed)
                         )
                     } else state
                 }
@@ -284,7 +293,7 @@ class DashboardViewModel @Inject constructor(
                 onFailure = { error ->
                     _uiState.update { state ->
                         if (state is DashboardUiState.Success) {
-                            state.copy(isExporting = false, exportError = error.message ?: context.getString(R.string.export_failed))
+                            state.copy(isExporting = false, exportError = error.message ?: localizedContext.getString(R.string.export_failed))
                         } else {
                             state
                         }

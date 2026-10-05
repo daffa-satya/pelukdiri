@@ -6,7 +6,7 @@ import com.makhp.pelukdiri.core.domain.repository.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,12 +23,13 @@ class NotificationSettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<NotificationSettingsUiState> = combine(
-        userPreferencesRepository.isDailySummaryEnabled,
-        userPreferencesRepository.isWeeklyReflectionEnabled,
-        userPreferencesRepository.isLimitReminderEnabled
-    ) { daily, weekly, limit ->
-        NotificationSettingsUiState(daily, weekly, limit, true) // intervention internal always enabled
+    val uiState: StateFlow<NotificationSettingsUiState> = userPreferencesRepository.snapshot.map { preferences ->
+        NotificationSettingsUiState(
+            preferences.isDailySummaryEnabled,
+            preferences.isWeeklyReflectionEnabled,
+            preferences.isLimitReminderEnabled,
+            true, // intervention internal always enabled
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

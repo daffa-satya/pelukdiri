@@ -37,7 +37,7 @@ class ControlEngineSimulationTest {
         currentTime: LocalTime = LocalTime.of(12, 0)
     ) {
         val result = engine.calculateNextIntervention(
-            deviation, lastPerf, history, lux, bedtime, wakeTime, currentLevel, currentTime
+            deviation, lastPerf, history, lux, bedtime, wakeTime, currentLevel, currentTime, 0L
         )
         
         println("--- Scenario: $name ---")

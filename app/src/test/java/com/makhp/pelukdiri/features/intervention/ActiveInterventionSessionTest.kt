@@ -11,13 +11,19 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ActiveInterventionSessionTest {
     private class FakeTime(var now: Long) : TimeProvider {
         override fun nowMillis() = now
@@ -42,8 +48,34 @@ class ActiveInterventionSessionTest {
         expiresAtMs = 1_000L + ActiveInterventionSession.TTL_MS
     )
 
+    @Test fun `stale session timeout is two minutes`() {
+        assertEquals(120_000L, ActiveInterventionSession.TTL_MS)
+    }
+
     @Test fun `codec round trips exact question input and metadata`() {
         assertEquals(snapshot, ActiveInterventionCodec.decode(ActiveInterventionCodec.encode(snapshot)))
+    }
+
+    @Test fun `saved session acknowledges a pending launch`() = runTest {
+        val preferences = mockk<UserPreferencesRepository>()
+        every { preferences.activeInterventionSession } returns flowOf(null)
+        coEvery { preferences.setActiveInterventionSession(any()) } returns Unit
+        val session = ActiveInterventionSession(preferences, FakeTime(1_000L), InterventionLockManager())
+
+        val acknowledgement = async { session.awaitLaunchAcknowledgement(3_000L) }
+        runCurrent()
+        assertFalse(acknowledgement.isCompleted)
+
+        session.save(snapshot)
+        assertTrue(acknowledgement.await())
+    }
+
+    @Test fun `missing session fails launch acknowledgement within timeout`() = runTest {
+        val preferences = mockk<UserPreferencesRepository>()
+        every { preferences.activeInterventionSession } returns flowOf(null)
+        val session = ActiveInterventionSession(preferences, FakeTime(1_000L), InterventionLockManager())
+
+        assertFalse(session.awaitLaunchAcknowledgement(3_000L))
     }
 
     @Test fun `codec round trips exact pattern playback and input`() {
@@ -81,6 +113,20 @@ class ActiveInterventionSessionTest {
         coEvery { preferences.setNextEligibleInterventionAt(0L) } returns Unit
         val lock = InterventionLockManager().also { it.acquireLock() }
         val session = ActiveInterventionSession(preferences, FakeTime(snapshot.expiresAtMs), lock)
+
+        assertNull(session.restore())
+        coVerify(exactly = 1) { preferences.setActiveInterventionSession(null) }
+        coVerify(exactly = 1) { preferences.setNextEligibleInterventionAt(0L) }
+        assertEquals(false, lock.isLocked.value)
+    }
+
+    @Test fun `after ttl also expires and clears session cooldown and lock`() = runTest {
+        val preferences = mockk<UserPreferencesRepository>()
+        every { preferences.activeInterventionSession } returns flowOf(ActiveInterventionCodec.encode(snapshot))
+        coEvery { preferences.setActiveInterventionSession(null) } returns Unit
+        coEvery { preferences.setNextEligibleInterventionAt(0L) } returns Unit
+        val lock = InterventionLockManager().also { it.acquireLock() }
+        val session = ActiveInterventionSession(preferences, FakeTime(snapshot.expiresAtMs + 1), lock)
 
         assertNull(session.restore())
         coVerify(exactly = 1) { preferences.setActiveInterventionSession(null) }

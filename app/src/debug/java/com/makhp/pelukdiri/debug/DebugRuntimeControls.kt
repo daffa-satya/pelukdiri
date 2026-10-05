@@ -1,7 +1,9 @@
 package com.makhp.pelukdiri.debug
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.makhp.pelukdiri.core.domain.InterventionLaunchPolicy
 import com.makhp.pelukdiri.core.domain.engine.InterventionChallengeType
 import com.makhp.pelukdiri.core.domain.time.TimeProvider
@@ -13,6 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@SuppressLint("ApplySharedPref") // Debug boundary/reboot controls must be durable before returning.
 class DebugRuntimeControls @Inject constructor(
     @ApplicationContext context: Context
 ) : TimeProvider, InterventionLaunchPolicy {
@@ -26,7 +29,7 @@ class DebugRuntimeControls @Inject constructor(
     override fun consumeForcedFailure(): Boolean = failNextLaunch.compareAndSet(true, false)
     @Synchronized override fun consumeForcedChallenge(): InterventionChallengeType? {
         val challenge = pendingForcedChallenge() ?: return null
-        preferences.edit().remove(KEY_FORCED_CHALLENGE).commit()
+        preferences.edit(commit = true) { remove(KEY_FORCED_CHALLENGE) }
         return challenge
     }
 
@@ -36,16 +39,16 @@ class DebugRuntimeControls @Inject constructor(
         val advanced = virtualNow.updateAndGet { current ->
             (current.takeUnless { it == USE_SYSTEM_TIME } ?: System.currentTimeMillis()) + millis
         }
-        preferences.edit().putLong(KEY_VIRTUAL_NOW, advanced).commit()
+        preferences.edit(commit = true) { putLong(KEY_VIRTUAL_NOW, advanced) }
     }
     fun forceNextLaunchFailure() = failNextLaunch.set(true)
     fun resetInterventionOverrides() {
         useSystemTime()
         failNextLaunch.set(false)
-        preferences.edit().remove(KEY_FORCED_CHALLENGE).commit()
+        preferences.edit(commit = true) { remove(KEY_FORCED_CHALLENGE) }
     }
     fun armForcedChallenge(challengeType: InterventionChallengeType) {
-        preferences.edit().putString(KEY_FORCED_CHALLENGE, challengeType.name).commit()
+        preferences.edit(commit = true) { putString(KEY_FORCED_CHALLENGE, challengeType.name) }
     }
     fun pendingForcedChallenge(): InterventionChallengeType? =
         preferences.getString(KEY_FORCED_CHALLENGE, null)
@@ -54,7 +57,7 @@ class DebugRuntimeControls @Inject constructor(
     private fun persistTime(epochMillis: Long) {
         virtualNow.set(epochMillis)
         // Boundary tests may reboot immediately, so wait for this tiny debug-only write.
-        preferences.edit().putLong(KEY_VIRTUAL_NOW, epochMillis).commit()
+        preferences.edit(commit = true) { putLong(KEY_VIRTUAL_NOW, epochMillis) }
     }
 
     companion object {

@@ -9,7 +9,7 @@ class PolicyConfigTest {
     fun `production uses candidate 3`() {
         assertEquals(ControlConfig.CANDIDATE_3, EngineModule.provideControlConfig())
         assertEquals(DeviationConfig.CANDIDATE_3, EngineModule.provideDeviationConfig())
-        assertEquals("v1.6-two-success-recovery", ControlConfig.POLICY_VERSION)
+        assertEquals("v1.9-acknowledged-launch", ControlConfig.POLICY_VERSION)
     }
 
     @Test
@@ -31,6 +31,7 @@ class PolicyConfigTest {
         assertEquals(2, ControlConfig.CANDIDATE_3.ordinaryDecreaseFailureWindow)
         assertEquals(2, ControlConfig.CANDIDATE_3.recoverySuccessWindow)
         assertEquals(2, ControlConfig.CANDIDATE_3.normalMinimumDifficulty)
+        assertEquals(0.5, ControlConfig.CANDIDATE_3.difficultyCurveExponent, 0.0)
         assertEquals(true, ControlConfig.CANDIDATE_3.useAdaptiveLimitFrequencyFloor)
         assertEquals(0.3, DeviationConfig.CANDIDATE_3.k, 0.0)
         assertEquals(2.0, DeviationConfig.CANDIDATE_3.s0, 0.0)

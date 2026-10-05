@@ -58,8 +58,8 @@ class DifficultyControllerTest {
         val bright = candidate.calculate(0.5, 1.0, 0.0, 3, false)
         val dark = candidate.calculate(0.5, 1.0, 1.0, 3, false)
 
-        assertEquals(3.0, bright.target, 0.001)
-        assertEquals(3.4, dark.target, 0.001)
+        assertEquals(4.1213, bright.target, 0.001)
+        assertEquals(4.3238, dark.target, 0.001)
         assertTrue(bright.nextLevel >= 3)
         assertTrue(dark.nextLevel >= 3)
     }
@@ -107,13 +107,13 @@ class DifficultyControllerTest {
             consecutiveSuccesses = 2,
         )
 
-        assertEquals(1.0, afterTwo.target, 0.001)
+        assertEquals(2.0, afterTwo.target, 0.001)
         assertEquals(1, afterOne.nextLevel)
         assertEquals(2, afterTwo.nextLevel)
     }
 
     @Test
-    fun `candidate three keeps level two when formula target is one`() {
+    fun `candidate three anchors zero control at normal level two`() {
         val candidate = DifficultyController(ControlConfig.CANDIDATE_3)
 
         val result = candidate.calculate(
@@ -124,7 +124,7 @@ class DifficultyControllerTest {
             insufficientEvidence = false,
         )
 
-        assertEquals(1.0, result.target, 0.001)
+        assertEquals(2.0, result.target, 0.001)
         assertEquals(2, result.nextLevel)
     }
 
@@ -137,18 +137,18 @@ class DifficultyControllerTest {
             deviation.anchoredLogistic(2.0), 1.0, 0.0, 2, false,
         )
         val elevated = candidate.calculate(
-            deviation.anchoredLogistic(5.0), 1.0, 0.0, 2, false,
+            deviation.anchoredLogistic(5.0), 1.0, 0.0, 3, false,
         )
         val high = candidate.calculate(
-            deviation.anchoredLogistic(10.0), 1.0, 0.0, 3, false,
+            deviation.anchoredLogistic(10.0), 1.0, 0.0, 4, false,
         )
 
-        assertEquals(1.9024, midpoint.target, 0.0001)
-        assertEquals(2, midpoint.nextLevel)
-        assertEquals(3.2093, elevated.target, 0.0001)
-        assertEquals(3, elevated.nextLevel)
-        assertEquals(4.4847, high.target, 0.0001)
-        assertEquals(4, high.nextLevel)
+        assertEquals(3.4249, midpoint.target, 0.0001)
+        assertEquals(3, midpoint.nextLevel)
+        assertEquals(4.2295, elevated.target, 0.0001)
+        assertEquals(4, elevated.nextLevel)
+        assertEquals(4.8001, high.target, 0.0001)
+        assertEquals(5, high.nextLevel)
     }
 
     @Test
