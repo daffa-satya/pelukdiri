@@ -284,9 +284,16 @@ private fun LandscapeQuestionContent(
         ) {
             Text(
                 text = stringResource(R.string.intervention_mindful_pause_title),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.intervention_math_hint),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
             )
             if (isMaxPenalized) {
                 Text(
@@ -384,19 +391,20 @@ private fun QuestionContent(
 
     Text(
         text = stringResource(R.string.intervention_mindful_pause_title),
-        color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.headlineLarge,
+        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.headlineMedium,
         fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
     )
-
-    Spacer(Modifier.height(InterventionDimens.contentGap))
-    Box(
-        Modifier
-            .width(Dimens.iconSizeLarge)
-            .height(Dimens.dividerThickness)
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+    Spacer(Modifier.height(Dimens.spaceSmall))
+    Text(
+        text = stringResource(R.string.intervention_math_hint),
+        color = MaterialTheme.colorScheme.onSurface,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = TextAlign.Center,
     )
-    Spacer(Modifier.height(Dimens.iconSizeSmall))
+    Spacer(Modifier.height(Dimens.spaceSmall))
 
     if (isMaxPenalized) {
         Text(

@@ -291,6 +291,7 @@
     <string name="intervention_emergency_button">Emergency Mode (3 Mins)</string>
     <string name="intervention_pattern_title">Brief Pause</string>
     <string name="intervention_pattern_hint">Remember the pattern sequence</string>
+    <string name="intervention_math_hint">Solve the equation</string>
     <string name="intervention_replay_pattern">Replay Pattern</string>
     <string name="intervention_playing_pattern">Playing pattern...</string>
     <string name="intervention_pattern_correct">Pattern sequence remembered successfully.</string>

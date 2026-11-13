@@ -291,6 +291,7 @@
     <string name="intervention_emergency_button">Mode Darurat (3 Menit)</string>
     <string name="intervention_pattern_title">Jeda Sebentar</string>
     <string name="intervention_pattern_hint">Ingat urutan pola</string>
+    <string name="intervention_math_hint">Selesaikan soal hitung</string>
     <string name="intervention_replay_pattern">Ulangi Pola</string>
     <string name="intervention_playing_pattern">Memutar pola...</string>
     <string name="intervention_pattern_correct">Urutan pola berhasil diingat.</string>
